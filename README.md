@@ -4,11 +4,7 @@
 
 An automated system for performing ongoing code refactoring using AI (Claude Code) and GitHub Actions. The system continuously generates pull requests for incremental refactoring work, reducing the manual burden and maintaining momentum on large-scale codebase improvements.
 
-## 🎉 Now Available as a Reusable GitHub Action!
-
-This repository can now be used as a reusable GitHub Action in any repository. You have two options:
-
-### Option 1: Use as a GitHub Action (Recommended)
+## Use as a GitHub Action
 
 Add the action to your workflow:
 
@@ -31,34 +27,7 @@ Add the action to your workflow:
 2. Check [examples/basic/workflow.yml](examples/basic/workflow.yml) for a simple example
 3. See [examples/advanced/workflow.yml](examples/advanced/workflow.yml) for all features
 
-### Option 2: Fork This Repository
-
-Clone this repo and customize the workflows directly.
-
-**When to use this approach:**
-- You want to heavily customize the workflow logic
-- You need features not exposed by the action inputs
-- You're developing enhancements to contribute back
-
 ## TODO
-
-- [x] **Create folder structure & config schema**
-
-Create `/refactor` folder structure with `configuration.json` and `spec.md`:
-
-```
-/refactor
-  /<refactor-name>/
-    spec.md              # Combined instructions and checklist
-    pr-template.md       # Template for PR descriptions
-    configuration.json   # Settings (see Configuration)
-```
-
-Instructions can live as Claude Code commands in your `.claude/commands/` directory for long-term reuse.
-
-- [x] **Convert to reusable Github Action**
-
-✅ Complete! See [ACTION_README.md](ACTION_README.md) and the [action.yml](action.yml) file. This repository can now be used as a reusable GitHub Action.
 
 - [ ] **Create Labels**
 
@@ -102,11 +71,8 @@ Capture screenshots showing the result. Visual verification without manual testi
 
 - [ ] **Resolve open questions**
 
-- Use custom GitHub Action or out-of-the-box Claude Code action?
 - Best approach for Claude token/credential management in Actions?
-- How to handle refactors that depend on previous changes?
-- Should failed refactors auto-retry or require manual intervention?
-- Can Claude Code mentions be used to update/close PRs? (bonus feature)
+- Can Claude Code mentions be used to update/close PRs?
 
 - [ ] **Test creation logic**
 

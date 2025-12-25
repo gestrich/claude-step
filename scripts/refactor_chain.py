@@ -767,6 +767,32 @@ def cmd_detect_project(args: argparse.Namespace, gh: GitHubActionsHelper) -> int
         return 1
 
 
+def ensure_label_exists(label: str, gh: GitHubActionsHelper) -> None:
+    """Ensure a GitHub label exists in the repository, create if it doesn't
+
+    Args:
+        label: Label name to ensure exists
+        gh: GitHub Actions helper instance for logging
+    """
+    try:
+        # Try to create the label
+        # If it already exists, gh will return an error which we'll catch
+        run_gh_command([
+            "label", "create", label,
+            "--description", "ClaudeStep automated refactoring",
+            "--color", "0E8A16"  # Green color for refactor labels
+        ])
+        gh.write_step_summary(f"- Label '{label}': ✅ Created")
+        gh.set_notice(f"Created label '{label}'")
+    except GitHubAPIError as e:
+        # Check if error is because label already exists
+        if "already exists" in str(e).lower():
+            gh.write_step_summary(f"- Label '{label}': ✅ Already exists")
+        else:
+            # Re-raise if it's a different error
+            raise
+
+
 def cmd_setup(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
     """Handle 'setup' subcommand - load configuration
 
@@ -791,6 +817,9 @@ def cmd_setup(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
 
         if not label or not branch_prefix or not reviewers:
             raise ConfigurationError("Missing required fields: label, branchPrefix, or reviewers")
+
+        # Ensure the label exists in the repository
+        ensure_label_exists(label, gh)
 
         # Validate spec.md format
         validate_spec_format(spec_file)
