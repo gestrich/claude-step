@@ -227,6 +227,9 @@ jobs:
           fi
           echo "Found $COMMITS_AHEAD commit(s) to push"
 
+          # Reconfigure git auth (Claude Code action may have changed it)
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+
           # Push the branch
           git push -u origin "$BRANCH_NAME"
 
