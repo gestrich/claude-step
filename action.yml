@@ -94,6 +94,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working_directory }}
       env:
+        GH_TOKEN: ${{ inputs.github_token }}
         CONFIG_PATH: ${{ steps.setup.outputs.config_path }}
         SPEC_PATH: ${{ steps.setup.outputs.spec_path }}
         ACTION_PATH: ${{ github.action_path }}
