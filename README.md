@@ -64,12 +64,6 @@ Instructions can live as Claude Code commands in your `.claude/commands/` direct
 
 The action should create the new label when it does not exist.
 
-- [ ] **Implement PR rejection handling**
-
-Options for handling bad PRs:
-- Check out the branch, mark item as skipped in `spec.md`
-- (Future/Bonus) Use Claude Code mentions to close or update the PR automatically
-
 - [ ] **Slack Action and metrics**
 
 Post progress updates and metrics to Slack when PRs are merged.
@@ -79,6 +73,20 @@ Success metrics to track:
 - Percentage of PRs merged without modification
 - Total items completed over time
 - Specification refinement iterations needed
+
+- [ ] **Progress Celebration**
+
+Post to Slack on merge: "✅ 47/300 files converted to Swift". Keeps momentum visible. You can even include a summary celebrating the number of PRs reviewed by each user.
+
+- [ ] **Leaderboard & Stats**
+
+Create a GitHub Pages site or Slack integration that tracks merges per developer over time. Query merged PRs with your refactor label using the GitHub API, aggregate by assignee, and display a leaderboard. Great for friendly competition and recognizing top reviewers.
+
+- [ ] **Implement PR rejection handling**
+
+Options for handling bad PRs:
+- Check out the branch, mark item as skipped in `spec.md`
+- (Future/Bonus) Use Claude Code mentions to close or update the PR automatically
 
 - [ ] **Random Code Smell Example**
 
@@ -91,14 +99,6 @@ Fetch open PRs and build locally on a schedule. Ready to run when you sit down t
 - [ ] **UI Automation Screenshots**
 
 Capture screenshots showing the result. Visual verification without manual testing.
-
-- [ ] **Progress Celebration**
-
-Post to Slack on merge: "✅ 47/300 files converted to Swift". Keeps momentum visible. You can even include a summary celebrating the number of PRs reviewed by each user.
-
-- [ ] **Leaderboard & Stats**
-
-Create a GitHub Pages site or Slack integration that tracks merges per developer over time. Query merged PRs with your refactor label using the GitHub API, aggregate by assignee, and display a leaderboard. Great for friendly competition and recognizing top reviewers.
 
 - [ ] **Resolve open questions**
 
