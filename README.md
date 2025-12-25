@@ -154,7 +154,7 @@ Options for handling bad PRs:
 
 - **UI Automation Screenshots** - Capture screenshots showing the result. Visual verification without manual testing.
 
-- **Progress Celebration** - Post to Slack on merge: "✅ 47/300 files converted to Swift". Keeps momentum visible.
+- **Progress Celebration** - Post to Slack on merge: "✅ 47/300 files converted to Swift". Keeps momentum visible. You can even include a summary celebrating the number of PRs reviewed by each user.
 
 ## Technical Decisions
 

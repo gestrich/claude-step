@@ -1,0 +1,10 @@
+{
+  "label": "refactor-example",
+  "branchPrefix": "refactor/example",
+  "reviewers": [
+    {
+      "username": "gestrich",
+      "maxOpenPRs": 1
+    }
+  ]
+}

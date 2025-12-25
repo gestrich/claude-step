@@ -1,20 +1,233 @@
-name: Claude Code
+name: Refactor Chain
 
 on:
   workflow_dispatch:
+    inputs:
+      project:
+        description: 'Refactor project folder name (under refactor/)'
+        required: true
+        default: 'example'
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
   id-token: write
 
 jobs:
-  claude:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.config.outputs.label }}
+      branch_prefix: ${{ steps.config.outputs.branch_prefix }}
+      reviewers_json: ${{ steps.config.outputs.reviewers_json }}
+      project_path: ${{ steps.config.outputs.project_path }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read configuration
+        id: config
+        run: |
+          PROJECT_PATH="refactor/${{ github.event.inputs.project }}"
+          CONFIG_FILE="${PROJECT_PATH}/configuration.json"
+
+          if [ ! -f "$CONFIG_FILE" ]; then
+            echo "::error::Configuration file not found: $CONFIG_FILE"
+            exit 1
+          fi
+
+          LABEL=$(jq -r '.label' "$CONFIG_FILE")
+          BRANCH_PREFIX=$(jq -r '.branchPrefix' "$CONFIG_FILE")
+          REVIEWERS_JSON=$(jq -c '.reviewers' "$CONFIG_FILE")
+
+          echo "label=$LABEL" >> $GITHUB_OUTPUT
+          echo "branch_prefix=$BRANCH_PREFIX" >> $GITHUB_OUTPUT
+          echo "reviewers_json=$REVIEWERS_JSON" >> $GITHUB_OUTPUT
+          echo "project_path=$PROJECT_PATH" >> $GITHUB_OUTPUT
+
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- Project: ${{ github.event.inputs.project }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Label: $LABEL" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch prefix: $BRANCH_PREFIX" >> $GITHUB_STEP_SUMMARY
+
+  check-capacity:
+    needs: setup
+    runs-on: ubuntu-latest
+    outputs:
+      reviewer: ${{ steps.find-reviewer.outputs.reviewer }}
+      has_capacity: ${{ steps.find-reviewer.outputs.has_capacity }}
+    steps:
+      - name: Find reviewer with capacity
+        id: find-reviewer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LABEL: ${{ needs.setup.outputs.label }}
+          REVIEWERS_JSON: ${{ needs.setup.outputs.reviewers_json }}
+        run: |
+          echo "Checking reviewer capacity..."
+
+          # Parse reviewers and find one with capacity
+          SELECTED_REVIEWER=""
+
+          for row in $(echo "$REVIEWERS_JSON" | jq -c '.[]'); do
+            USERNAME=$(echo "$row" | jq -r '.username')
+            MAX_PRS=$(echo "$row" | jq -r '.maxOpenPRs')
+
+            # Count open PRs with label assigned to this user
+            OPEN_PRS=$(gh pr list \
+              --repo "${{ github.repository }}" \
+              --label "$LABEL" \
+              --assignee "$USERNAME" \
+              --state open \
+              --json number \
+              --jq 'length')
+
+            echo "Reviewer $USERNAME: $OPEN_PRS open PRs (max: $MAX_PRS)"
+
+            if [ "$OPEN_PRS" -lt "$MAX_PRS" ]; then
+              SELECTED_REVIEWER="$USERNAME"
+              echo "Selected reviewer: $USERNAME"
+              break
+            fi
+          done
+
+          if [ -n "$SELECTED_REVIEWER" ]; then
+            echo "reviewer=$SELECTED_REVIEWER" >> $GITHUB_OUTPUT
+            echo "has_capacity=true" >> $GITHUB_OUTPUT
+          else
+            echo "reviewer=" >> $GITHUB_OUTPUT
+            echo "has_capacity=false" >> $GITHUB_OUTPUT
+            echo "::notice::All reviewers at capacity, skipping PR creation"
+          fi
+
+  find-task:
+    needs: [setup, check-capacity]
+    if: needs.check-capacity.outputs.has_capacity == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      task: ${{ steps.parse-plan.outputs.task }}
+      task_id: ${{ steps.parse-plan.outputs.task_id }}
+      has_task: ${{ steps.parse-plan.outputs.has_task }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find next unchecked task
+        id: parse-plan
+        env:
+          PROJECT_PATH: ${{ needs.setup.outputs.project_path }}
+        run: |
+          PLAN_FILE="${PROJECT_PATH}/plan.md"
+
+          if [ ! -f "$PLAN_FILE" ]; then
+            echo "::error::Plan file not found: $PLAN_FILE"
+            exit 1
+          fi
+
+          # Find first unchecked item: - [ ] task description
+          TASK=$(grep -m 1 '^\s*- \[ \]' "$PLAN_FILE" | sed 's/^\s*- \[ \] //')
+
+          if [ -n "$TASK" ]; then
+            # Create a simple ID from the task (first 30 chars, lowercase, dashes)
+            TASK_ID=$(echo "$TASK" | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]' '-' | head -c 30 | sed 's/-$//')
+
+            echo "task=$TASK" >> $GITHUB_OUTPUT
+            echo "task_id=$TASK_ID" >> $GITHUB_OUTPUT
+            echo "has_task=true" >> $GITHUB_OUTPUT
+
+            echo "### Next Task" >> $GITHUB_STEP_SUMMARY
+            echo "$TASK" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "task=" >> $GITHUB_OUTPUT
+            echo "task_id=" >> $GITHUB_OUTPUT
+            echo "has_task=false" >> $GITHUB_OUTPUT
+            echo "::notice::No unchecked tasks found in plan"
+          fi
+
+  create-pr:
+    needs: [setup, check-capacity, find-task]
+    if: needs.check-capacity.outputs.has_capacity == 'true' && needs.find-task.outputs.has_task == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare prompt
+        id: prompt
+        env:
+          PROJECT_PATH: ${{ needs.setup.outputs.project_path }}
+          TASK: ${{ needs.find-task.outputs.task }}
+        run: |
+          PROMPT_FILE="${PROJECT_PATH}/prompt.md"
+
+          if [ ! -f "$PROMPT_FILE" ]; then
+            echo "::error::Prompt file not found: $PROMPT_FILE"
+            exit 1
+          fi
+
+          # Read prompt template and substitute task
+          PROMPT=$(cat "$PROMPT_FILE" | sed "s|{{TASK}}|$TASK|g")
+
+          # Write to temp file for Claude action
+          echo "$PROMPT" > /tmp/claude-prompt.txt
+          cat /tmp/claude-prompt.txt
+
+          echo "prompt_file=/tmp/claude-prompt.txt" >> $GITHUB_OUTPUT
+
+      - name: Create branch
+        id: branch
+        env:
+          BRANCH_PREFIX: ${{ needs.setup.outputs.branch_prefix }}
+          TASK_ID: ${{ needs.find-task.outputs.task_id }}
+        run: |
+          BRANCH_NAME="${BRANCH_PREFIX}-${TASK_ID}"
+          git checkout -b "$BRANCH_NAME"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
       - name: Run Claude Code
         uses: anthropics/claude-code-action@v1
         with:
-          prompt: "Print 'Hello world' and nothing else."
+          prompt: |
+            Complete this task and commit the changes:
+
+            ${{ needs.find-task.outputs.task }}
+
+            Instructions from prompt.md:
+            $(cat ${{ needs.setup.outputs.project_path }}/prompt.md | sed 's/{{TASK}}/${{ needs.find-task.outputs.task }}/g')
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Push branch and create PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: ${{ steps.branch.outputs.branch_name }}
+          LABEL: ${{ needs.setup.outputs.label }}
+          REVIEWER: ${{ needs.check-capacity.outputs.reviewer }}
+          TASK: ${{ needs.find-task.outputs.task }}
+          PROJECT_PATH: ${{ needs.setup.outputs.project_path }}
+        run: |
+          # Check if there are changes to commit
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "::warning::No changes made by Claude, skipping PR creation"
+            exit 0
+          fi
+
+          # Push the branch
+          git push -u origin "$BRANCH_NAME"
+
+          # Read PR template and substitute
+          PR_TEMPLATE_FILE="${PROJECT_PATH}/pr-template.md"
+          if [ -f "$PR_TEMPLATE_FILE" ]; then
+            PR_BODY=$(cat "$PR_TEMPLATE_FILE" | sed "s|{{TASK_DESCRIPTION}}|$TASK|g")
+          else
+            PR_BODY="## Task\n$TASK"
+          fi
+
+          # Create PR
+          gh pr create \
+            --title "Refactor: $TASK" \
+            --body "$PR_BODY" \
+            --label "$LABEL" \
+            --assignee "$REVIEWER" \
+            --head "$BRANCH_NAME"
+
+          echo "### PR Created" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: $BRANCH_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "- Reviewer: $REVIEWER" >> $GITHUB_STEP_SUMMARY
+          echo "- Task: $TASK" >> $GITHUB_STEP_SUMMARY
