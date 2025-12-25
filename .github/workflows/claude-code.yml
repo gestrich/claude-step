@@ -53,6 +53,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           LABEL: ${{ needs.setup.outputs.label }}
           REVIEWERS_JSON: ${{ needs.setup.outputs.reviewers_json }}
+          PROJECT: ${{ github.event.inputs.project }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: python .github/workflows/scripts/refactor_chain.py check-capacity
 

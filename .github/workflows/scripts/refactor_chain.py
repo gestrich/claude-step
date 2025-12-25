@@ -305,12 +305,69 @@ def mark_task_complete(plan_file: str, task: str) -> None:
         f.write(updated_content)
 
 
-def find_available_reviewer(reviewers: List[Dict[str, Any]], label: str) -> Optional[str]:
-    """Find first reviewer with capacity
+def get_artifact_metadata(repo: str, artifact_id: int) -> Optional[Dict[str, Any]]:
+    """Download and parse artifact metadata JSON
+
+    Args:
+        repo: GitHub repository (owner/name)
+        artifact_id: Artifact ID to download
+
+    Returns:
+        Parsed artifact metadata or None if download fails
+    """
+    import tempfile
+    import zipfile
+
+    try:
+        # Download artifact as zip file
+        # gh CLI doesn't support artifact download, so we use API directly
+        # The artifact download URL returns a redirect, we need to follow it
+        download_url = f"/repos/{repo}/actions/artifacts/{artifact_id}/zip"
+
+        # Create temp file for download
+        with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tmp_file:
+            tmp_path = tmp_file.name
+
+        # Download using gh api (which follows redirects)
+        try:
+            # gh api returns the binary content when we follow the redirect
+            result = run_command([
+                "gh", "api", download_url,
+                "--method", "GET"
+            ], capture_output=True)
+
+            # Write binary content to temp file
+            with open(tmp_path, 'wb') as f:
+                f.write(result.stdout)
+
+            # Extract and read JSON from zip
+            with zipfile.ZipFile(tmp_path, 'r') as zip_ref:
+                # The zip contains the JSON file
+                json_files = [f for f in zip_ref.namelist() if f.endswith('.json')]
+                if json_files:
+                    with zip_ref.open(json_files[0]) as json_file:
+                        metadata = json.load(json_file)
+                        return metadata
+
+        finally:
+            # Clean up temp file
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    except Exception as e:
+        print(f"Warning: Failed to download artifact {artifact_id}: {e}")
+        return None
+
+    return None
+
+
+def find_available_reviewer(reviewers: List[Dict[str, Any]], label: str, project: str) -> Optional[str]:
+    """Find first reviewer with capacity based on artifact metadata
 
     Args:
         reviewers: List of reviewer dicts with 'username' and 'maxOpenPRs'
         label: GitHub label to filter PRs
+        project: Project name to match artifacts
 
     Returns:
         Username of available reviewer, or None if all at capacity
@@ -318,26 +375,87 @@ def find_available_reviewer(reviewers: List[Dict[str, Any]], label: str) -> Opti
     Raises:
         GitHubAPIError: If GitHub CLI command fails
     """
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+
+    # Initialize reviewer PR counts
+    reviewer_pr_counts = {}
+    for reviewer in reviewers:
+        reviewer_pr_counts[reviewer["username"]] = 0
+
+    # Get all open PRs with the label
+    try:
+        pr_output = run_gh_command([
+            "pr", "list",
+            "--repo", repo,
+            "--label", label,
+            "--state", "open",
+            "--json", "number,headRefName"
+        ])
+        prs = json.loads(pr_output) if pr_output else []
+    except (GitHubAPIError, json.JSONDecodeError) as e:
+        print(f"Warning: Failed to list PRs: {e}")
+        prs = []
+
+    print(f"Found {len(prs)} open PR(s) with label '{label}'")
+
+    # Count PRs per reviewer from artifact metadata
+    for pr in prs:
+        branch = pr["headRefName"]
+        pr_number = pr["number"]
+
+        # Get workflow runs for this branch
+        try:
+            api_response = gh_api_call(
+                f"/repos/{repo}/actions/runs?branch={branch}&status=completed&per_page=10"
+            )
+            runs = api_response.get("workflow_runs", [])
+        except GitHubAPIError as e:
+            print(f"Warning: Failed to get runs for PR #{pr_number}: {e}")
+            continue
+
+        # Check most recent successful run for artifact
+        reviewer_found = False
+        for run in runs:
+            if run.get("conclusion") == "success":
+                try:
+                    artifacts_data = gh_api_call(
+                        f"/repos/{repo}/actions/runs/{run['id']}/artifacts"
+                    )
+                    artifacts = artifacts_data.get("artifacts", [])
+
+                    for artifact in artifacts:
+                        name = artifact["name"]
+                        if name.startswith(f"task-metadata-{project}-"):
+                            # Download and parse artifact to get reviewer
+                            artifact_id = artifact["id"]
+                            metadata = get_artifact_metadata(repo, artifact_id)
+
+                            if metadata and "reviewer" in metadata:
+                                assigned_reviewer = metadata["reviewer"]
+                                if assigned_reviewer in reviewer_pr_counts:
+                                    reviewer_pr_counts[assigned_reviewer] += 1
+                                    print(f"PR #{pr_number}: reviewer={assigned_reviewer} (from artifact)")
+                                    reviewer_found = True
+                                else:
+                                    print(f"Warning: PR #{pr_number} has unknown reviewer: {assigned_reviewer}")
+                            else:
+                                print(f"Warning: Could not parse reviewer from artifact for PR #{pr_number}")
+                            break
+
+                    if reviewer_found:
+                        break
+
+                except GitHubAPIError as e:
+                    print(f"Warning: Failed to get artifacts for run {run['id']}: {e}")
+                    continue
+
+                break  # Only check first successful run
+
+    # Print counts and find first available reviewer
     for reviewer in reviewers:
         username = reviewer["username"]
         max_prs = reviewer["maxOpenPRs"]
-
-        # Query GitHub for open PRs assigned to this reviewer with the label
-        repo = os.environ.get("GITHUB_REPOSITORY", "")
-        try:
-            output = run_gh_command([
-                "pr", "list",
-                "--repo", repo,
-                "--label", label,
-                "--assignee", username,
-                "--state", "open",
-                "--json", "number",
-                "--jq", "length"
-            ])
-            open_prs = int(output) if output else 0
-        except (ValueError, GitHubAPIError) as e:
-            print(f"Error checking PRs for {username}: {e}")
-            continue
+        open_prs = reviewer_pr_counts[username]
 
         print(f"Reviewer {username}: {open_prs} open PRs (max: {max_prs})")
 
@@ -493,9 +611,10 @@ def cmd_check_capacity(args: argparse.Namespace, gh: GitHubActionsHelper) -> int
         # Get environment variables
         label = os.environ.get("LABEL", "")
         reviewers_json = os.environ.get("REVIEWERS_JSON", "")
+        project = os.environ.get("PROJECT", "")
 
-        if not label or not reviewers_json:
-            raise ConfigurationError("Missing required environment variables: LABEL, REVIEWERS_JSON")
+        if not all([label, reviewers_json, project]):
+            raise ConfigurationError("Missing required environment variables: LABEL, REVIEWERS_JSON, PROJECT")
 
         # Parse reviewers
         reviewers = json.loads(reviewers_json)
@@ -503,7 +622,7 @@ def cmd_check_capacity(args: argparse.Namespace, gh: GitHubActionsHelper) -> int
         print("Checking reviewer capacity...")
 
         # Find available reviewer
-        selected_reviewer = find_available_reviewer(reviewers, label)
+        selected_reviewer = find_available_reviewer(reviewers, label, project)
 
         if selected_reviewer:
             gh.write_output("reviewer", selected_reviewer)
