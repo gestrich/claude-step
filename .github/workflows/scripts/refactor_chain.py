@@ -358,7 +358,79 @@ def download_artifact_json(repo: str, artifact_id: int) -> Optional[Dict[str, An
         return None
 
 
-def find_available_reviewer(reviewers: List[Dict[str, Any]], label: str, project: str) -> Optional[str]:
+class ReviewerCapacityResult:
+    """Result of reviewer capacity check with detailed information"""
+
+    def __init__(self):
+        self.reviewers_status = []  # List of dicts with reviewer details
+        self.selected_reviewer = None
+        self.all_at_capacity = False
+
+    def add_reviewer(self, username: str, max_prs: int, open_prs: List[Dict], has_capacity: bool):
+        """Add reviewer status information"""
+        self.reviewers_status.append({
+            "username": username,
+            "max_prs": max_prs,
+            "open_prs": open_prs,  # List of {pr_number, task_index, task_description}
+            "open_count": len(open_prs),
+            "has_capacity": has_capacity
+        })
+
+    def format_summary(self) -> str:
+        """Generate formatted summary for GitHub Actions output"""
+        lines = ["## Reviewer Capacity Check", ""]
+
+        for reviewer in self.reviewers_status:
+            username = reviewer["username"]
+            max_prs = reviewer["max_prs"]
+            open_count = reviewer["open_count"]
+            open_prs = reviewer["open_prs"]
+            has_capacity = reviewer["has_capacity"]
+
+            # Reviewer header with status emoji
+            status_emoji = "✅" if has_capacity else "❌"
+            lines.append(f"### {status_emoji} **{username}**")
+            lines.append("")
+
+            # Capacity info
+            lines.append(f"**Max PRs Allowed:** {max_prs}")
+            lines.append(f"**Currently Open:** {open_count}/{max_prs}")
+            lines.append("")
+
+            # List open PRs with details
+            if open_prs:
+                lines.append("**Open PRs:**")
+                for pr_info in open_prs:
+                    pr_num = pr_info.get("pr_number", "?")
+                    task_idx = pr_info.get("task_index", "?")
+                    task_desc = pr_info.get("task_description", "Unknown task")
+                    lines.append(f"- PR #{pr_num}: Task {task_idx} - {task_desc}")
+                lines.append("")
+            else:
+                lines.append("**Open PRs:** None")
+                lines.append("")
+
+            # Availability status
+            if has_capacity:
+                available_slots = max_prs - open_count
+                lines.append(f"**Status:** ✅ Available ({available_slots} slot(s) remaining)")
+            else:
+                lines.append(f"**Status:** ❌ At capacity")
+
+            lines.append("")
+
+        # Final decision
+        lines.append("---")
+        lines.append("")
+        if self.selected_reviewer:
+            lines.append(f"**Decision:** ✅ Selected **{self.selected_reviewer}** for next PR")
+        else:
+            lines.append(f"**Decision:** ❌ All reviewers at capacity - skipping PR creation")
+
+        return "\n".join(lines)
+
+
+def find_available_reviewer(reviewers: List[Dict[str, Any]], label: str, project: str) -> tuple[Optional[str], ReviewerCapacityResult]:
     """Find first reviewer with capacity based on artifact metadata
 
     Args:
@@ -367,17 +439,18 @@ def find_available_reviewer(reviewers: List[Dict[str, Any]], label: str, project
         project: Project name to match artifacts
 
     Returns:
-        Username of available reviewer, or None if all at capacity
+        Tuple of (username or None, ReviewerCapacityResult)
 
     Raises:
         GitHubAPIError: If GitHub CLI command fails
     """
     repo = os.environ.get("GITHUB_REPOSITORY", "")
+    result = ReviewerCapacityResult()
 
-    # Initialize reviewer PR counts
-    reviewer_pr_counts = {}
+    # Initialize reviewer PR lists
+    reviewer_prs = {}
     for reviewer in reviewers:
-        reviewer_pr_counts[reviewer["username"]] = 0
+        reviewer_prs[reviewer["username"]] = []
 
     # Get all open PRs with the label
     try:
@@ -432,8 +505,14 @@ def find_available_reviewer(reviewers: List[Dict[str, Any]], label: str, project
                         # Only count if this PR is in our open PRs list
                         if pr_num in pr_numbers:
                             assigned_reviewer = metadata["reviewer"]
-                            if assigned_reviewer in reviewer_pr_counts:
-                                reviewer_pr_counts[assigned_reviewer] += 1
+                            if assigned_reviewer in reviewer_prs:
+                                # Store PR details
+                                pr_info = {
+                                    "pr_number": pr_num,
+                                    "task_index": metadata.get("task_index", "?"),
+                                    "task_description": metadata.get("task_description", "Unknown task")
+                                }
+                                reviewer_prs[assigned_reviewer].append(pr_info)
                                 print(f"PR #{pr_num}: reviewer={assigned_reviewer} (from artifact)")
                             else:
                                 print(f"Warning: PR #{pr_num} has unknown reviewer: {assigned_reviewer}")
@@ -442,19 +521,28 @@ def find_available_reviewer(reviewers: List[Dict[str, Any]], label: str, project
             print(f"Warning: Failed to get artifacts for run {run['id']}: {e}")
             continue
 
-    # Print counts and find first available reviewer
+    # Build result and find first available reviewer
+    selected_reviewer = None
     for reviewer in reviewers:
         username = reviewer["username"]
         max_prs = reviewer["maxOpenPRs"]
-        open_prs = reviewer_pr_counts[username]
+        open_prs = reviewer_prs[username]
+        has_capacity = len(open_prs) < max_prs
 
-        print(f"Reviewer {username}: {open_prs} open PRs (max: {max_prs})")
+        # Add to result
+        result.add_reviewer(username, max_prs, open_prs, has_capacity)
 
-        if open_prs < max_prs:
+        print(f"Reviewer {username}: {len(open_prs)} open PRs (max: {max_prs})")
+
+        # Select first available reviewer
+        if has_capacity and selected_reviewer is None:
+            selected_reviewer = username
             print(f"Selected reviewer: {username}")
-            return username
 
-    return None
+    result.selected_reviewer = selected_reviewer
+    result.all_at_capacity = (selected_reviewer is None)
+
+    return selected_reviewer, result
 
 
 def get_in_progress_task_indices(repo: str, label: str, project: str) -> set:
@@ -613,7 +701,14 @@ def cmd_check_capacity(args: argparse.Namespace, gh: GitHubActionsHelper) -> int
         print("Checking reviewer capacity...")
 
         # Find available reviewer
-        selected_reviewer = find_available_reviewer(reviewers, label, project)
+        selected_reviewer, capacity_result = find_available_reviewer(reviewers, label, project)
+
+        # Write formatted summary to step summary
+        summary = capacity_result.format_summary()
+        gh.write_step_summary(summary)
+
+        # Also print to console for workflow logs
+        print("\n" + summary)
 
         if selected_reviewer:
             gh.write_output("reviewer", selected_reviewer)
