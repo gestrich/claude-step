@@ -499,8 +499,31 @@ def cmd_create_pr(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
         remote_url = f"https://x-access-token:{gh_token}@github.com/{github_repository}.git"
         run_git_command(["remote", "set-url", "origin", remote_url])
 
-        # Push the branch
-        run_git_command(["push", "-u", "origin", branch_name])
+        # Mark task as complete in plan.md before pushing
+        plan_file = f"{project_path}/plan.md"
+        try:
+            mark_task_complete(plan_file, task)
+            print(f"Marked task complete in {plan_file}")
+
+            # Add the updated plan to the same commit
+            run_git_command(["add", plan_file])
+
+            # Check if there are changes to commit
+            try:
+                status_output = run_git_command(["status", "--porcelain"])
+                if status_output.strip():
+                    # Amend the last commit to include the plan update
+                    run_git_command(["commit", "--amend", "--no-edit"])
+                    print("Added plan.md update to commit")
+            except GitError:
+                # If amending fails, create a new commit
+                run_git_command(["commit", "-m", f"Mark task complete: {task}"])
+                print("Created separate commit for plan.md update")
+        except (GitError, FileNotFoundError) as e:
+            gh.set_warning(f"Failed to mark task complete in plan: {str(e)}")
+
+        # Push the branch with all changes
+        run_git_command(["push", "-u", "origin", branch_name, "--force-with-lease"])
 
         # Load PR template and substitute
         pr_template_file = f"{project_path}/pr-template.md"
@@ -519,24 +542,6 @@ def cmd_create_pr(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             "--assignee", reviewer,
             "--head", branch_name
         ])
-
-        # Mark task as complete in plan.md
-        plan_file = f"{project_path}/plan.md"
-        try:
-            mark_task_complete(plan_file, task)
-            print(f"Marked task complete in {plan_file}")
-
-            # Configure git user for the commit
-            run_git_command(["config", "user.name", "github-actions[bot]"])
-            run_git_command(["config", "user.email", "github-actions[bot]@users.noreply.github.com"])
-
-            # Commit the updated plan
-            run_git_command(["add", plan_file])
-            run_git_command(["commit", "-m", f"Mark task complete: {task}"])
-            run_git_command(["push", "origin", "main"])
-            print("Pushed updated plan to main branch")
-        except (GitError, FileNotFoundError) as e:
-            gh.set_warning(f"Failed to mark task complete in plan: {str(e)}")
 
         # Write summary
         gh.write_step_summary("### PR Created")
