@@ -3,16 +3,12 @@
 ## Steps
 
 - [x] **Set up a test repo** - Get the default Claude Code GitHub Action running with a manual workflow trigger.
-
-- [ ] **First milestone** - Get a workflow that runs Claude Code and creates a PR. This validates infrastructure: GitHub token permissions, Claude token, action setup.
-
-- [ ] **Lead with a manual PR** - Stage your first PR manually with several example refactors. This kicks off the chain and sets the pattern.
-
-- [ ] **One at a time initially** - Start with one concurrent PR. You'll be editing instructions frequently early on—don't want multiple PRs doing it wrong.
-
-- [ ] **Use immediate trigger first** - Start with merge-triggered runs for faster iteration. Switch to scheduled (daily) once stable.
-
-- [ ] **Scale up** - As confidence grows, increase concurrent PRs and move to scheduled triggers.
+- [ ] **Get workflow creating PRs** - Validate infrastructure: GitHub token permissions, Claude token, action setup.
+- [ ] **Build trigger logic** - Label detection, max PRs per user, per-user assignment.
+- [ ] **Create folder structure & config schema** - `/refactor` folder, `config.json`, `plan.md` template.
+- [ ] **Record video walkthrough** - "Chain Refactors" tutorial.
+- [ ] **Write blog post** - Written guide explaining the approach.
+- [ ] **Open source the repo** - Complete setup others can use.
 
 ## Overview
 
@@ -47,23 +43,35 @@ A `config.json` file per refactor project:
 ```json
 {
   "label": "swift-migration",
-  "maxConcurrentPRs": 1,
-  "branchFormat": "refactor/swift-migration-{item}"
+  "branchFormat": "refactor/swift-migration-{item}",
+  "reviewers": [
+    { "username": "alice", "maxOpenPRs": 1 },
+    { "username": "bob", "maxOpenPRs": 1 }
+  ]
 }
 ```
 
 - **label** - GitHub tag used to identify PRs for this refactor
-- **maxConcurrentPRs** - How many PRs can be open at once (start with 1)
 - **branchFormat** - Pattern for branch names
+- **reviewers** - List of GitHub usernames and how many PRs each can have open at once
+
+### Per-User PR Assignment
+
+Instead of a global `maxConcurrentPRs`, PRs are assigned per reviewer. This:
+- Distributes review load across team members
+- Allows parallel progress (2 reviewers = 2 simultaneous PRs)
+- Each reviewer only sees PRs assigned to them
+- When a reviewer merges their PR, a new one is created for them
 
 ## Trigger Algorithm
 
-1. Query GitHub API for open PRs with the configured label
-2. If count < `maxConcurrentPRs`:
+For each reviewer in `config.json`:
+1. Query GitHub API for open PRs with the label assigned to this reviewer
+2. If count < reviewer's `maxOpenPRs`:
    - Read `plan.md`, find next unchecked item
    - Run Claude Code with the refactor instructions
-   - Create PR with the configured label
-3. If at max, do nothing (wait for merge)
+   - Create PR with the label, assign to this reviewer
+3. If at max for this reviewer, skip to next reviewer
 
 ## Trigger Modes
 
@@ -148,36 +156,6 @@ Options for handling bad PRs:
 
 - **Progress Celebration** - Post to Slack on merge: "✅ 47/300 files converted to Swift". Keeps momentum visible.
 
-## Implementation Plan
-
-### Phase 1: Foundation
-
-- [ ] Set up test repo with sample Objective-C files
-- [ ] Get Claude Code GitHub Action running with manual trigger
-- [ ] Create first PR successfully via workflow
-- [ ] Set up GitHub token with PR creation permissions
-
-### Phase 2: Trigger Logic
-
-- [ ] Implement label-based PR detection
-- [ ] Build trigger algorithm (check open PRs, create if under max)
-- [ ] Add merge-triggered workflow
-- [ ] Add scheduled (cron) workflow option
-
-### Phase 3: Structure & Config
-
-- [ ] Create `/refactor` folder structure
-- [ ] Build `config.json` schema
-- [ ] Create `plan.md` template
-- [ ] Create PR template with checklist
-
-### Phase 4: Polish & Launch
-
-- [ ] Add Slack notifications
-- [ ] Record video walkthrough
-- [ ] Write blog post
-- [ ] Open source the repository
-
 ## Technical Decisions
 
 | Decision | Choice | Rationale |
@@ -201,15 +179,21 @@ Options for handling bad PRs:
 3. **API modernization** - Update deprecated API calls across the codebase
 4. **Test coverage** - Add unit tests to untested files incrementally
 
-## Launch Deliverables
-
-1. **Open source repository** - Complete setup that others can use in their projects
-2. **Video walkthrough** - "Chain Refactors" tutorial
-3. **Blog post** - Written guide explaining the approach
-
 ## Success Metrics
 
 - Time from PR creation to merge (review efficiency)
 - Percentage of PRs merged without modification
 - Total items completed over time
 - Specification refinement iterations needed
+
+## Getting Started Tips
+
+Once you have the system set up, here are tips for rolling it out:
+
+- **Lead with a manual PR** - Stage your first PR manually with several example refactors. This kicks off the chain and sets the pattern for Claude to follow.
+
+- **One at a time initially** - Start with one concurrent PR. You'll be editing instructions frequently early on—don't want multiple PRs doing it wrong.
+
+- **Use immediate trigger first** - Start with merge-triggered runs for faster iteration. Switch to scheduled (daily) once the process is stable.
+
+- **Scale up gradually** - As confidence grows, add more reviewers and increase concurrent PRs per reviewer.
