@@ -180,26 +180,27 @@ jobs:
           # Read the entire spec.md file
           SPEC_CONTENT=$(cat "$SPEC_FILE")
 
-          # Create the prompt with prefix and full spec content
-          PROMPT="Complete the following task from spec.md:
-
-          Task: ${TASK}
-
-          Instructions: Read the entire spec.md file below to understand both WHAT to do and HOW to do it. Follow all guidelines and patterns specified in the document.
-
-          --- BEGIN spec.md ---
-          ${SPEC_CONTENT}
-          --- END spec.md ---
-
-          Now complete the task '${TASK}' following all the details and instructions in the spec.md file above. When you're done, use git add and git commit to commit your changes."
-
-          # Write to a file to avoid GitHub Actions escaping issues
-          echo "$PROMPT" > /tmp/claude-prompt.txt
+          # Create the prompt and save to GitHub output (use multiline string)
+          {
+            echo 'claude_prompt<<EOF'
+            echo "Complete the following task from spec.md:"
+            echo ""
+            echo "Task: ${TASK}"
+            echo ""
+            echo "Instructions: Read the entire spec.md file below to understand both WHAT to do and HOW to do it. Follow all guidelines and patterns specified in the document."
+            echo ""
+            echo "--- BEGIN spec.md ---"
+            cat "$SPEC_FILE"
+            echo "--- END spec.md ---"
+            echo ""
+            echo "Now complete the task '${TASK}' following all the details and instructions in the spec.md file above. When you're done, use git add and git commit to commit your changes."
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
 
       - name: Run Claude Code
         uses: anthropics/claude-code-action@v1
         with:
-          prompt_file: /tmp/claude-prompt.txt
+          prompt: ${{ steps.prepare-prompt.outputs.claude_prompt }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_args: "--allowedTools Write,Read,Bash,Edit"
           show_full_output: true
