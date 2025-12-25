@@ -178,6 +178,7 @@ runs:
       with:
         prompt: ${{ steps.prepare-prompt.outputs.claude_prompt }}
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        github_token: ${{ inputs.github_token }}
         claude_args: '--allowedTools ${{ inputs.claude_allowed_tools }}'
         show_full_output: true
 
