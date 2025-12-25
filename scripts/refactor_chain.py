@@ -994,8 +994,41 @@ def cmd_create_pr(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
         except (GitError, ValueError):
             commits_count = 0
 
+        # Reconfigure git auth (Claude Code action may have changed it)
+        remote_url = f"https://x-access-token:{gh_token}@github.com/{github_repository}.git"
+        run_git_command(["remote", "set-url", "origin", remote_url])
+
+        # Mark task as complete in spec.md
+        # This should happen even if Claude made no changes
+        try:
+            mark_task_complete(spec_path, task)
+            print(f"Marked task complete in {spec_path}")
+
+            # Add the updated spec
+            run_git_command(["add", spec_path])
+
+            # Check if there are changes to commit
+            status_output = run_git_command(["status", "--porcelain"])
+            if status_output.strip():
+                if commits_count > 0:
+                    # Amend the last commit to include the spec update
+                    try:
+                        run_git_command(["commit", "--amend", "--no-edit"])
+                        print("Added spec.md update to existing commit")
+                    except GitError:
+                        # If amending fails, create a new commit
+                        run_git_command(["commit", "-m", f"Mark task complete: {task}"])
+                        print("Created separate commit for spec.md update")
+                else:
+                    # No previous commits, create a new one for spec update
+                    run_git_command(["commit", "-m", f"Mark task complete: {task}"])
+                    print("Created commit for spec.md update")
+                    commits_count = 1  # Update count since we just created a commit
+        except (GitError, FileNotFoundError) as e:
+            gh.set_warning(f"Failed to mark task complete in spec: {str(e)}")
+
         if commits_count == 0:
-            gh.set_warning("No changes made by Claude, skipping PR creation")
+            gh.set_warning("No changes made (including spec update), skipping PR creation")
             gh.write_output("pr_number", "")
             gh.write_output("pr_url", "")
             gh.write_output("artifact_path", "")
@@ -1003,32 +1036,6 @@ def cmd_create_pr(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             return 0
 
         print(f"Found {commits_count} commit(s) to push")
-
-        # Reconfigure git auth (Claude Code action may have changed it)
-        remote_url = f"https://x-access-token:{gh_token}@github.com/{github_repository}.git"
-        run_git_command(["remote", "set-url", "origin", remote_url])
-
-        # Mark task as complete in spec.md before pushing
-        try:
-            mark_task_complete(spec_path, task)
-            print(f"Marked task complete in {spec_path}")
-
-            # Add the updated spec to the same commit
-            run_git_command(["add", spec_path])
-
-            # Check if there are changes to commit
-            try:
-                status_output = run_git_command(["status", "--porcelain"])
-                if status_output.strip():
-                    # Amend the last commit to include the spec update
-                    run_git_command(["commit", "--amend", "--no-edit"])
-                    print("Added spec.md update to commit")
-            except GitError:
-                # If amending fails, create a new commit
-                run_git_command(["commit", "-m", f"Mark task complete: {task}"])
-                print("Created separate commit for spec.md update")
-        except (GitError, FileNotFoundError) as e:
-            gh.set_warning(f"Failed to mark task complete in spec: {str(e)}")
 
         # Push the branch with all changes
         # Use --force since we may have amended the commit
