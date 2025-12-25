@@ -49,22 +49,22 @@ inputs:
 outputs:
   pr_number:
     description: 'Number of created PR (empty if none created)'
-    value: ${{ steps.create-pr.outputs.pr_number }}
+    value: ${{ steps.finalize.outputs.pr_number }}
   pr_url:
     description: 'URL of created PR (empty if none created)'
-    value: ${{ steps.create-pr.outputs.pr_url }}
+    value: ${{ steps.finalize.outputs.pr_url }}
   reviewer:
     description: 'Assigned reviewer username (empty if none assigned)'
-    value: ${{ steps.check-capacity.outputs.reviewer }}
+    value: ${{ steps.prepare.outputs.reviewer }}
   task_completed:
     description: 'Task description that was completed (empty if none)'
-    value: ${{ steps.find-task.outputs.task }}
+    value: ${{ steps.prepare.outputs.task }}
   has_capacity:
     description: 'Whether a reviewer had capacity (true/false)'
-    value: ${{ steps.check-capacity.outputs.has_capacity }}
+    value: ${{ steps.prepare.outputs.has_capacity }}
   all_tasks_done:
     description: 'Whether all tasks are complete (true/false)'
-    value: ${{ steps.find-task.outputs.all_tasks_done }}
+    value: ${{ steps.prepare.outputs.all_tasks_done }}
 
 runs:
   using: 'composite'
@@ -74,8 +74,8 @@ runs:
       with:
         python-version: '3.11'
 
-    - name: Detect project and setup configuration
-      id: setup
+    - name: Prepare for Claude Code execution
+      id: prepare
       shell: bash
       working-directory: ${{ inputs.working_directory }}
       env:
@@ -87,169 +87,47 @@ runs:
         PR_TEMPLATE_PATH: ${{ inputs.pr_template_path }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         ACTION_PATH: ${{ github.action_path }}
-      run: python3 "$ACTION_PATH/scripts/refactor_chain.py" detect-project
-
-    - name: Load and validate configuration
-      id: load-config
-      shell: bash
-      working-directory: ${{ inputs.working_directory }}
-      env:
-        GH_TOKEN: ${{ inputs.github_token }}
-        CONFIG_PATH: ${{ steps.setup.outputs.config_path }}
-        SPEC_PATH: ${{ steps.setup.outputs.spec_path }}
-        ACTION_PATH: ${{ github.action_path }}
-      run: python3 "$ACTION_PATH/scripts/refactor_chain.py" setup --config "$CONFIG_PATH" --spec "$SPEC_PATH"
-
-    - name: Check reviewer capacity
-      id: check-capacity
-      shell: bash
-      working-directory: ${{ inputs.working_directory }}
-      env:
-        GH_TOKEN: ${{ inputs.github_token }}
-        LABEL: ${{ steps.load-config.outputs.label }}
-        REVIEWERS_JSON: ${{ steps.load-config.outputs.reviewers_json }}
-        PROJECT: ${{ steps.setup.outputs.project_name }}
-        GITHUB_REPOSITORY: ${{ github.repository }}
-        ACTION_PATH: ${{ github.action_path }}
-      run: python3 "$ACTION_PATH/scripts/refactor_chain.py" check-capacity
-
-    - name: Find next task
-      id: find-task
-      if: steps.check-capacity.outputs.has_capacity == 'true'
-      shell: bash
-      working-directory: ${{ inputs.working_directory }}
-      env:
-        GH_TOKEN: ${{ inputs.github_token }}
-        PROJECT_PATH: ${{ steps.setup.outputs.project_path }}
-        SPEC_PATH: ${{ steps.setup.outputs.spec_path }}
-        PROJECT: ${{ steps.setup.outputs.project_name }}
-        LABEL: ${{ steps.load-config.outputs.label }}
-        GITHUB_REPOSITORY: ${{ github.repository }}
-        ACTION_PATH: ${{ github.action_path }}
-      run: python3 "$ACTION_PATH/scripts/refactor_chain.py" find-task
-
-    - name: Create branch
-      id: create-branch
-      if: steps.check-capacity.outputs.has_capacity == 'true' && steps.find-task.outputs.has_task == 'true'
-      shell: bash
-      working-directory: ${{ inputs.working_directory }}
-      env:
-        PROJECT: ${{ steps.setup.outputs.project_name }}
-        TASK_INDEX: ${{ steps.find-task.outputs.task_index }}
-      run: |
-        DATE_PREFIX=$(date +%Y-%m)
-        BRANCH_NAME="${DATE_PREFIX}-${PROJECT}-${TASK_INDEX}"
-        git checkout -b "$BRANCH_NAME"
-        echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
-        echo "Created branch: $BRANCH_NAME"
-
-    - name: Prepare Claude prompt
-      id: prepare-prompt
-      if: steps.check-capacity.outputs.has_capacity == 'true' && steps.find-task.outputs.has_task == 'true'
-      shell: bash
-      working-directory: ${{ inputs.working_directory }}
-      env:
-        SPEC_PATH: ${{ steps.setup.outputs.spec_path }}
-        TASK: ${{ steps.find-task.outputs.task }}
-      run: |
-        # Read the entire spec.md file
-        SPEC_CONTENT=$(cat "$SPEC_PATH")
-
-        # Create the prompt and save to GitHub output (use multiline string)
-        {
-          echo 'claude_prompt<<EOF'
-          echo "Complete the following task from spec.md:"
-          echo ""
-          echo "Task: ${TASK}"
-          echo ""
-          echo "Instructions: Read the entire spec.md file below to understand both WHAT to do and HOW to do it. Follow all guidelines and patterns specified in the document."
-          echo ""
-          echo "--- BEGIN spec.md ---"
-          cat "$SPEC_PATH"
-          echo "--- END spec.md ---"
-          echo ""
-          echo "Now complete the task '${TASK}' following all the details and instructions in the spec.md file above. When you're done, use git add and git commit to commit your changes."
-          echo 'EOF'
-        } >> $GITHUB_OUTPUT
+      run: python3 "$ACTION_PATH/scripts/refactor_chain.py" prepare
 
     - name: Run Claude Code
-      if: steps.check-capacity.outputs.has_capacity == 'true' && steps.find-task.outputs.has_task == 'true'
+      if: steps.prepare.outputs.has_capacity == 'true' && steps.prepare.outputs.has_task == 'true'
       uses: anthropics/claude-code-action@v1
       with:
-        prompt: ${{ steps.prepare-prompt.outputs.claude_prompt }}
+        prompt: ${{ steps.prepare.outputs.claude_prompt }}
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
         github_token: ${{ inputs.github_token }}
         claude_args: '--allowedTools ${{ inputs.claude_allowed_tools }}'
         show_full_output: true
 
-    - name: Commit any uncommitted changes
-      if: steps.check-capacity.outputs.has_capacity == 'true' && steps.find-task.outputs.has_task == 'true'
-      shell: bash
-      working-directory: ${{ inputs.working_directory }}
-      env:
-        TASK: ${{ steps.find-task.outputs.task }}
-      run: |
-        # Configure git user for commits
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-
-        # Check for any changes (staged, unstaged, or untracked)
-        if [ -n "$(git status --porcelain)" ]; then
-          echo "Found uncommitted changes, committing..."
-          git add -A
-          git commit -m "Complete task: $TASK"
-        else
-          echo "No uncommitted changes found"
-        fi
-
-    - name: Create pull request
-      id: create-pr
-      if: steps.check-capacity.outputs.has_capacity == 'true' && steps.find-task.outputs.has_task == 'true'
+    - name: Finalize and create PR
+      id: finalize
+      if: always()
       shell: bash
       working-directory: ${{ inputs.working_directory }}
       env:
         GH_TOKEN: ${{ inputs.github_token }}
-        BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
-        LABEL: ${{ steps.load-config.outputs.label }}
-        REVIEWER: ${{ steps.check-capacity.outputs.reviewer }}
-        TASK: ${{ steps.find-task.outputs.task }}
-        TASK_INDEX: ${{ steps.find-task.outputs.task_index }}
-        PROJECT: ${{ steps.setup.outputs.project_name }}
-        PROJECT_PATH: ${{ steps.setup.outputs.project_path }}
-        SPEC_PATH: ${{ steps.setup.outputs.spec_path }}
-        PR_TEMPLATE_PATH: ${{ steps.setup.outputs.pr_template_path }}
+        BRANCH_NAME: ${{ steps.prepare.outputs.branch_name }}
+        LABEL: ${{ steps.prepare.outputs.label }}
+        REVIEWER: ${{ steps.prepare.outputs.reviewer }}
+        TASK: ${{ steps.prepare.outputs.task }}
+        TASK_INDEX: ${{ steps.prepare.outputs.task_index }}
+        PROJECT: ${{ steps.prepare.outputs.project_name }}
+        PROJECT_PATH: ${{ steps.prepare.outputs.project_path }}
+        SPEC_PATH: ${{ steps.prepare.outputs.spec_path }}
+        PR_TEMPLATE_PATH: ${{ steps.prepare.outputs.pr_template_path }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         GITHUB_RUN_ID: ${{ github.run_id }}
         BASE_BRANCH: ${{ inputs.base_branch }}
+        HAS_CAPACITY: ${{ steps.prepare.outputs.has_capacity }}
+        HAS_TASK: ${{ steps.prepare.outputs.has_task }}
         ACTION_PATH: ${{ github.action_path }}
-      run: python3 "$ACTION_PATH/scripts/refactor_chain.py" create-pr
+      run: python3 "$ACTION_PATH/scripts/refactor_chain.py" finalize
 
     - name: Upload task metadata artifact
-      if: steps.create-pr.outputs.artifact_path != ''
+      if: steps.finalize.outputs.artifact_path != ''
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ steps.create-pr.outputs.artifact_name }}
-        path: ${{ steps.create-pr.outputs.artifact_path }}
+        name: ${{ steps.finalize.outputs.artifact_name }}
+        path: ${{ steps.finalize.outputs.artifact_path }}
         retention-days: 90
         if-no-files-found: warn
-
-    - name: Summary
-      if: always()
-      shell: bash
-      run: |
-        echo "## ClaudeStep Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-
-        if [ "${{ steps.check-capacity.outputs.has_capacity }}" != "true" ]; then
-          echo "⏸️ **Status**: All reviewers at capacity" >> $GITHUB_STEP_SUMMARY
-        elif [ "${{ steps.find-task.outputs.has_task }}" != "true" ]; then
-          echo "✅ **Status**: All tasks complete or in progress" >> $GITHUB_STEP_SUMMARY
-        elif [ -n "${{ steps.create-pr.outputs.pr_number }}" ]; then
-          echo "✅ **Status**: PR created successfully" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **PR**: #${{ steps.create-pr.outputs.pr_number }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Reviewer**: ${{ steps.check-capacity.outputs.reviewer }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Task**: ${{ steps.find-task.outputs.task }}" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "ℹ️ **Status**: No PR created" >> $GITHUB_STEP_SUMMARY
-        fi

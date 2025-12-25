@@ -659,114 +659,6 @@ def get_in_progress_task_indices(repo: str, label: str, project: str) -> set:
 
 
 # Command Handlers
-def cmd_detect_project(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
-    """Handle 'detect-project' subcommand - detect project from merged PR or use provided name
-
-    Args:
-        args: Parsed command-line arguments
-        gh: GitHub Actions helper instance
-
-    Returns:
-        Exit code (0 for success, 1 for failure)
-    """
-    try:
-        # Get environment variables
-        project_name = os.environ.get("PROJECT_NAME", "")
-        merged_pr_number = os.environ.get("MERGED_PR_NUMBER", "")
-        config_path = os.environ.get("CONFIG_PATH", "")
-        spec_path = os.environ.get("SPEC_PATH", "")
-        pr_template_path = os.environ.get("PR_TEMPLATE_PATH", "")
-        repo = os.environ.get("GITHUB_REPOSITORY", "")
-
-        detected_project = None
-
-        # If merged PR number provided, detect project from PR labels
-        if merged_pr_number:
-            print(f"Detecting project from merged PR #{merged_pr_number}...")
-
-            try:
-                # Get PR labels
-                pr_output = run_gh_command([
-                    "pr", "view", merged_pr_number,
-                    "--repo", repo,
-                    "--json", "labels"
-                ])
-                pr_data = json.loads(pr_output)
-                pr_labels = [label["name"] for label in pr_data.get("labels", [])]
-
-                print(f"PR labels: {pr_labels}")
-
-                # Search for matching refactor project
-                import glob
-                for config_file in glob.glob("refactor/*/configuration.json"):
-                    if os.path.isfile(config_file):
-                        try:
-                            config = load_json(config_file)
-                            label = config.get("label")
-
-                            if label in pr_labels:
-                                # Extract project name from path: refactor/{project}/configuration.json
-                                detected_project = config_file.split("/")[1]
-                                print(f"✅ Found matching project: {detected_project} (label: {label})")
-                                break
-                        except Exception as e:
-                            print(f"Warning: Failed to read {config_file}: {e}")
-                            continue
-
-                if not detected_project:
-                    gh.set_error(f"No refactor project found with matching label for PR #{merged_pr_number}")
-                    return 1
-
-            except Exception as e:
-                gh.set_error(f"Failed to detect project from PR: {str(e)}")
-                return 1
-
-        # Use provided project name if no merged PR
-        elif project_name:
-            detected_project = project_name
-            print(f"Using provided project name: {detected_project}")
-        else:
-            gh.set_error("Either project_name or merged_pr_number must be provided")
-            return 1
-
-        # Determine paths (use inputs or defaults)
-        if config_path:
-            final_config_path = config_path
-        else:
-            final_config_path = f"refactor/{detected_project}/configuration.json"
-
-        if spec_path:
-            final_spec_path = spec_path
-        else:
-            final_spec_path = f"refactor/{detected_project}/spec.md"
-
-        if pr_template_path:
-            final_pr_template_path = pr_template_path
-        else:
-            final_pr_template_path = f"refactor/{detected_project}/pr-template.md"
-
-        project_path = f"refactor/{detected_project}"
-
-        # Write outputs
-        gh.write_output("project_name", detected_project)
-        gh.write_output("config_path", final_config_path)
-        gh.write_output("spec_path", final_spec_path)
-        gh.write_output("pr_template_path", final_pr_template_path)
-        gh.write_output("project_path", project_path)
-
-        print(f"Configuration paths:")
-        print(f"  Project: {detected_project}")
-        print(f"  Config: {final_config_path}")
-        print(f"  Spec: {final_spec_path}")
-        print(f"  PR Template: {final_pr_template_path}")
-
-        return 0
-
-    except Exception as e:
-        gh.set_error(f"Unexpected error in detect-project: {str(e)}")
-        return 1
-
-
 def ensure_label_exists(label: str, gh: GitHubActionsHelper) -> None:
     """Ensure a GitHub label exists in the repository, create if it doesn't
 
@@ -793,24 +685,87 @@ def ensure_label_exists(label: str, gh: GitHubActionsHelper) -> None:
             raise
 
 
-def cmd_setup(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
-    """Handle 'setup' subcommand - load configuration
+def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
+    """Handle 'prepare' subcommand - all setup steps before running Claude
+
+    This combines: detect-project, setup, check-capacity, find-task, create-branch, prepare-prompt
 
     Args:
         args: Parsed command-line arguments
         gh: GitHub Actions helper instance
 
     Returns:
-        Exit code (0 for success, 1 for failure)
+        Exit code (0 for success, non-zero for various failure modes)
     """
     try:
-        config_file = args.config
-        spec_file = args.spec
+        from datetime import datetime
 
-        # Load and validate configuration
-        config = load_json(config_file)
+        # === STEP 1: Detect Project ===
+        print("=== Step 1/6: Detecting project ===")
+        project_name = os.environ.get("PROJECT_NAME", "")
+        merged_pr_number = os.environ.get("MERGED_PR_NUMBER", "")
+        config_path_input = os.environ.get("CONFIG_PATH", "")
+        spec_path_input = os.environ.get("SPEC_PATH", "")
+        pr_template_path_input = os.environ.get("PR_TEMPLATE_PATH", "")
+        repo = os.environ.get("GITHUB_REPOSITORY", "")
 
-        # Extract required fields
+        detected_project = None
+
+        # If merged PR number provided, detect project from PR labels
+        if merged_pr_number:
+            print(f"Detecting project from merged PR #{merged_pr_number}...")
+            try:
+                pr_output = run_gh_command([
+                    "pr", "view", merged_pr_number,
+                    "--repo", repo,
+                    "--json", "labels"
+                ])
+                pr_data = json.loads(pr_output)
+                pr_labels = [label["name"] for label in pr_data.get("labels", [])]
+                print(f"PR labels: {pr_labels}")
+
+                # Search for matching refactor project
+                import glob
+                for config_file in glob.glob("refactor/*/configuration.json"):
+                    if os.path.isfile(config_file):
+                        try:
+                            config = load_json(config_file)
+                            label = config.get("label")
+                            if label in pr_labels:
+                                detected_project = config_file.split("/")[1]
+                                print(f"✅ Found matching project: {detected_project} (label: {label})")
+                                break
+                        except Exception as e:
+                            print(f"Warning: Failed to read {config_file}: {e}")
+
+                if not detected_project:
+                    gh.set_error(f"No refactor project found with matching label for PR #{merged_pr_number}")
+                    return 1
+            except Exception as e:
+                gh.set_error(f"Failed to detect project from PR: {str(e)}")
+                return 1
+        elif project_name:
+            detected_project = project_name
+            print(f"Using provided project name: {detected_project}")
+        else:
+            gh.set_error("Either project_name or merged_pr_number must be provided")
+            return 1
+
+        # Determine paths
+        config_path = config_path_input or f"refactor/{detected_project}/configuration.json"
+        spec_path = spec_path_input or f"refactor/{detected_project}/spec.md"
+        pr_template_path = pr_template_path_input or f"refactor/{detected_project}/pr-template.md"
+        project_path = f"refactor/{detected_project}"
+
+        print(f"Configuration paths:")
+        print(f"  Project: {detected_project}")
+        print(f"  Config: {config_path}")
+        print(f"  Spec: {spec_path}")
+        print(f"  PR Template: {pr_template_path}")
+
+        # === STEP 2: Load and Validate Configuration ===
+        print("\n=== Step 2/6: Loading configuration ===")
+        config = load_json(config_path)
         label = config.get("label")
         branch_prefix = config.get("branchPrefix")
         reviewers = config.get("reviewers")
@@ -818,149 +773,117 @@ def cmd_setup(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
         if not label or not branch_prefix or not reviewers:
             raise ConfigurationError("Missing required fields: label, branchPrefix, or reviewers")
 
-        # Ensure the label exists in the repository
+        # Ensure label exists
         ensure_label_exists(label, gh)
 
-        # Validate spec.md format
-        validate_spec_format(spec_file)
+        # Validate spec format
+        validate_spec_format(spec_path)
 
-        # Convert reviewers to JSON string for passing to next job
-        reviewers_json = json.dumps(reviewers)
+        print(f"✅ Configuration loaded: label={label}, reviewers={len(reviewers)}")
 
-        # Write outputs
-        gh.write_output("label", label)
-        gh.write_output("branch_prefix", branch_prefix)
-        gh.write_output("reviewers_json", reviewers_json)
+        # === STEP 3: Check Reviewer Capacity ===
+        print("\n=== Step 3/6: Checking reviewer capacity ===")
+        selected_reviewer, capacity_result = find_available_reviewer(reviewers, label, detected_project)
 
-        # Write step summary
-        gh.write_step_summary("### Configuration")
-        gh.write_step_summary(f"- Config: {config_file}")
-        gh.write_step_summary(f"- Spec: {spec_file}")
-        gh.write_step_summary(f"- Label: {label}")
-        gh.write_step_summary(f"- Branch prefix: {branch_prefix}")
-        gh.write_step_summary(f"- Spec file: ✅ Valid format")
-
-        return 0
-
-    except (FileNotFoundError, ConfigurationError) as e:
-        gh.set_error(str(e))
-        return 1
-    except Exception as e:
-        gh.set_error(f"Unexpected error in setup: {str(e)}")
-        return 1
-
-
-def cmd_check_capacity(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
-    """Handle 'check-capacity' subcommand - find reviewer with capacity
-
-    Args:
-        args: Parsed command-line arguments
-        gh: GitHub Actions helper instance
-
-    Returns:
-        Exit code (0 for success, 1 for failure)
-    """
-    try:
-        # Get environment variables
-        label = os.environ.get("LABEL", "")
-        reviewers_json = os.environ.get("REVIEWERS_JSON", "")
-        project = os.environ.get("PROJECT", "")
-
-        if not all([label, reviewers_json, project]):
-            raise ConfigurationError("Missing required environment variables: LABEL, REVIEWERS_JSON, PROJECT")
-
-        # Parse reviewers
-        reviewers = json.loads(reviewers_json)
-
-        print("Checking reviewer capacity...")
-
-        # Find available reviewer
-        selected_reviewer, capacity_result = find_available_reviewer(reviewers, label, project)
-
-        # Write formatted summary to step summary
         summary = capacity_result.format_summary()
         gh.write_step_summary(summary)
-
-        # Also print to console for workflow logs
         print("\n" + summary)
 
-        if selected_reviewer:
-            gh.write_output("reviewer", selected_reviewer)
-            gh.write_output("has_capacity", "true")
-        else:
-            gh.write_output("reviewer", "")
+        if not selected_reviewer:
             gh.write_output("has_capacity", "false")
+            gh.write_output("reviewer", "")
             gh.set_notice("All reviewers at capacity, skipping PR creation")
+            return 0  # Not an error, just no capacity
 
-        return 0
+        gh.write_output("has_capacity", "true")
+        gh.write_output("reviewer", selected_reviewer)
+        print(f"✅ Selected reviewer: {selected_reviewer}")
 
-    except (ConfigurationError, GitHubAPIError) as e:
-        gh.set_error(str(e))
-        return 1
-    except Exception as e:
-        gh.set_error(f"Unexpected error in check-capacity: {str(e)}")
-        return 1
-
-
-def cmd_find_task(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
-    """Handle 'find-task' subcommand - find next available task
-
-    Args:
-        args: Parsed command-line arguments
-        gh: GitHub Actions helper instance
-
-    Returns:
-        Exit code (0 for success, 1 for failure)
-    """
-    try:
-        # Get environment variables
-        spec_path = os.environ.get("SPEC_PATH", "")
-        label = os.environ.get("LABEL", "")
-        project = os.environ.get("PROJECT", "")
-        repo = os.environ.get("GITHUB_REPOSITORY", "")
-
-        if not all([spec_path, label, project, repo]):
-            raise ConfigurationError("Missing required environment variables: SPEC_PATH, LABEL, PROJECT, GITHUB_REPOSITORY")
-
-        # Get in-progress task indices from open PRs
-        print("Checking for in-progress tasks...")
-        in_progress_indices = get_in_progress_task_indices(repo, label, project)
+        # === STEP 4: Find Next Task ===
+        print("\n=== Step 4/6: Finding next task ===")
+        in_progress_indices = get_in_progress_task_indices(repo, label, detected_project)
 
         if in_progress_indices:
             print(f"Found in-progress tasks: {sorted(in_progress_indices)}")
 
-        # Find next available task
         result = find_next_available_task(spec_path, in_progress_indices)
 
-        if result:
-            task_index, task = result
-
-            gh.write_output("task", task)
-            gh.write_output("task_index", str(task_index))
-            gh.write_output("has_task", "true")
-            gh.write_output("all_tasks_done", "false")
-
-            gh.write_step_summary("### Next Task")
-            gh.write_step_summary(f"Task {task_index}: {task}")
-        else:
-            gh.write_output("task", "")
-            gh.write_output("task_index", "")
+        if not result:
             gh.write_output("has_task", "false")
             gh.write_output("all_tasks_done", "true")
             gh.set_notice("No available tasks (all completed or in progress)")
+            return 0  # Not an error, just no tasks
 
+        task_index, task = result
+        print(f"✅ Found task {task_index}: {task}")
+
+        # === STEP 5: Create Branch ===
+        print("\n=== Step 5/6: Creating branch ===")
+        date_prefix = datetime.now().strftime("%Y-%m")
+        branch_name = f"{date_prefix}-{detected_project}-{task_index}"
+
+        try:
+            run_git_command(["checkout", "-b", branch_name])
+            print(f"✅ Created branch: {branch_name}")
+        except GitError as e:
+            gh.set_error(f"Failed to create branch: {str(e)}")
+            return 1
+
+        # === STEP 6: Prepare Claude Prompt ===
+        print("\n=== Step 6/6: Preparing Claude prompt ===")
+
+        # Read spec content
+        with open(spec_path, "r") as f:
+            spec_content = f.read()
+
+        # Create the prompt
+        claude_prompt = f"""Complete the following task from spec.md:
+
+Task: {task}
+
+Instructions: Read the entire spec.md file below to understand both WHAT to do and HOW to do it. Follow all guidelines and patterns specified in the document.
+
+--- BEGIN spec.md ---
+{spec_content}
+--- END spec.md ---
+
+Now complete the task '{task}' following all the details and instructions in the spec.md file above. When you're done, use git add and git commit to commit your changes."""
+
+        print(f"✅ Prompt prepared ({len(claude_prompt)} characters)")
+
+        # === Write All Outputs ===
+        gh.write_output("project_name", detected_project)
+        gh.write_output("project_path", project_path)
+        gh.write_output("config_path", config_path)
+        gh.write_output("spec_path", spec_path)
+        gh.write_output("pr_template_path", pr_template_path)
+        gh.write_output("label", label)
+        gh.write_output("branch_prefix", branch_prefix)
+        gh.write_output("reviewers_json", json.dumps(reviewers))
+        gh.write_output("task", task)
+        gh.write_output("task_index", str(task_index))
+        gh.write_output("has_task", "true")
+        gh.write_output("all_tasks_done", "false")
+        gh.write_output("branch_name", branch_name)
+        gh.write_output("claude_prompt", claude_prompt)
+
+        print("\n✅ Preparation complete - ready to run Claude Code")
         return 0
 
-    except (FileNotFoundError, ConfigurationError, GitHubAPIError) as e:
-        gh.set_error(str(e))
+    except (FileNotFoundError, ConfigurationError, GitError, GitHubAPIError) as e:
+        gh.set_error(f"Preparation failed: {str(e)}")
         return 1
     except Exception as e:
-        gh.set_error(f"Unexpected error in find-task: {str(e)}")
+        gh.set_error(f"Unexpected error in prepare: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return 1
 
 
-def cmd_create_pr(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
-    """Handle 'create-pr' subcommand - push branch and create PR
+def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
+    """Handle 'finalize' subcommand - commit changes, create PR, and generate summary
+
+    This combines: commit changes, create-pr, summary
 
     Args:
         args: Parsed command-line arguments
@@ -970,6 +893,8 @@ def cmd_create_pr(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
         Exit code (0 for success, 1 for failure)
     """
     try:
+        from datetime import datetime
+
         # Get environment variables
         branch_name = os.environ.get("BRANCH_NAME", "")
         task = os.environ.get("TASK", "")
@@ -983,9 +908,48 @@ def cmd_create_pr(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
         github_repository = os.environ.get("GITHUB_REPOSITORY", "")
         github_run_id = os.environ.get("GITHUB_RUN_ID", "")
         base_branch = os.environ.get("BASE_BRANCH", "main")
+        has_capacity = os.environ.get("HAS_CAPACITY", "")
+        has_task = os.environ.get("HAS_TASK", "")
 
+        # === Generate Summary Early (for all cases) ===
+        print("\n=== Generating workflow summary ===")
+
+        gh.write_step_summary("## ClaudeStep Summary")
+        gh.write_step_summary("")
+
+        # Check if we should skip (no capacity or no task)
+        if has_capacity != "true":
+            gh.write_step_summary("⏸️ **Status**: All reviewers at capacity")
+            print("⏸️ All reviewers at capacity - skipping")
+            return 0
+
+        if has_task != "true":
+            gh.write_step_summary("✅ **Status**: All tasks complete or in progress")
+            print("✅ All tasks complete or in progress - skipping")
+            return 0
+
+        # Validate required environment variables
         if not all([branch_name, task, task_index, reviewer, label, project, spec_path, gh_token, github_repository]):
             raise ConfigurationError("Missing required environment variables")
+
+        # === STEP 1: Commit Any Uncommitted Changes ===
+        print("=== Step 1/3: Committing changes ===")
+
+        # Configure git user for commits
+        run_git_command(["config", "user.name", "github-actions[bot]"])
+        run_git_command(["config", "user.email", "github-actions[bot]@users.noreply.github.com"])
+
+        # Check for any changes (staged, unstaged, or untracked)
+        status_output = run_git_command(["status", "--porcelain"])
+        if status_output.strip():
+            print("Found uncommitted changes, committing...")
+            run_git_command(["add", "-A"])
+            run_git_command(["commit", "-m", f"Complete task: {task}"])
+        else:
+            print("No uncommitted changes found")
+
+        # === STEP 2: Create PR ===
+        print("\n=== Step 2/3: Creating pull request ===")
 
         # Check if there are commits to push
         try:
@@ -999,7 +963,6 @@ def cmd_create_pr(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
         run_git_command(["remote", "set-url", "origin", remote_url])
 
         # Mark task as complete in spec.md
-        # This should happen even if Claude made no changes
         try:
             mark_task_complete(spec_path, task)
             print(f"Marked task complete in {spec_path}")
@@ -1016,14 +979,12 @@ def cmd_create_pr(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
                         run_git_command(["commit", "--amend", "--no-edit"])
                         print("Added spec.md update to existing commit")
                     except GitError:
-                        # If amending fails, create a new commit
                         run_git_command(["commit", "-m", f"Mark task complete: {task}"])
                         print("Created separate commit for spec.md update")
                 else:
-                    # No previous commits, create a new one for spec update
                     run_git_command(["commit", "-m", f"Mark task complete: {task}"])
                     print("Created commit for spec.md update")
-                    commits_count = 1  # Update count since we just created a commit
+                    commits_count = 1
         except (GitError, FileNotFoundError) as e:
             gh.set_warning(f"Failed to mark task complete in spec: {str(e)}")
 
@@ -1033,12 +994,12 @@ def cmd_create_pr(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             gh.write_output("pr_url", "")
             gh.write_output("artifact_path", "")
             gh.write_output("artifact_name", "")
+            gh.write_step_summary("ℹ️ **Status**: No changes to commit")
             return 0
 
         print(f"Found {commits_count} commit(s) to push")
 
-        # Push the branch with all changes
-        # Use --force since we may have amended the commit
+        # Push the branch
         run_git_command(["push", "-u", "origin", branch_name, "--force"])
 
         # Load PR template and substitute
@@ -1048,7 +1009,7 @@ def cmd_create_pr(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
         else:
             pr_body = f"## Task\n{task}"
 
-        # Add GitHub Actions run link for traceability
+        # Add GitHub Actions run link
         if github_run_id:
             actions_url = f"https://github.com/{github_repository}/actions/runs/{github_run_id}"
             pr_body += f"\n\n---\n\n*Created by [ClaudeStep run]({actions_url})*"
@@ -1064,19 +1025,19 @@ def cmd_create_pr(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             "--base", base_branch
         ])
 
-        print(f"Created PR: {pr_url}")
+        print(f"✅ Created PR: {pr_url}")
 
-        # Query the PR number from the created PR
+        # Query PR number
         pr_output = run_gh_command([
             "pr", "view", branch_name,
             "--json", "number"
         ])
-
         pr_data = json.loads(pr_output)
         pr_number = pr_data.get("number")
 
-        # Create artifact metadata JSON
-        from datetime import datetime
+        # === STEP 3: Create Artifact Metadata ===
+        print("\n=== Step 3/3: Creating artifact metadata ===")
+
         metadata = {
             "task_index": int(task_index),
             "task_description": task,
@@ -1088,35 +1049,41 @@ def cmd_create_pr(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             "pr_number": pr_number
         }
 
-        # Write metadata to file for artifact upload
+        # Write metadata to file
         artifact_filename = f"task-metadata-{project}-{task_index}.json"
         artifact_path = os.path.join(os.getcwd(), artifact_filename)
 
         with open(artifact_path, "w") as f:
             json.dump(metadata, f, indent=2)
 
-        print(f"Created artifact metadata at {artifact_path}")
+        print(f"✅ Created artifact metadata at {artifact_path}")
 
-        # Output artifact path for YAML to upload
+        # Write outputs
         gh.write_output("artifact_path", artifact_path)
         gh.write_output("artifact_name", artifact_filename)
         gh.write_output("pr_number", str(pr_number))
         gh.write_output("pr_url", pr_url)
 
-        # Write summary
-        gh.write_step_summary("### PR Created")
-        gh.write_step_summary(f"- Branch: {branch_name}")
-        gh.write_step_summary(f"- PR: #{pr_number}")
-        gh.write_step_summary(f"- Reviewer: {reviewer}")
-        gh.write_step_summary(f"- Task {task_index}: {task}")
+        # Write final summary
+        gh.write_step_summary("✅ **Status**: PR created successfully")
+        gh.write_step_summary("")
+        gh.write_step_summary(f"- **PR**: #{pr_number}")
+        gh.write_step_summary(f"- **Reviewer**: {reviewer}")
+        gh.write_step_summary(f"- **Task**: {task}")
 
+        print("\n✅ Finalization complete")
         return 0
 
     except (GitError, GitHubAPIError, ConfigurationError) as e:
-        gh.set_error(str(e))
+        gh.set_error(f"Finalization failed: {str(e)}")
+        gh.write_step_summary("❌ **Status**: Failed to create PR")
+        gh.write_step_summary(f"- **Error**: {str(e)}")
         return 1
     except Exception as e:
-        gh.set_error(f"Unexpected error in create-pr: {str(e)}")
+        gh.set_error(f"Unexpected error in finalize: {str(e)}")
+        gh.write_step_summary("❌ **Status**: Unexpected error")
+        import traceback
+        traceback.print_exc()
         return 1
 
 
@@ -1127,22 +1094,9 @@ def main():
     )
     subparsers = parser.add_subparsers(dest="command", help="Subcommands")
 
-    # Detect-project subcommand
-    parser_detect = subparsers.add_parser("detect-project", help="Detect project from merged PR or use provided name")
-
-    # Setup subcommand
-    parser_setup = subparsers.add_parser("setup", help="Load configuration and write outputs")
-    parser_setup.add_argument("--config", required=True, help="Path to configuration.json")
-    parser_setup.add_argument("--spec", required=True, help="Path to spec.md")
-
-    # Check-capacity subcommand
-    parser_check = subparsers.add_parser("check-capacity", help="Find reviewer with capacity")
-
-    # Find-task subcommand
-    parser_find = subparsers.add_parser("find-task", help="Find next unchecked task")
-
-    # Create-PR subcommand
-    parser_create = subparsers.add_parser("create-pr", help="Push branch and create PR")
+    # Consolidated commands
+    parser_prepare = subparsers.add_parser("prepare", help="Prepare everything for Claude Code execution")
+    parser_finalize = subparsers.add_parser("finalize", help="Finalize after Claude Code execution (commit, PR, summary)")
 
     args = parser.parse_args()
 
@@ -1154,16 +1108,10 @@ def main():
     gh = GitHubActionsHelper()
 
     # Route to appropriate command handler
-    if args.command == "detect-project":
-        return cmd_detect_project(args, gh)
-    elif args.command == "setup":
-        return cmd_setup(args, gh)
-    elif args.command == "check-capacity":
-        return cmd_check_capacity(args, gh)
-    elif args.command == "find-task":
-        return cmd_find_task(args, gh)
-    elif args.command == "create-pr":
-        return cmd_create_pr(args, gh)
+    if args.command == "prepare":
+        return cmd_prepare(args, gh)
+    elif args.command == "finalize":
+        return cmd_finalize(args, gh)
     else:
         gh.set_error(f"Unknown command: {args.command}")
         return 1
