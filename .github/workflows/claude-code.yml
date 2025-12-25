@@ -193,6 +193,23 @@ jobs:
           claude_args: "--allowedTools Write,Read,Bash,Edit"
           show_full_output: true
 
+      - name: Commit any uncommitted changes
+        env:
+          TASK: ${{ needs.find-task.outputs.task }}
+        run: |
+          # Configure git user for commits
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Check for any changes (staged, unstaged, or untracked)
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Found uncommitted changes, committing..."
+            git add -A
+            git commit -m "Complete task: $TASK"
+          else
+            echo "No uncommitted changes found"
+          fi
+
       - name: Push branch and create PR
         env:
           GH_TOKEN: ${{ github.token }}
@@ -202,7 +219,7 @@ jobs:
           TASK: ${{ needs.find-task.outputs.task }}
           PROJECT_PATH: ${{ needs.setup.outputs.project_path }}
         run: |
-          # Check if there are commits to push (Claude commits changes, so check log not diff)
+          # Check if there are commits to push
           COMMITS_AHEAD=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
           if [ "$COMMITS_AHEAD" -eq "0" ]; then
             echo "::warning::No changes made by Claude, skipping PR creation"
