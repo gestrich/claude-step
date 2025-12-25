@@ -246,6 +246,32 @@ def find_unchecked_task(plan_file: str) -> Optional[str]:
     return None
 
 
+def mark_task_complete(plan_file: str, task: str) -> None:
+    """Mark a task as complete in the plan file
+
+    Args:
+        plan_file: Path to plan.md file
+        task: Task description to mark complete
+
+    Raises:
+        FileNotFoundError: If plan file doesn't exist
+    """
+    if not os.path.exists(plan_file):
+        raise FileNotFoundError(f"Plan file not found: {plan_file}")
+
+    with open(plan_file, "r") as f:
+        content = f.read()
+
+    # Replace the unchecked task with checked version
+    # Match the task with surrounding whitespace preserved
+    pattern = r'(\s*)- \[ \] ' + re.escape(task)
+    replacement = r'\1- [x] ' + task
+    updated_content = re.sub(pattern, replacement, content, count=1)
+
+    with open(plan_file, "w") as f:
+        f.write(updated_content)
+
+
 def find_available_reviewer(reviewers: List[Dict[str, Any]], label: str) -> Optional[str]:
     """Find first reviewer with capacity
 
@@ -493,6 +519,24 @@ def cmd_create_pr(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             "--assignee", reviewer,
             "--head", branch_name
         ])
+
+        # Mark task as complete in plan.md
+        plan_file = f"{project_path}/plan.md"
+        try:
+            mark_task_complete(plan_file, task)
+            print(f"Marked task complete in {plan_file}")
+
+            # Configure git user for the commit
+            run_git_command(["config", "user.name", "github-actions[bot]"])
+            run_git_command(["config", "user.email", "github-actions[bot]@users.noreply.github.com"])
+
+            # Commit the updated plan
+            run_git_command(["add", plan_file])
+            run_git_command(["commit", "-m", f"Mark task complete: {task}"])
+            run_git_command(["push", "origin", "main"])
+            print("Pushed updated plan to main branch")
+        except (GitError, FileNotFoundError) as e:
+            gh.set_warning(f"Failed to mark task complete in plan: {str(e)}")
 
         # Write summary
         gh.write_step_summary("### PR Created")
