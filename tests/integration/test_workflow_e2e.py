@@ -4,6 +4,7 @@ End-to-end integration test for ClaudeStep workflow
 This test validates the complete workflow using the demo repository:
 - Creates a test project with tasks
 - Triggers workflow and verifies PR creation
+- Verifies AI-generated PR summaries are posted as comments
 - Tests reviewer capacity (max 2 PRs per reviewer)
 - Tests merge trigger functionality
 - Cleans up all created resources
@@ -139,6 +140,41 @@ class GitHubHelper:
             "--repo", self.repo,
             "--delete-branch"
         ])
+
+    def get_pr_comments(self, pr_number: int) -> list[dict]:
+        """Get all comments on a PR"""
+        output = self.run_command([
+            "pr", "view", str(pr_number),
+            "--repo", self.repo,
+            "--json", "comments"
+        ])
+        data = json.loads(output)
+        return data.get("comments", [])
+
+    def verify_pr_summary(self, pr_number: int, timeout: int = 60) -> bool:
+        """
+        Verify that a PR has an AI-generated summary comment.
+        Retries for up to timeout seconds since the summary is posted asynchronously.
+
+        Returns True if summary found, False otherwise.
+        """
+        start_time = time.time()
+
+        while time.time() - start_time < timeout:
+            comments = self.get_pr_comments(pr_number)
+
+            for comment in comments:
+                body = comment.get("body", "")
+                if "## AI-Generated Summary" in body or "AI-Generated Summary" in body:
+                    print(f"  ✓ Found AI-generated summary on PR #{pr_number}")
+                    return True
+
+            # Wait before retrying
+            if time.time() - start_time < timeout:
+                time.sleep(5)
+
+        print(f"  ✗ No AI-generated summary found on PR #{pr_number} after {timeout}s")
+        return False
 
 
 class TestProjectManager:
@@ -322,8 +358,11 @@ def test_claudestep_workflow_e2e(gh, test_project, cleanup_prs):
 
     Tests:
     1. Workflow creates PR for first task
-    2. Workflow creates PR for second task (respects reviewer capacity)
-    3. Merge trigger creates PR for next task
+    2. AI-generated summary is posted on PR #1
+    3. Workflow creates PR for second task (respects reviewer capacity)
+    4. AI-generated summary is posted on PR #2
+    5. Merge trigger creates PR for next task
+    6. AI-generated summary is posted on PR #3
     """
 
     print(f"\n{'='*60}")
@@ -354,6 +393,11 @@ def test_claudestep_workflow_e2e(gh, test_project, cleanup_prs):
     cleanup_prs.append(pr_1_number)
     print(f"  ✓ PR #{pr_1_number} created: {pr_1['title']}")
 
+    # Verify PR summary comment was posted
+    print(f"  Checking for AI-generated summary on PR #{pr_1_number}...")
+    has_summary_1 = gh.verify_pr_summary(pr_1_number, timeout=90)
+    assert has_summary_1, f"PR #{pr_1_number} does not have an AI-generated summary comment"
+
     # Wait a bit to ensure PR is fully indexed before second workflow run
     print("  Waiting for PR to be fully indexed...")
     time.sleep(10)
@@ -382,6 +426,11 @@ def test_claudestep_workflow_e2e(gh, test_project, cleanup_prs):
     pr_2_number = pr_2["number"]
     cleanup_prs.append(pr_2_number)
     print(f"  ✓ PR #{pr_2_number} created: {pr_2['title']}")
+
+    # Verify PR summary comment was posted
+    print(f"  Checking for AI-generated summary on PR #{pr_2_number}...")
+    has_summary_2 = gh.verify_pr_summary(pr_2_number, timeout=90)
+    assert has_summary_2, f"PR #{pr_2_number} does not have an AI-generated summary comment"
 
     # Verify both PRs are open (reviewer at capacity)
     all_prs = gh.get_prs_by_label("claudestep")
@@ -444,14 +493,19 @@ def test_claudestep_workflow_e2e(gh, test_project, cleanup_prs):
     cleanup_prs.append(pr_3_number)
     print(f"  ✓ PR #{pr_3_number} created: {pr_3['title']}")
 
+    # Verify PR summary comment was posted
+    print(f"  Checking for AI-generated summary on PR #{pr_3_number}...")
+    has_summary_3 = gh.verify_pr_summary(pr_3_number, timeout=90)
+    assert has_summary_3, f"PR #{pr_3_number} does not have an AI-generated summary comment"
+
     # === SUCCESS ===
     print(f"\n{'='*60}")
     print("✓ All tests passed!")
     print(f"{'='*60}")
     print(f"\nCreated PRs:")
-    print(f"  - PR #{pr_1_number}: {pr_1['title']} (MERGED)")
-    print(f"  - PR #{pr_2_number}: {pr_2['title']} (OPEN)")
-    print(f"  - PR #{pr_3_number}: {pr_3['title']} (OPEN)")
+    print(f"  - PR #{pr_1_number}: {pr_1['title']} (MERGED) - Summary: ✓")
+    print(f"  - PR #{pr_2_number}: {pr_2['title']} (OPEN) - Summary: ✓")
+    print(f"  - PR #{pr_3_number}: {pr_3['title']} (OPEN) - Summary: ✓")
 
 
 if __name__ == "__main__":
