@@ -903,9 +903,19 @@ Metrics tracked:
 - Team member activity (merged PRs, open PRs)
 - Configurable time periods (days back)
 
-- [ ] **Leaderboard & Stats**
+- [x] **Leaderboard & Stats**
 
-Create a GitHub Pages site or Slack integration that tracks merges per developer over time. Query merged PRs with your refactor label using the GitHub API, aggregate by assignee, and display a leaderboard. Great for friendly competition and recognizing top reviewers.
+✅ Implemented! The Statistics action now includes a leaderboard that tracks and ranks team members by merged PRs.
+
+Features:
+- 🥇🥈🥉 Medal awards for top 3 contributors
+- Visual activity bars showing relative contribution
+- Ranks all active team members
+- Shows both merged and open PR counts
+- Integrated into both Slack messages and GitHub Actions summaries
+- Automatically sorted by activity level
+
+The leaderboard appears prominently at the top of statistics reports, making it easy to recognize top reviewers and encourage friendly competition. See [Setup Slack Notifications](#5-setup-slack-notifications-optional) for configuration.
 
 - [ ] **Cost in PR Summary**
 

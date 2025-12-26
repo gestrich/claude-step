@@ -372,3 +372,167 @@ class TestStatisticsReport:
         bob_pos = slack_msg.find("@bob")
 
         assert charlie_pos < alice_pos < bob_pos
+
+
+class TestLeaderboard:
+    """Test leaderboard formatting"""
+
+    def test_leaderboard_empty(self):
+        """Test leaderboard with no team members"""
+        report = StatisticsReport()
+        leaderboard = report.format_leaderboard()
+        assert leaderboard == ""
+
+    def test_leaderboard_no_activity(self):
+        """Test leaderboard with team members but no activity"""
+        report = StatisticsReport()
+        alice = TeamMemberStats("alice")
+        bob = TeamMemberStats("bob")
+        report.add_team_member(alice)
+        report.add_team_member(bob)
+
+        leaderboard = report.format_leaderboard()
+        assert leaderboard == ""
+
+    def test_leaderboard_single_member(self):
+        """Test leaderboard with one active member"""
+        report = StatisticsReport()
+        alice = TeamMemberStats("alice")
+        alice.merged_prs = [{"pr_number": 1, "title": "Test"}]
+        report.add_team_member(alice)
+
+        leaderboard = report.format_leaderboard()
+        assert "🏆 Leaderboard" in leaderboard
+        assert "🥇" in leaderboard
+        assert "@alice" in leaderboard
+        assert "1 PR(s) merged" in leaderboard
+        assert "██████████" in leaderboard  # Full bar for the only member
+
+    def test_leaderboard_top_three_medals(self):
+        """Test leaderboard shows medals for top 3"""
+        report = StatisticsReport()
+
+        # Add 5 members with different activity levels
+        for i, name in enumerate(["alice", "bob", "charlie", "david", "eve"]):
+            member = TeamMemberStats(name)
+            # alice: 5, bob: 4, charlie: 3, david: 2, eve: 1
+            member.merged_prs = [{"pr_number": j} for j in range(5 - i)]
+            report.add_team_member(member)
+
+        leaderboard = report.format_leaderboard()
+
+        # Check medals are present
+        assert "🥇" in leaderboard
+        assert "🥈" in leaderboard
+        assert "🥉" in leaderboard
+        assert "#4" in leaderboard
+        assert "#5" in leaderboard
+
+        # Check ordering
+        alice_pos = leaderboard.find("@alice")
+        bob_pos = leaderboard.find("@bob")
+        charlie_pos = leaderboard.find("@charlie")
+        david_pos = leaderboard.find("@david")
+        eve_pos = leaderboard.find("@eve")
+
+        assert alice_pos < bob_pos < charlie_pos < david_pos < eve_pos
+
+    def test_leaderboard_shows_merged_counts(self):
+        """Test leaderboard displays correct merged PR counts"""
+        report = StatisticsReport()
+
+        alice = TeamMemberStats("alice")
+        alice.merged_prs = [{"pr_number": i} for i in range(10)]
+        report.add_team_member(alice)
+
+        bob = TeamMemberStats("bob")
+        bob.merged_prs = [{"pr_number": i} for i in range(3)]
+        report.add_team_member(bob)
+
+        leaderboard = report.format_leaderboard()
+
+        assert "10 PR(s) merged" in leaderboard
+        assert "3 PR(s) merged" in leaderboard
+
+    def test_leaderboard_shows_open_prs(self):
+        """Test leaderboard shows open PRs when present"""
+        report = StatisticsReport()
+
+        alice = TeamMemberStats("alice")
+        alice.merged_prs = [{"pr_number": 1}]
+        alice.open_prs = [{"pr_number": 2}, {"pr_number": 3}]
+        report.add_team_member(alice)
+
+        leaderboard = report.format_leaderboard()
+
+        assert "(2 open PR(s))" in leaderboard
+
+    def test_leaderboard_activity_bar(self):
+        """Test leaderboard activity bar scales correctly"""
+        report = StatisticsReport()
+
+        # alice has 10 merged (should get full bar)
+        alice = TeamMemberStats("alice")
+        alice.merged_prs = [{"pr_number": i} for i in range(10)]
+        report.add_team_member(alice)
+
+        # bob has 5 merged (should get half bar)
+        bob = TeamMemberStats("bob")
+        bob.merged_prs = [{"pr_number": i} for i in range(5)]
+        report.add_team_member(bob)
+
+        leaderboard = report.format_leaderboard()
+
+        # alice should have full bar (10 filled blocks)
+        lines = leaderboard.split("\n")
+        alice_line_idx = next(i for i, line in enumerate(lines) if "@alice" in line)
+        alice_bar = lines[alice_line_idx + 1].strip()
+        assert alice_bar == "██████████"
+
+        # bob should have half bar (5 filled, 5 empty)
+        bob_line_idx = next(i for i, line in enumerate(lines) if "@bob" in line)
+        bob_bar = lines[bob_line_idx + 1].strip()
+        assert bob_bar == "█████░░░░░"
+
+    def test_leaderboard_filters_inactive_members(self):
+        """Test leaderboard only shows members with merged PRs"""
+        report = StatisticsReport()
+
+        # Active member
+        alice = TeamMemberStats("alice")
+        alice.merged_prs = [{"pr_number": 1}]
+        report.add_team_member(alice)
+
+        # Inactive member (has open PRs but no merges)
+        bob = TeamMemberStats("bob")
+        bob.open_prs = [{"pr_number": 2}]
+        report.add_team_member(bob)
+
+        # Completely inactive member
+        charlie = TeamMemberStats("charlie")
+        report.add_team_member(charlie)
+
+        leaderboard = report.format_leaderboard()
+
+        assert "@alice" in leaderboard
+        assert "@bob" not in leaderboard
+        assert "@charlie" not in leaderboard
+
+    def test_leaderboard_in_slack_output(self):
+        """Test leaderboard appears in Slack formatted output"""
+        report = StatisticsReport()
+        report.generated_at = datetime(2025, 1, 1, 12, 0, 0)
+
+        alice = TeamMemberStats("alice")
+        alice.merged_prs = [{"pr_number": 1}]
+        report.add_team_member(alice)
+
+        slack_msg = report.format_for_slack()
+
+        # Leaderboard should appear before project progress
+        assert "🏆 Leaderboard" in slack_msg
+        leaderboard_pos = slack_msg.find("🏆 Leaderboard")
+        project_pos = slack_msg.find("📊 Project Progress")
+
+        # Leaderboard should come first (most engaging)
+        assert leaderboard_pos < project_pos

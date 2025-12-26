@@ -65,6 +65,12 @@ def cmd_statistics(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
         gh.write_step_summary(f"*Generated: {datetime.now().isoformat()}*")
         gh.write_step_summary("")
 
+        # Add leaderboard to step summary (show first - most engaging!)
+        leaderboard = report.format_leaderboard()
+        if leaderboard:
+            gh.write_step_summary(leaderboard)
+            gh.write_step_summary("")
+
         # Add project summaries to step summary
         if report.project_stats:
             gh.write_step_summary("## Project Progress")
@@ -79,9 +85,9 @@ def cmd_statistics(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             gh.write_step_summary("*No projects found*")
             gh.write_step_summary("")
 
-        # Add team member summaries
+        # Add team member summaries (detailed view)
         if report.team_stats:
-            gh.write_step_summary("## Team Member Activity")
+            gh.write_step_summary("## Team Member Activity (Detailed)")
             gh.write_step_summary("")
             # Sort by activity level (merged PRs desc, then username)
             sorted_members = sorted(

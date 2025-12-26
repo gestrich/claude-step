@@ -186,6 +186,63 @@ class StatisticsReport:
         """Add project statistics"""
         self.project_stats[stats.project_name] = stats
 
+    def format_leaderboard(self) -> str:
+        """Format leaderboard showing top contributors with rankings
+
+        Returns:
+            Markdown formatted leaderboard with medals and rankings
+        """
+        lines = []
+
+        if not self.team_stats:
+            return ""
+
+        # Sort by activity level (merged PRs desc, then username)
+        sorted_members = sorted(
+            self.team_stats.items(),
+            key=lambda x: (-x[1].merged_count, x[0])
+        )
+
+        # Filter to only members with activity
+        active_members = [(username, stats) for username, stats in sorted_members
+                         if stats.merged_count > 0]
+
+        if not active_members:
+            return ""
+
+        lines.append("## 🏆 Leaderboard")
+        lines.append("")
+
+        # Medal emojis for top 3
+        medals = ["🥇", "🥈", "🥉"]
+
+        for idx, (username, stats) in enumerate(active_members):
+            rank = idx + 1
+
+            # Get medal or rank number
+            if rank <= 3:
+                rank_display = medals[idx]
+            else:
+                rank_display = f"#{rank}"
+
+            # Format the leaderboard entry
+            merged = stats.merged_count
+            open_prs = stats.open_count
+
+            # Create activity bar (visual representation of merged PRs)
+            max_merged = active_members[0][1].merged_count if active_members else 1
+            bar_width = 10
+            filled = int((merged / max_merged) * bar_width) if max_merged > 0 else 0
+            bar = "█" * filled + "░" * (bar_width - filled)
+
+            lines.append(f"{rank_display} **@{username}** - {merged} PR(s) merged")
+            lines.append(f"   {bar}")
+            if open_prs > 0:
+                lines.append(f"   _({open_prs} open PR(s))_")
+            lines.append("")
+
+        return "\n".join(lines)
+
     def format_for_slack(self) -> str:
         """Complete report in Slack mrkdwn format"""
         lines = []
@@ -198,6 +255,12 @@ class StatisticsReport:
             from datetime import datetime
             timestamp = self.generated_at.strftime("%Y-%m-%d %H:%M UTC")
             lines.append(f"*Generated: {timestamp}*")
+            lines.append("")
+
+        # Leaderboard (show first, it's the most engaging!)
+        leaderboard = self.format_leaderboard()
+        if leaderboard:
+            lines.append(leaderboard)
             lines.append("")
 
         # Project Statistics
@@ -214,9 +277,9 @@ class StatisticsReport:
             lines.append("*No projects found*")
             lines.append("")
 
-        # Team Member Statistics
+        # Team Member Statistics (detailed view)
         if self.team_stats:
-            lines.append("## 👥 Team Activity")
+            lines.append("## 👥 Team Activity (Detailed)")
             lines.append("")
             # Sort by activity level (merged PRs desc, then username)
             sorted_members = sorted(
