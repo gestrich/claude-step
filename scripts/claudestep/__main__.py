@@ -10,6 +10,7 @@ import argparse
 import sys
 
 from claudestep.commands.discover import main as cmd_discover
+from claudestep.commands.discover_ready import main as cmd_discover_ready
 from claudestep.commands.finalize import cmd_finalize
 from claudestep.commands.prepare import cmd_prepare
 from claudestep.github_actions import GitHubActionsHelper
@@ -24,6 +25,7 @@ def main():
 
     # Consolidated commands
     parser_discover = subparsers.add_parser("discover", help="Discover all refactor projects in the repository")
+    parser_discover_ready = subparsers.add_parser("discover-ready", help="Discover projects with capacity and available tasks")
     parser_prepare = subparsers.add_parser("prepare", help="Prepare everything for Claude Code execution")
     parser_finalize = subparsers.add_parser("finalize", help="Finalize after Claude Code execution (commit, PR, summary)")
 
@@ -40,6 +42,8 @@ def main():
     if args.command == "discover":
         cmd_discover()
         return 0
+    elif args.command == "discover-ready":
+        return cmd_discover_ready()
     elif args.command == "prepare":
         return cmd_prepare(args, gh)
     elif args.command == "finalize":
