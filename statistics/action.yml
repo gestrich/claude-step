@@ -1,0 +1,58 @@
+name: 'ClaudeStep Statistics'
+description: 'Generate statistics and reports for ClaudeStep projects'
+author: 'gestrich'
+
+branding:
+  icon: 'bar-chart-2'
+  color: 'blue'
+
+inputs:
+  github_token:
+    description: 'GitHub token for API access'
+    required: true
+    default: ${{ github.token }}
+  config_path:
+    description: 'Path to configuration.json (for single project stats)'
+    required: false
+  days_back:
+    description: 'Days to look back for team member statistics'
+    required: false
+    default: '30'
+  working_directory:
+    description: 'Working directory for the action'
+    required: false
+    default: '.'
+
+outputs:
+  slack_message:
+    description: 'Formatted message for Slack (mrkdwn format)'
+    value: ${{ steps.stats.outputs.slack_message }}
+  statistics_json:
+    description: 'JSON statistics data'
+    value: ${{ steps.stats.outputs.statistics_json }}
+  has_statistics:
+    description: 'Whether statistics were generated (true/false)'
+    value: ${{ steps.stats.outputs.has_statistics }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Generate statistics
+      id: stats
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        CONFIG_PATH: ${{ inputs.config_path }}
+        STATS_DAYS_BACK: ${{ inputs.days_back }}
+        STATS_FORMAT: 'slack'
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        export PYTHONPATH="$ACTION_PATH/scripts:$PYTHONPATH"
+        python3 -m claudestep statistics

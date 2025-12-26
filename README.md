@@ -11,6 +11,7 @@ An automated system for performing ongoing code refactoring using AI (Claude Cod
 - 👥 **Multi-Reviewer Support** - Distributes PRs across team members
 - 🔄 **Multiple Trigger Modes** - Scheduled, manual, or automatic on PR merge
 - 📊 **Progress Tracking** - Track completed vs remaining tasks
+- 💬 **Slack Integration** - Post statistics and progress reports to Slack channels
 - ⚡ **Incremental PRs** - One small PR at a time for easier review
 
 ## Use as a GitHub Action
@@ -614,6 +615,65 @@ gh label create "your-refactor-label" --description "Automated refactor PRs" --c
 
 All PRs are automatically labeled with `claudestep` for tracking purposes.
 
+### 5. Setup Slack Notifications (Optional)
+
+To receive statistics and progress reports in Slack, you'll need a webhook URL.
+
+#### Get Slack Webhook URL
+
+1. Go to [https://api.slack.com/apps](https://api.slack.com/apps)
+2. Click **"Create New App"** → **"From scratch"**
+3. Name your app (e.g., "ClaudeStep Bot") and select your workspace
+4. In the app settings, go to **"Incoming Webhooks"**
+5. Toggle **"Activate Incoming Webhooks"** to **On**
+6. Click **"Add New Webhook to Workspace"**
+7. Select the channel where you want notifications (e.g., `#refactoring-updates`)
+8. Click **"Allow"**
+9. Copy the webhook URL (looks like `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXX`)
+
+#### Add Webhook to GitHub
+
+1. Go to your repository **Settings > Secrets and variables > Actions**
+2. Click **"New repository secret"**
+3. Name: `SLACK_WEBHOOK_URL`
+4. Value: (paste your Slack webhook URL)
+5. Click **"Add secret"**
+
+#### Use in Workflows
+
+The Statistics action outputs formatted messages ready for Slack:
+
+```yaml
+- name: Generate Statistics
+  id: stats
+  uses: gestrich/claude-step/statistics@v1
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+
+- name: Post to Slack
+  uses: slackapi/slack-github-action@v2
+  with:
+    payload: |
+      {
+        "text": "ClaudeStep Report",
+        "blocks": [
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": ${{ toJson(steps.stats.outputs.slack_message) }}
+            }
+          }
+        ]
+      }
+  env:
+    SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+```
+
+See [.github/workflows/claudestep-statistics.yml](.github/workflows/claudestep-statistics.yml) for a complete example.
+
+---
+
 See [Configuration Reference](#configuration-reference) for details on `configuration.json` and `spec.md` format.
 
 ## Background
@@ -833,15 +893,15 @@ Built with [Claude Code](https://github.com/anthropics/claude-code-action) by An
 
 ## TODO
 
-- [ ] **Slack Action and metrics**
+- [x] **Slack Action and metrics**
 
-Post progress updates and metrics to Slack when PRs are merged. Post to Slack on merge: "✅ 47/300 tasks completed to Swift". Keeps momentum visible.
+✅ Implemented! The Statistics action generates reports with project progress and team activity. See [Setup Slack Notifications](#5-setup-slack-notifications-optional) and [.github/workflows/claudestep-statistics.yml](.github/workflows/claudestep-statistics.yml) for setup instructions.
 
-Success metrics to track:
-- Time from PR creation to merge (review efficiency)
-- Percentage of PRs merged without modification
-- Total items completed over time
-- Specification refinement iterations needed
+Metrics tracked:
+- Project completion progress (with visual progress bars)
+- Tasks completed, in progress, and pending per project
+- Team member activity (merged PRs, open PRs)
+- Configurable time periods (days back)
 
 - [ ] **Leaderboard & Stats**
 

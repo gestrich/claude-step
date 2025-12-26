@@ -13,6 +13,7 @@ from claudestep.commands.discover import main as cmd_discover
 from claudestep.commands.discover_ready import main as cmd_discover_ready
 from claudestep.commands.finalize import cmd_finalize
 from claudestep.commands.prepare import cmd_prepare
+from claudestep.commands.statistics import cmd_statistics
 from claudestep.github_actions import GitHubActionsHelper
 
 
@@ -28,6 +29,7 @@ def main():
     parser_discover_ready = subparsers.add_parser("discover-ready", help="Discover projects with capacity and available tasks")
     parser_prepare = subparsers.add_parser("prepare", help="Prepare everything for Claude Code execution")
     parser_finalize = subparsers.add_parser("finalize", help="Finalize after Claude Code execution (commit, PR, summary)")
+    parser_statistics = subparsers.add_parser("statistics", help="Generate statistics and reports")
 
     args = parser.parse_args()
 
@@ -48,6 +50,8 @@ def main():
         return cmd_prepare(args, gh)
     elif args.command == "finalize":
         return cmd_finalize(args, gh)
+    elif args.command == "statistics":
+        return cmd_statistics(args, gh)
     else:
         gh.set_error(f"Unknown command: {args.command}")
         return 1
