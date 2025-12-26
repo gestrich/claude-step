@@ -118,6 +118,20 @@ runs:
         claude_args: '--allowedTools ${{ inputs.claude_allowed_tools }}'
         show_full_output: true
 
+    - name: Extract cost from main task
+      id: extract_main_cost
+      if: steps.claude_code.outputs.execution_file != ''
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        EXECUTION_FILE: ${{ steps.claude_code.outputs.execution_file }}
+        EXECUTION_INDEX: '-1'  # Last item (only main task execution at this point)
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        export PYTHONPATH="$ACTION_PATH/scripts:$PYTHONPATH"
+        python3 -m claudestep extract-cost
+      continue-on-error: true
+
     - name: Finalize and create PR
       id: finalize
       if: always()
@@ -174,20 +188,6 @@ runs:
         github_token: ${{ inputs.github_token }}
         claude_args: '--allowedTools Bash'
         show_full_output: true
-      continue-on-error: true
-
-    - name: Extract cost from main task
-      id: extract_main_cost
-      if: steps.finalize.outputs.pr_number != '' && steps.claude_code.outputs.execution_file != ''
-      shell: bash
-      working-directory: ${{ inputs.working_directory }}
-      env:
-        EXECUTION_FILE: ${{ steps.claude_code.outputs.execution_file }}
-        EXECUTION_INDEX: '-2'  # Second-to-last item (main task, before PR summary)
-        ACTION_PATH: ${{ github.action_path }}
-      run: |
-        export PYTHONPATH="$ACTION_PATH/scripts:$PYTHONPATH"
-        python3 -m claudestep extract-cost
       continue-on-error: true
 
     - name: Extract cost from PR summary
