@@ -5,7 +5,7 @@ import os
 
 from claudestep.commands.discover import find_all_projects
 from claudestep.config import load_json, validate_spec_format
-from claudestep.github_actions import set_output
+from claudestep.github_actions import GitHubActionsHelper
 from claudestep.project_detection import detect_project_paths
 from claudestep.reviewer_management import find_available_reviewer
 from claudestep.task_management import find_next_available_task, get_in_progress_task_indices
@@ -95,12 +95,15 @@ def main():
     print("🔍 Finding all projects with capacity and available tasks...")
     print("")
 
+    # Initialize GitHub Actions helper
+    gh = GitHubActionsHelper()
+
     # Get repository from environment
     repo = os.environ.get("GITHUB_REPOSITORY", "")
     if not repo:
         print("Error: GITHUB_REPOSITORY environment variable not set")
-        set_output("projects", "[]")
-        set_output("project_count", "0")
+        gh.write_output("projects", "[]")
+        gh.write_output("project_count", "0")
         return 1
 
     # Discover all projects
@@ -109,8 +112,8 @@ def main():
     if not all_projects:
         print("No refactor projects found")
         print("")
-        set_output("projects", "[]")
-        set_output("project_count", "0")
+        gh.write_output("projects", "[]")
+        gh.write_output("project_count", "0")
         return 0
 
     # Check each project for capacity and tasks
@@ -137,8 +140,8 @@ def main():
         print("")
         projects_json = json.dumps(ready_projects)
 
-    set_output("projects", projects_json)
-    set_output("project_count", str(len(ready_projects)))
+    gh.write_output("projects", projects_json)
+    gh.write_output("project_count", str(len(ready_projects)))
 
     return 0
 
