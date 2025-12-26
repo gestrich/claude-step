@@ -5,7 +5,6 @@ import json
 import os
 from datetime import datetime
 
-from claudestep.commands.discover import find_all_projects
 from claudestep.config import load_json, validate_spec_format
 from claudestep.exceptions import ConfigurationError, FileNotFoundError, GitError, GitHubAPIError
 from claudestep.git_operations import run_git_command
@@ -50,65 +49,8 @@ def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             detected_project = project_name
             print(f"Using provided project name: {detected_project}")
         else:
-            # Discovery mode: find all projects and use the first one with capacity/tasks
-            print("No project specified - entering discovery mode")
-            print("Discovering all refactor projects...")
-            all_projects = find_all_projects()
-
-            if not all_projects:
-                gh.set_notice("No refactor projects found in repository")
-                gh.write_output("has_capacity", "false")
-                gh.write_output("has_task", "false")
-                return 0
-
-            print(f"Found {len(all_projects)} project(s): {', '.join(all_projects)}")
-            print("Checking each project for capacity and available tasks...")
-
-            # Try each project until we find one with capacity and tasks
-            for candidate_project in all_projects:
-                print(f"\n--- Checking project: {candidate_project} ---")
-                try:
-                    # Get paths for this project
-                    cand_config_path, cand_spec_path, cand_pr_template_path, cand_project_path = detect_project_paths(
-                        candidate_project, config_path_input, spec_path_input, pr_template_path_input
-                    )
-
-                    # Load config
-                    cand_config = load_json(cand_config_path)
-                    cand_reviewers = cand_config.get("reviewers", [])
-                    label = "claudestep"
-
-                    # Check capacity
-                    reviewer, capacity_result = find_available_reviewer(cand_reviewers, label, candidate_project)
-                    if not reviewer:
-                        print(f"  ⏭️  No reviewer capacity for {candidate_project}")
-                        continue
-
-                    # Check for tasks
-                    validate_spec_format(cand_spec_path)
-                    in_progress = get_in_progress_task_indices(repo, label, candidate_project)
-                    next_task = find_next_available_task(cand_spec_path, in_progress)
-
-                    if not next_task:
-                        print(f"  ⏭️  No available tasks for {candidate_project}")
-                        continue
-
-                    # Found a project with capacity and tasks!
-                    print(f"  ✅ Project {candidate_project} has capacity and tasks - selecting this project")
-                    detected_project = candidate_project
-                    break
-
-                except Exception as e:
-                    print(f"  ❌ Error checking {candidate_project}: {str(e)}")
-                    continue
-
-            if not detected_project:
-                gh.set_notice("All projects either have no capacity or no available tasks")
-                gh.write_output("has_capacity", "false")
-                gh.write_output("has_task", "false")
-                return 0
-
-            print(f"\n✅ Selected project from discovery: {detected_project}")
+            gh.set_error("project_name must be provided (use discovery action to find projects)")
+            return 1
 
         # Determine paths
         config_path, spec_path, pr_template_path, project_path = detect_project_paths(

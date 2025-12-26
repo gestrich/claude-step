@@ -1,70 +1,28 @@
 name: 'ClaudeStep Discovery'
-description: 'Automate code refactoring with AI using Claude Code. Automatically discovers and processes the next project that needs work.'
+description: 'Discover all refactor projects that have reviewer capacity and available tasks. Returns list of projects to process.'
 author: 'gestrich'
 
 branding:
-  icon: 'git-pull-request'
+  icon: 'search'
   color: 'orange'
 
 inputs:
-  anthropic_api_key:
-    description: 'Anthropic API key for Claude Code'
-    required: true
   github_token:
-    description: 'GitHub token for PR creation and API access'
+    description: 'GitHub token for API access'
     required: true
     default: ${{ github.token }}
-  merged_pr_number:
-    description: 'PR number that was just merged (for auto-detecting project from labels)'
-    required: false
-  config_path:
-    description: 'Path to configuration.json file (overrides default)'
-    required: false
-  spec_path:
-    description: 'Path to spec.md file (overrides default)'
-    required: false
-  pr_template_path:
-    description: 'Path to pr-template.md file (overrides default)'
-    required: false
-  claude_model:
-    description: 'Claude model to use (e.g., claude-sonnet-4-5)'
-    required: false
-    default: 'claude-sonnet-4-5'
-  claude_allowed_tools:
-    description: 'Comma-separated list of tools Claude can use'
-    required: false
-    default: 'Write,Read,Bash,Edit'
-  base_branch:
-    description: 'Base branch for pull requests'
-    required: false
-    default: 'main'
   working_directory:
     description: 'Working directory for the action'
     required: false
     default: '.'
 
 outputs:
-  pr_number:
-    description: 'Number of created PR (empty if none created)'
-    value: ${{ steps.finalize.outputs.pr_number }}
-  pr_url:
-    description: 'URL of created PR (empty if none created)'
-    value: ${{ steps.finalize.outputs.pr_url }}
-  reviewer:
-    description: 'Assigned reviewer username (empty if none assigned)'
-    value: ${{ steps.prepare.outputs.reviewer }}
-  task_completed:
-    description: 'Task description that was completed (empty if none)'
-    value: ${{ steps.prepare.outputs.task }}
-  has_capacity:
-    description: 'Whether a reviewer had capacity (true/false)'
-    value: ${{ steps.prepare.outputs.has_capacity }}
-  all_tasks_done:
-    description: 'Whether all tasks are complete (true/false)'
-    value: ${{ steps.prepare.outputs.all_tasks_done }}
-  project_name:
-    description: 'Project name that was discovered and processed'
-    value: ${{ steps.prepare.outputs.project_name }}
+  projects:
+    description: 'JSON array of project names that have capacity and tasks'
+    value: ${{ steps.discover.outputs.projects }}
+  project_count:
+    description: 'Number of projects that have work to do'
+    value: ${{ steps.discover.outputs.project_count }}
 
 runs:
   using: 'composite'
@@ -74,76 +32,97 @@ runs:
       with:
         python-version: '3.11'
 
-    - name: Prepare for Claude Code execution (Discovery Mode)
-      id: prepare
+    - name: Discover projects with work
+      id: discover
       shell: bash
       working-directory: ${{ inputs.working_directory }}
       env:
         GH_TOKEN: ${{ inputs.github_token }}
-        # PROJECT_NAME is intentionally not set - triggers discovery mode
-        MERGED_PR_NUMBER: ${{ inputs.merged_pr_number }}
-        CONFIG_PATH: ${{ inputs.config_path }}
-        SPEC_PATH: ${{ inputs.spec_path }}
-        PR_TEMPLATE_PATH: ${{ inputs.pr_template_path }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         ACTION_PATH: ${{ github.action_path }}/../
       run: |
         export PYTHONPATH="$ACTION_PATH/scripts:$PYTHONPATH"
-        python3 -m claudestep prepare
 
-    # WORKAROUND: Clean stale Claude Code lock files before installation
-    # Issue: https://github.com/anthropics/claude-code-action/issues/709
-    # When Claude Code installation times out, it leaves behind a lock file at
-    # ~/.local/state/claude/locks/[version].lock that prevents retry attempts.
-    # This causes "another process is currently installing Claude" errors.
-    # Remove this step when the upstream issue is resolved.
-    - name: Clean Claude Code lock files
-      if: steps.prepare.outputs.has_capacity == 'true' && steps.prepare.outputs.has_task == 'true'
-      shell: bash
-      run: rm -rf ~/.local/state/claude/locks
-      continue-on-error: true
+        echo "========================================================================"
+        echo "ClaudeStep Discovery Mode"
+        echo "========================================================================"
+        echo ""
+        echo "🔍 Finding all projects with capacity and available tasks..."
+        echo ""
 
-    - name: Run Claude Code
-      if: steps.prepare.outputs.has_capacity == 'true' && steps.prepare.outputs.has_task == 'true'
-      uses: anthropics/claude-code-action@v1
-      with:
-        prompt: ${{ steps.prepare.outputs.claude_prompt }}
-        anthropic_api_key: ${{ inputs.anthropic_api_key }}
-        github_token: ${{ inputs.github_token }}
-        claude_args: '--allowedTools ${{ inputs.claude_allowed_tools }}'
-        show_full_output: true
+        # Discover all projects
+        ALL_PROJECTS_JSON=$(python3 -m claudestep discover 2>&1 | grep "^projects=" | cut -d'=' -f2)
 
-    - name: Finalize and create PR
-      id: finalize
-      if: always()
-      shell: bash
-      working-directory: ${{ inputs.working_directory }}
-      env:
-        GH_TOKEN: ${{ inputs.github_token }}
-        BRANCH_NAME: ${{ steps.prepare.outputs.branch_name }}
-        LABEL: ${{ steps.prepare.outputs.label }}
-        REVIEWER: ${{ steps.prepare.outputs.reviewer }}
-        TASK: ${{ steps.prepare.outputs.task }}
-        TASK_INDEX: ${{ steps.prepare.outputs.task_index }}
-        PROJECT: ${{ steps.prepare.outputs.project_name }}
-        PROJECT_PATH: ${{ steps.prepare.outputs.project_path }}
-        SPEC_PATH: ${{ steps.prepare.outputs.spec_path }}
-        PR_TEMPLATE_PATH: ${{ steps.prepare.outputs.pr_template_path }}
-        GITHUB_REPOSITORY: ${{ github.repository }}
-        GITHUB_RUN_ID: ${{ github.run_id }}
-        BASE_BRANCH: ${{ inputs.base_branch }}
-        HAS_CAPACITY: ${{ steps.prepare.outputs.has_capacity }}
-        HAS_TASK: ${{ steps.prepare.outputs.has_task }}
-        ACTION_PATH: ${{ github.action_path }}/../
-      run: |
-        export PYTHONPATH="$ACTION_PATH/scripts:$PYTHONPATH"
-        python3 -m claudestep finalize
+        if [ -z "$ALL_PROJECTS_JSON" ] || [ "$ALL_PROJECTS_JSON" = "[]" ]; then
+            echo "No refactor projects found"
+            echo "projects=[]" >> $GITHUB_OUTPUT
+            echo "project_count=0" >> $GITHUB_OUTPUT
+            exit 0
+        fi
 
-    - name: Upload task metadata artifact
-      if: steps.finalize.outputs.artifact_path != ''
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ steps.finalize.outputs.artifact_name }}
-        path: ${{ steps.finalize.outputs.artifact_path }}
-        retention-days: 90
-        if-no-files-found: warn
+        # Check each project for capacity and tasks
+        READY_PROJECTS=()
+
+        readarray -t ALL_PROJECTS < <(echo "$ALL_PROJECTS_JSON" | jq -r '.[]')
+
+        for PROJECT in "${ALL_PROJECTS[@]}"; do
+            echo "Checking project: $PROJECT"
+
+            # Check if project has config
+            if [ ! -f "refactor/$PROJECT/configuration.json" ]; then
+                echo "  ⏭️  No configuration.json found"
+                continue
+            fi
+
+            # Check if project has spec
+            if [ ! -f "refactor/$PROJECT/spec.md" ]; then
+                echo "  ⏭️  No spec.md found"
+                continue
+            fi
+
+            # Load config and check for reviewers
+            REVIEWERS=$(jq -r '.reviewers // [] | length' "refactor/$PROJECT/configuration.json")
+            if [ "$REVIEWERS" = "0" ]; then
+                echo "  ⏭️  No reviewers configured"
+                continue
+            fi
+
+            # Check for uncompleted tasks in spec.md
+            UNCOMPLETED_TASKS=$(grep -c '^\s*- \[ \]' "refactor/$PROJECT/spec.md" || echo "0")
+            if [ "$UNCOMPLETED_TASKS" = "0" ]; then
+                echo "  ⏭️  No uncompleted tasks"
+                continue
+            fi
+
+            # Check reviewer capacity (count open PRs for this project)
+            OPEN_PRS=$(gh pr list --repo "$GITHUB_REPOSITORY" --label "claudestep" --state open --json title --jq "map(select(.title | contains(\"[$PROJECT]\")))" | jq '. | length')
+
+            # Get max concurrent PRs (sum of all reviewer maxOpenPRs)
+            MAX_PRS=$(jq -r '[.reviewers[].maxOpenPRs] | add' "refactor/$PROJECT/configuration.json")
+
+            if [ "$OPEN_PRS" -ge "$MAX_PRS" ]; then
+                echo "  ⏭️  At capacity ($OPEN_PRS/$MAX_PRS PRs open)"
+                continue
+            fi
+
+            echo "  ✅ Ready for work ($OPEN_PRS/$MAX_PRS PRs, $UNCOMPLETED_TASKS tasks remaining)"
+            READY_PROJECTS+=("$PROJECT")
+        done
+
+        # Convert to JSON array
+        if [ ${#READY_PROJECTS[@]} -eq 0 ]; then
+            echo ""
+            echo "No projects have available capacity and tasks"
+            echo "projects=[]" >> $GITHUB_OUTPUT
+            echo "project_count=0" >> $GITHUB_OUTPUT
+        else
+            READY_JSON=$(printf '%s\n' "${READY_PROJECTS[@]}" | jq -R . | jq -s .)
+            echo ""
+            echo "========================================================================"
+            echo "Found ${#READY_PROJECTS[@]} project(s) ready for work:"
+            printf '  - %s\n' "${READY_PROJECTS[@]}"
+            echo "========================================================================"
+            echo ""
+            echo "projects=$READY_JSON" >> $GITHUB_OUTPUT
+            echo "project_count=${#READY_PROJECTS[@]}" >> $GITHUB_OUTPUT
+        fi
