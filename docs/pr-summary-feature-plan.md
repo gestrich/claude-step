@@ -146,9 +146,9 @@ Add an optional feature to post AI-generated summary comments on PRs created by 
 
 ---
 
-### Phase 3: Documentation
+### Phase 3: Documentation ✅ COMPLETED
 
-- [ ] **Update README.md**
+- [x] **Update README.md**
 
   Add documentation:
 
@@ -158,7 +158,7 @@ Add an optional feature to post AI-generated summary comments on PRs created by 
   - Note about API costs (~$0.002-0.005 per summary)
   - Explain what the summary includes (what was done + why)
 
-- [ ] **Update Architecture Documentation** (`docs/architecture.md`)
+- [x] **Update Architecture Documentation** (`docs/architecture.md`)
 
   Add section explaining:
 
@@ -427,5 +427,75 @@ Execute in this sequence:
    - Claude Code failure: Workflow continues due to `continue-on-error: true`
 
 **Next Steps:**
-- Phase 3: Update documentation (README.md, architecture.md)
+- ~~Phase 3: Update documentation (README.md, architecture.md)~~ ✅ COMPLETED
+- Phase 4: Write unit tests and perform integration testing
+
+---
+
+### Phase 3 Completion (2025-12-26)
+
+**Files Modified:**
+- `README.md` - Added PR summary feature documentation
+- `docs/architecture.md` - Added PR summary architecture section
+
+**Documentation Added:**
+
+1. **README.md Updates:**
+   - Added "AI-Generated PR Summaries" to Features list
+   - Added summary mention in Quick Start "What to Expect" section
+   - Added `add_pr_summary` input to Action Inputs table
+   - Added detailed `add_pr_summary` input documentation with:
+     - Description of feature (analyzes diff, explains changes <200 words)
+     - Default value (`true`) and how to disable
+     - API cost estimate ($0.002-0.005 per summary)
+     - Example showing how to disable the feature
+   - Updated TODO section marking "Claude Code generated Summary" as completed
+
+2. **Architecture Documentation Updates:**
+   - Added `prepare-summary` command to Available Commands table
+   - Added comprehensive "PR Summary Flow" section with:
+     - ASCII diagram showing complete data flow
+     - Explanation of Python Command (prepare-summary)
+     - Explanation of Claude Code Action execution
+     - Example PR comment format
+   - Documented Key Design Decisions:
+     - Rationale for reusing claude-code-action
+     - Two-step process (prepare + execute)
+     - Graceful degradation strategy
+     - Template-based prompt approach
+   - Documented Error Handling for each failure scenario
+   - Updated Module Organization section to include:
+     - `commands/prepare_summary.py` in command list
+     - `prompts/summary_prompt.md` in new prompts directory
+
+**Testing Results:**
+- ✅ Python compilation verified for all files
+- ✅ CLI command `prepare-summary` works with valid inputs (PR_NUMBER, TASK, GITHUB_REPOSITORY, GITHUB_RUN_ID, ACTION_PATH)
+- ✅ Gracefully handles missing PR_NUMBER (outputs notice, exits 0)
+- ✅ Template substitution verified with test data
+- ✅ Output format correct (summary_prompt contains 949 character prompt)
+- ✅ Help text displays correctly
+
+**Technical Implementation Notes:**
+
+1. **Documentation Structure**: Followed existing patterns in both README.md and architecture.md:
+   - Added feature to Features list consistently with existing features
+   - Added input to table with same format as other inputs
+   - Included cost information (following precedent from API key docs)
+   - Added detailed "how to disable" example (user-focused)
+
+2. **Architecture Documentation**: Added comprehensive flow diagram and explanations:
+   - Matches existing flow diagram style (Statistics Action Flow, Main Action Flow)
+   - Explains both the workflow orchestration and Python implementation
+   - Documents design decisions (why, not just what)
+   - Includes error handling scenarios
+
+3. **User-Focused Documentation**: README updates prioritize user needs:
+   - Clear feature description in Features list
+   - Visible in Quick Start section (high-traffic area)
+   - Explicit cost information (transparency)
+   - Simple example showing how to opt-out
+   - Links to detailed documentation
+
+**Next Steps:**
 - Phase 4: Write unit tests and perform integration testing

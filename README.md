@@ -13,6 +13,7 @@ An automated system for performing ongoing code refactoring using AI (Claude Cod
 - 📊 **Progress Tracking** - Track completed vs remaining tasks
 - 💬 **Slack Integration** - Post statistics and progress reports to Slack channels
 - ⚡ **Incremental PRs** - One small PR at a time for easier review
+- 🤖 **AI-Generated PR Summaries** - Automatic summary comments explaining what was changed and why
 
 ## Use as a GitHub Action
 
@@ -151,6 +152,7 @@ jobs:
 - ✅ PR created with label "ai-refactor"
 - ✅ PR assigned to you
 - ✅ First task from spec.md is completed
+- ✅ AI-generated summary comment posted on PR (explains changes)
 
 ### Step 5: Review & Iterate
 
@@ -330,6 +332,7 @@ The action uses artifacts to track PR assignments. If assignment seems wrong:
 | `claude_allowed_tools` | ❌ | `Write,Read,Bash,Edit` | Comma-separated list of tools Claude can use |
 | `base_branch` | ❌ | `main` | Base branch for PRs |
 | `working_directory` | ❌ | `.` | Working directory |
+| `add_pr_summary` | ❌ | `true` | Add AI-generated summary comment to PR |
 
 ### Outputs
 
@@ -359,6 +362,24 @@ claude_allowed_tools: 'Write,Read,Bash,Edit,Glob,Grep'
 ```
 
 **Security note:** Only add tools that are safe for your use case. More tools = more power but also more potential for unintended changes.
+
+**add_pr_summary:**
+Controls whether an AI-generated summary comment is posted on each PR. The summary analyzes the PR diff and explains what was changed and why in under 200 words.
+
+- `true` (default) - Automatically post summary comments
+- `false` - Skip summary generation
+
+The summary provides context for reviewers and helps document the changes made. Each summary costs approximately $0.002-0.005 in API credits (based on diff size).
+
+Example to disable:
+```yaml
+- uses: gestrich/claude-step@v1
+  with:
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    project_name: 'my-refactor'
+    add_pr_summary: false
+```
 
 **anthropic_api_key:**
 Get your API key from [console.anthropic.com](https://console.anthropic.com), then:
@@ -917,13 +938,23 @@ Features:
 
 The leaderboard appears prominently at the top of statistics reports, making it easy to recognize top reviewers and encourage friendly competition. See [Setup Slack Notifications](#5-setup-slack-notifications-optional) for configuration.
 
+- [x] **Claude Code generated Summary**
+
+✅ Implemented! PRs now include AI-generated summary comments that explain what was changed and why.
+
+Features:
+- Automatically analyzes PR diffs after creation
+- Posts concise <200 word summaries as PR comments
+- Explains specific changes (files, functions, logic modified)
+- Documents the purpose and benefits of changes
+- Can be toggled via `add_pr_summary` input (defaults to enabled)
+- Costs ~$0.002-0.005 per summary
+
+See `add_pr_summary` input in [Action Inputs](#action-inputs--outputs) for configuration options.
+
 - [ ] **Cost in PR Summary**
 
 Show Claude Code cost in PR summary
-
-- [ ] **Claude Code generated Summary**
-
-A section in the PR summary should show summarized output from Claude code on what was done.
 
 - [ ] **Implement PR rejection handling**
 
