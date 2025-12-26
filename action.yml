@@ -45,6 +45,10 @@ inputs:
     description: 'Working directory for the action'
     required: false
     default: '.'
+  add_pr_summary:
+    description: 'Add AI-generated summary comment to PR (true/false)'
+    required: false
+    default: 'true'
 
 outputs:
   pr_number:
@@ -138,6 +142,37 @@ runs:
       run: |
         export PYTHONPATH="$ACTION_PATH/scripts:$PYTHONPATH"
         python3 -m claudestep finalize
+
+    - name: Prepare summary prompt
+      id: prepare_summary
+      if: |
+        inputs.add_pr_summary == 'true' &&
+        steps.finalize.outputs.pr_number != ''
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+        PR_NUMBER: ${{ steps.finalize.outputs.pr_number }}
+        TASK: ${{ steps.prepare.outputs.task }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        export PYTHONPATH="$ACTION_PATH/scripts:$PYTHONPATH"
+        python3 -m claudestep prepare-summary
+
+    - name: Generate and post PR summary
+      if: |
+        inputs.add_pr_summary == 'true' &&
+        steps.prepare_summary.outputs.summary_prompt != ''
+      uses: anthropics/claude-code-action@v1
+      with:
+        prompt: ${{ steps.prepare_summary.outputs.summary_prompt }}
+        anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        github_token: ${{ inputs.github_token }}
+        claude_args: '--allowedTools Bash'
+        show_full_output: true
+      continue-on-error: true
 
     - name: Upload task metadata artifact
       if: steps.finalize.outputs.artifact_path != ''

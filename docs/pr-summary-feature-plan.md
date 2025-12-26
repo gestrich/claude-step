@@ -81,9 +81,9 @@ Add an optional feature to post AI-generated summary comments on PRs created by 
 
 ---
 
-### Phase 2: GitHub Actions Integration
+### Phase 2: GitHub Actions Integration ✅ COMPLETED
 
-- [ ] **Add Optional Input Flag** (`action.yml`)
+- [x] **Add Optional Input Flag** (`action.yml`)
 
   Add new input parameter (around line 47):
 
@@ -96,7 +96,7 @@ Add an optional feature to post AI-generated summary comments on PRs created by 
 
   Default to `'true'` to enable feature by default (users can opt-out).
 
-- [ ] **Add Workflow Steps** (`action.yml`)
+- [x] **Add Workflow Steps** (`action.yml`)
 
   Add two new steps after finalize, before artifact upload (around line 142):
 
@@ -374,6 +374,58 @@ Execute in this sequence:
    - All exceptions caught and reported via GitHub Actions error annotations
 
 **Next Steps:**
-- Phase 2: Add GitHub Actions workflow integration (action.yml modifications)
+- ~~Phase 2: Add GitHub Actions workflow integration (action.yml modifications)~~ ✅ COMPLETED
+- Phase 3: Update documentation (README.md, architecture.md)
+- Phase 4: Write unit tests and perform integration testing
+
+---
+
+### Phase 2 Completion (2025-12-26)
+
+**Files Modified:**
+- `action.yml` - Added `add_pr_summary` input and two new workflow steps
+
+**Testing Results:**
+- ✅ Python syntax validation passed for all files
+- ✅ CLI command `prepare-summary` works with valid inputs (PR_NUMBER, TASK, GITHUB_REPOSITORY, GITHUB_RUN_ID, ACTION_PATH)
+- ✅ Gracefully skips when PR_NUMBER is empty (outputs notice, exits with code 0)
+- ✅ Template substitution verified ({TASK_DESCRIPTION}, {PR_NUMBER}, {WORKFLOW_URL})
+- ✅ Output format correct (summary_prompt contains 960 character prompt)
+- ✅ Help text displays command correctly
+
+**Technical Implementation Details:**
+
+1. **Input Parameter**: Added `add_pr_summary` input to action.yml at line 48:
+   - Description: 'Add AI-generated summary comment to PR (true/false)'
+   - Default: 'true' (feature enabled by default, users can opt-out)
+   - Required: false
+
+2. **Workflow Step 1 - Prepare summary prompt** (lines 146-162):
+   - ID: `prepare_summary`
+   - Conditional: Only runs if `add_pr_summary == 'true'` AND `pr_number != ''`
+   - Sets environment variables: GH_TOKEN, PR_NUMBER, TASK, GITHUB_REPOSITORY, GITHUB_RUN_ID, ACTION_PATH
+   - Executes: `python3 -m claudestep prepare-summary`
+   - Outputs: `summary_prompt` (full prompt text with substituted variables)
+
+3. **Workflow Step 2 - Generate and post PR summary** (lines 164-175):
+   - Conditional: Only runs if `add_pr_summary == 'true'` AND `summary_prompt != ''`
+   - Uses: `anthropics/claude-code-action@v1`
+   - Prompt: From `prepare_summary.outputs.summary_prompt`
+   - Allowed tools: Only `Bash` (for gh CLI commands)
+   - Error handling: `continue-on-error: true` (graceful degradation)
+
+4. **Integration Points:**
+   - Workflow step depends on `steps.finalize.outputs.pr_number` being set
+   - Reuses task description from `steps.prepare.outputs.task`
+   - Positioned after finalize, before artifact upload
+   - No impact on main workflow if summary generation fails
+
+5. **Error Handling:**
+   - Missing PR_NUMBER: Step skipped gracefully (notice logged)
+   - Missing required env vars: Error logged, step fails but workflow continues
+   - Template file not found: Error logged, step fails but workflow continues
+   - Claude Code failure: Workflow continues due to `continue-on-error: true`
+
+**Next Steps:**
 - Phase 3: Update documentation (README.md, architecture.md)
 - Phase 4: Write unit tests and perform integration testing
