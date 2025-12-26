@@ -10,7 +10,7 @@ from claudestep.github_operations import run_gh_command
 
 
 def detect_project_from_pr(pr_number: str, repo: str) -> Optional[str]:
-    """Detect project from merged PR artifact metadata
+    """Detect project from merged PR branch name
 
     Args:
         pr_number: PR number to check
@@ -21,7 +21,7 @@ def detect_project_from_pr(pr_number: str, repo: str) -> Optional[str]:
     """
     print(f"Detecting project from merged PR #{pr_number}...")
     try:
-        # First get the branch name from the PR
+        # Get the branch name from the PR
         pr_output = run_gh_command([
             "pr", "view", pr_number,
             "--repo", repo,
@@ -36,41 +36,27 @@ def detect_project_from_pr(pr_number: str, repo: str) -> Optional[str]:
 
         print(f"PR branch: {branch_name}")
 
-        # Get workflow runs for this branch
-        from claudestep.github_operations import gh_api_call, download_artifact_json
+        # Extract project name from branch name
+        # Branch format: YYYY-MM-{project}-{index}
+        # Example: 2025-12-test-project-d324087d-1 -> test-project-d324087d
+        parts = branch_name.split("-")
+        if len(parts) >= 4:
+            # Remove YYYY, MM, and index (last part)
+            # Join the remaining parts to get the project name
+            project = "-".join(parts[2:-1])
+            print(f"✅ Extracted project from branch name: {project}")
 
-        api_response = gh_api_call(
-            f"/repos/{repo}/actions/runs?branch={branch_name}&status=completed&per_page=10"
-        )
-        runs = api_response.get("workflow_runs", [])
+            # Verify the project exists
+            config_path = f"refactor/{project}/configuration.json"
+            if os.path.exists(config_path):
+                return project
+            else:
+                print(f"Warning: Project config not found at {config_path}")
+                return None
+        else:
+            print(f"Branch name '{branch_name}' doesn't match expected format")
+            return None
 
-        # Check most recent successful runs for artifact metadata
-        for run in runs:
-            if run.get("conclusion") == "success":
-                try:
-                    artifacts_data = gh_api_call(
-                        f"/repos/{repo}/actions/runs/{run['id']}/artifacts"
-                    )
-                    artifacts = artifacts_data.get("artifacts", [])
-
-                    # Look for task metadata artifacts
-                    for artifact in artifacts:
-                        name = artifact["name"]
-                        if name.startswith("task-metadata-"):
-                            # Download and parse the artifact
-                            artifact_id = artifact["id"]
-                            metadata = download_artifact_json(repo, artifact_id)
-
-                            if metadata and "project" in metadata:
-                                project = metadata["project"]
-                                print(f"✅ Found project from artifact: {project}")
-                                return project
-                except Exception as e:
-                    print(f"Warning: Failed to check artifacts for run {run['id']}: {e}")
-                    continue
-
-        print(f"No artifact metadata found for PR #{pr_number}")
-        return None
     except Exception as e:
         print(f"Failed to detect project from PR: {str(e)}")
         return None
