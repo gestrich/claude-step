@@ -1,0 +1,110 @@
+name: ClaudeStep All Projects
+
+on:
+  workflow_call:
+    inputs:
+      claude_model:
+        description: 'Claude model to use (e.g., claude-sonnet-4-5)'
+        required: false
+        type: string
+        default: 'claude-sonnet-4-5'
+      claude_allowed_tools:
+        description: 'Comma-separated list of tools Claude can use'
+        required: false
+        type: string
+        default: 'Write,Read,Bash,Edit'
+      base_branch:
+        description: 'Base branch for pull requests'
+        required: false
+        type: string
+        default: 'main'
+      working_directory:
+        description: 'Working directory for the action'
+        required: false
+        type: string
+        default: '.'
+      max_parallel:
+        description: 'Maximum number of projects to process in parallel'
+        required: false
+        type: number
+        default: 1
+    secrets:
+      anthropic_api_key:
+        description: 'Anthropic API key for Claude Code'
+        required: true
+      github_token:
+        description: 'GitHub token for PR creation and API access'
+        required: false
+    outputs:
+      projects_processed:
+        description: 'Number of projects processed'
+        value: ${{ jobs.discover.outputs.project_count }}
+      projects_list:
+        description: 'JSON array of project names that were processed'
+        value: ${{ jobs.discover.outputs.projects }}
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.find.outputs.projects }}
+      project_count: ${{ steps.find.outputs.project_count }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Discover all refactor projects
+        id: find
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          ACTION_PATH: ${{ github.action_path }}
+        run: |
+          export PYTHONPATH="${GITHUB_WORKSPACE}/scripts:$PYTHONPATH"
+          python3 -m claudestep discover
+
+  process-projects:
+    needs: discover
+    if: needs.discover.outputs.project_count != '0'
+    strategy:
+      matrix:
+        project: ${{ fromJson(needs.discover.outputs.projects) }}
+      max-parallel: ${{ fromJson(inputs.max_parallel) }}
+      fail-fast: false
+    uses: ./.github/workflows/single-project.yml
+    with:
+      project_name: ${{ matrix.project }}
+      claude_model: ${{ inputs.claude_model }}
+      claude_allowed_tools: ${{ inputs.claude_allowed_tools }}
+      base_branch: ${{ inputs.base_branch }}
+      working_directory: ${{ inputs.working_directory }}
+    secrets:
+      anthropic_api_key: ${{ secrets.anthropic_api_key }}
+      github_token: ${{ secrets.github_token }}
+
+  summary:
+    needs: [discover, process-projects]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output summary
+        run: |
+          echo "# ClaudeStep All Projects Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Projects found**: ${{ needs.discover.outputs.project_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.discover.outputs.project_count }}" != "0" ]; then
+            echo "**Projects processed**:" >> $GITHUB_STEP_SUMMARY
+            echo '${{ needs.discover.outputs.projects }}' | jq -r '.[] | "- " + .' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No projects found with configuration.json files." >> $GITHUB_STEP_SUMMARY
+          fi

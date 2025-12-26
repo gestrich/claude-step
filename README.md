@@ -29,10 +29,6 @@ Add the action to your workflow:
 
 ## TODO
 
-- [ ] **Create Labels**
-
-The action should create the new label when it does not exist.
-
 - [ ] **Slack Action and metrics**
 
 Post progress updates and metrics to Slack when PRs are merged.

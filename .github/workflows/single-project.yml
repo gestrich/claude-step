@@ -1,0 +1,116 @@
+name: ClaudeStep Single Project
+
+on:
+  workflow_call:
+    inputs:
+      project_name:
+        description: 'Project name to process'
+        required: true
+        type: string
+      merged_pr_number:
+        description: 'PR number that was just merged (optional)'
+        required: false
+        type: string
+      config_path:
+        description: 'Path to configuration.json file (overrides default)'
+        required: false
+        type: string
+      spec_path:
+        description: 'Path to spec.md file (overrides default)'
+        required: false
+        type: string
+      pr_template_path:
+        description: 'Path to pr-template.md file (overrides default)'
+        required: false
+        type: string
+      claude_model:
+        description: 'Claude model to use (e.g., claude-sonnet-4-5)'
+        required: false
+        type: string
+        default: 'claude-sonnet-4-5'
+      claude_allowed_tools:
+        description: 'Comma-separated list of tools Claude can use'
+        required: false
+        type: string
+        default: 'Write,Read,Bash,Edit'
+      base_branch:
+        description: 'Base branch for pull requests'
+        required: false
+        type: string
+        default: 'main'
+      working_directory:
+        description: 'Working directory for the action'
+        required: false
+        type: string
+        default: '.'
+    secrets:
+      anthropic_api_key:
+        description: 'Anthropic API key for Claude Code'
+        required: true
+      github_token:
+        description: 'GitHub token for PR creation and API access'
+        required: false
+    outputs:
+      pr_number:
+        description: 'Number of created PR (empty if none created)'
+        value: ${{ jobs.refactor.outputs.pr_number }}
+      pr_url:
+        description: 'URL of created PR (empty if none created)'
+        value: ${{ jobs.refactor.outputs.pr_url }}
+      reviewer:
+        description: 'Assigned reviewer username (empty if none assigned)'
+        value: ${{ jobs.refactor.outputs.reviewer }}
+      task_completed:
+        description: 'Task description that was completed (empty if none)'
+        value: ${{ jobs.refactor.outputs.task_completed }}
+      has_capacity:
+        description: 'Whether a reviewer had capacity (true/false)'
+        value: ${{ jobs.refactor.outputs.has_capacity }}
+      all_tasks_done:
+        description: 'Whether all tasks are complete (true/false)'
+        value: ${{ jobs.refactor.outputs.all_tasks_done }}
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  refactor:
+    runs-on: ubuntu-latest
+    outputs:
+      pr_number: ${{ steps.claudestep.outputs.pr_number }}
+      pr_url: ${{ steps.claudestep.outputs.pr_url }}
+      reviewer: ${{ steps.claudestep.outputs.reviewer }}
+      task_completed: ${{ steps.claudestep.outputs.task_completed }}
+      has_capacity: ${{ steps.claudestep.outputs.has_capacity }}
+      all_tasks_done: ${{ steps.claudestep.outputs.all_tasks_done }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run ClaudeStep
+        id: claudestep
+        uses: gestrich/claude-step@main
+        with:
+          anthropic_api_key: ${{ secrets.anthropic_api_key }}
+          github_token: ${{ secrets.github_token || github.token }}
+          project_name: ${{ inputs.project_name }}
+          merged_pr_number: ${{ inputs.merged_pr_number }}
+          config_path: ${{ inputs.config_path }}
+          spec_path: ${{ inputs.spec_path }}
+          pr_template_path: ${{ inputs.pr_template_path }}
+          claude_model: ${{ inputs.claude_model }}
+          claude_allowed_tools: ${{ inputs.claude_allowed_tools }}
+          base_branch: ${{ inputs.base_branch }}
+          working_directory: ${{ inputs.working_directory }}
+
+      - name: Output summary
+        if: steps.claudestep.outputs.pr_number
+        run: |
+          echo "✅ **PR Created for ${{ inputs.project_name }}**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: ${{ steps.claudestep.outputs.pr_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Reviewer**: @${{ steps.claudestep.outputs.reviewer }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Task**: ${{ steps.claudestep.outputs.task_completed }}" >> $GITHUB_STEP_SUMMARY
