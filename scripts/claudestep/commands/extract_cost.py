@@ -36,10 +36,18 @@ def cmd_extract_cost(args, gh):
         with open(execution_file, 'r') as f:
             data = json.load(f)
 
-        # Debug: Print top-level keys to understand structure
-        print(f"Execution file top-level keys: {list(data.keys())[:20]}")
-        if 'total_cost_usd' in data:
-            print(f"Found total_cost_usd at top level: {data['total_cost_usd']}")
+        # Debug: Check if data is a list or dict
+        if isinstance(data, list):
+            print(f"Execution file contains a list with {len(data)} items")
+            # If it's a list, get the last item (most recent execution)
+            if data:
+                data = data[-1]
+                print("Using the last item in the list")
+
+        if isinstance(data, dict):
+            print(f"Execution file top-level keys: {list(data.keys())[:20]}")
+            if 'total_cost_usd' in data:
+                print(f"Found total_cost_usd at top level: {data['total_cost_usd']}")
 
         # Extract cost from the execution data
         cost = extract_cost_from_execution(data)
