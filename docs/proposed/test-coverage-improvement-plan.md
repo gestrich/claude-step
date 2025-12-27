@@ -35,7 +35,7 @@ These changes reduce code duplication and simplify the testing surface area.
 - `.github/workflows/test.yml` - CI workflow for unit tests
 - `pyproject.toml` - Package configuration with test dependencies
 - Tests run on every push and PR to main branch
-- **352 tests passing** with 0 failures (up from 333)
+- **372 tests passing** with 0 failures (up from 352)
 
 ### Existing Tests (Organized by Layer)
 **Domain Layer:**
@@ -61,6 +61,7 @@ These changes reduce code duplication and simplify the testing surface area.
 **CLI Layer:**
 - `tests/unit/cli/commands/test_prepare_summary.py` - PR summary command (9 tests)
 - `tests/unit/cli/commands/test_prepare.py` - Preparation workflow command (19 tests)
+- `tests/unit/cli/commands/test_finalize.py` - Finalization workflow command (20 tests)
 
 **Integration:**
 - Demo repository: `claude-step-demo/tests/integration/test_workflow_e2e.py` - End-to-end workflow
@@ -675,11 +676,28 @@ Before committing a test, verify:
     - Tests verify step summary written with reviewer capacity information
     - All tests follow the style guide with Arrange-Act-Assert structure and descriptive names
 
-- [ ] **Test finalize.py** (`tests/unit/cli/commands/test_finalize.py`)
-  - Mock git and GitHub operations
-  - Test commit creation, spec.md task marking, PR creation with template substitution
-  - Test metadata artifact creation
-  - Test handling no changes scenario and error recovery
+- [x] **Test finalize.py** ✅ COMPLETE (December 27, 2025) (`tests/unit/cli/commands/test_finalize.py`)
+  - 20 comprehensive tests covering the full finalization workflow
+  - Tests for early exits (no capacity, no task, missing env vars)
+  - Tests for git configuration (.action exclusion, user configuration)
+  - Tests for commit workflow (changes detected, no changes, staged files)
+  - Tests for spec.md task marking (success, amend commit, separate commit, failure handling)
+  - Tests for PR creation (push, template substitution, correct parameters)
+  - Tests for artifact metadata creation with all required fields
+  - Tests for output variables and step summary writing
+  - Tests for error handling (GitError, GitHubAPIError, unexpected errors)
+  - Tests for git remote auth reconfiguration
+  - **Technical Notes:**
+    - All 20 tests pass with comprehensive coverage of finalize command
+    - Total test count increased from 352 to 372 tests
+    - Tests mock at system boundaries (git, GitHub CLI, file system)
+    - Tests verify the 3-step workflow: commit changes, create PR, create artifact
+    - Tests verify early exit scenarios don't attempt PR creation
+    - Tests confirm spec.md task marking happens before PR creation
+    - Tests verify artifact metadata includes cost tracking fields
+    - Edge cases tested: no commits to push, amend failures, spec marking failures
+    - All tests follow the style guide with Arrange-Act-Assert structure
+    - Tests use `mock_open()` for file operations and proper environment variable mocking
 
 - [ ] **Test discover.py** (`tests/unit/cli/commands/test_discover.py`)
   - Mock file system operations
@@ -924,7 +942,7 @@ class TestCheckReviewerCapacity:
 - ✅ Phase 1: 100% COMPLETE (test infrastructure, conftest.py fixtures, and domain layer tests all done)
 - ✅ Phase 2: 100% COMPLETE (all infrastructure layer tests done - git, github, filesystem operations)
 - ✅ Phase 3: 100% COMPLETE (all application layer tests done - task_management, statistics, table_formatter, reviewer_management, project_detection, artifact_operations)
-- ✅ Phase 4: ~22% complete (prepare_summary and prepare done, need 7 more commands)
+- ✅ Phase 4: ~33% complete (prepare_summary, prepare, and finalize done, need 6 more commands)
 - Phase 5: Not started (integration tests and quality improvements)
 - ✅ Phase 6: ~40% complete (CI set up, need documentation and enhancements)
 
@@ -981,6 +999,7 @@ class TestCheckReviewerCapacity:
 - ✅ Comprehensive tests for `project_detection.py` (17 test cases) - December 27, 2025
 - ✅ Comprehensive tests for `artifact_operations.py` (31 test cases) - December 27, 2025
 - ✅ Comprehensive tests for `prepare.py` (19 test cases) - December 27, 2025
+- ✅ Comprehensive tests for `finalize.py` (20 test cases) - December 27, 2025
 - ✅ **Common test fixtures** in `tests/conftest.py` (December 27, 2025)
   - 20+ reusable fixtures covering file system, git, GitHub, and configuration scenarios
   - All fixtures follow test style guide with clear docstrings and organized by category
