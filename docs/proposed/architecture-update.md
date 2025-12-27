@@ -322,7 +322,7 @@ def test_check_capacity():
 - [x] **Phase 1**: Set Up Package Infrastructure ✅
 - [x] **Phase 2**: Move Domain Layer ✅
 - [x] **Phase 3**: Move Infrastructure Layer ✅
-- [ ] **Phase 4**: Move Application Layer
+- [x] **Phase 4**: Move Application Layer ✅
 - [ ] **Phase 5**: Move Presentation Layer
 - [ ] **Phase 6**: Update Tests
 - [ ] **Phase 7**: Update Documentation and CI
@@ -448,6 +448,38 @@ def test_check_capacity():
 - Run tests to verify
 
 **Validation**: All tests pass, application layer properly isolated.
+
+**Status**: ✅ Completed
+
+**Technical Notes**:
+- Created `src/claudestep/application/` directory structure with subdirectories:
+  - `application/services/` for business logic services
+  - `application/collectors/` for data collection services
+  - `application/formatters/` for output formatting utilities
+- Moved application layer files to new locations:
+  - `reviewer_management.py` → `application/services/reviewer_management.py`
+  - `task_management.py` → `application/services/task_management.py`
+  - `project_detection.py` → `application/services/project_detection.py`
+  - `pr_operations.py` → `application/services/pr_operations.py`
+  - `artifact_operations.py` → `application/services/artifact_operations.py`
+  - `statistics_collector.py` → `application/collectors/statistics_collector.py`
+  - `table_formatter.py` → `application/formatters/table_formatter.py`
+- Updated all imports throughout codebase to use `claudestep.application.*` paths:
+  - Updated imports in application layer files themselves (cross-dependencies within application layer)
+  - Updated 4 files in `scripts/claudestep/commands/` (discover_ready, prepare, finalize, statistics)
+  - Updated 7 files in `scripts/claudestep/` for backward compatibility (models, plus the old versions of moved files)
+  - Updated 4 test files in `tests/` (test_pr_operations, test_table_formatter, test_task_management, test_statistics)
+  - Fixed domain layer import: `src/claudestep/domain/models.py` now imports TableFormatter from application layer
+- Removed symlinks for moved application files from `src/claudestep/`:
+  - Removed `reviewer_management.py`, `task_management.py`, `project_detection.py` symlinks
+  - Removed `pr_operations.py`, `artifact_operations.py` symlinks
+  - Removed `statistics_collector.py`, `table_formatter.py` symlinks
+- Updated test mock paths in `test_pr_operations.py` to use new module paths
+- **Note**: Domain layer now depends on application layer (models.py imports TableFormatter). This is a known architectural violation that should be addressed in a future refactoring - the formatting logic should be moved out of domain models.
+- **Note**: Old `scripts/claudestep/` versions remain as backward compatibility layer and will be removed in Phase 7
+- Validated package structure with import tests
+- Test results: 107 tests passed, 5 pre-existing failures unrelated to Phase 4 (in test_prepare_summary.py due to prompt template path issues)
+- Application layer now properly organized into services, collectors, and formatters following the layered architecture
 
 ### Phase 5: Move Presentation Layer
 

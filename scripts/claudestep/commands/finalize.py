@@ -10,7 +10,7 @@ from claudestep.domain.exceptions import ConfigurationError, FileNotFoundError, 
 from claudestep.infrastructure.git.operations import run_git_command
 from claudestep.infrastructure.github.actions import GitHubActionsHelper
 from claudestep.infrastructure.github.operations import run_gh_command
-from claudestep.task_management import mark_task_complete
+from claudestep.application.services.task_management import mark_task_complete
 
 
 def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:

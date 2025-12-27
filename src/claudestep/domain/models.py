@@ -1,12 +1,7 @@
-"""Data models for ClaudeStep operations
-
-NOTE: This module currently imports from claudestep.table_formatter which is still
-in the old location. This will be refactored when table_formatter moves to the
-application/formatters layer in Phase 4.
-"""
+"""Data models for ClaudeStep operations"""
 
 from typing import Any, Dict, List, Optional
-from claudestep.table_formatter import TableFormatter
+from claudestep.application.formatters.table_formatter import TableFormatter
 
 
 class MarkdownFormatter:

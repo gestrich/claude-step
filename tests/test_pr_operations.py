@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from claudestep.pr_operations import (
+from claudestep.application.services.pr_operations import (
     format_branch_name,
     get_project_prs,
     parse_branch_name,
@@ -109,7 +109,7 @@ class TestParseBranchName:
 class TestGetProjectPrs:
     """Tests for get_project_prs function"""
 
-    @patch("claudestep.pr_operations.run_gh_command")
+    @patch("claudestep.application.services.pr_operations.run_gh_command")
     def test_get_open_prs(self, mock_gh_command):
         """Should fetch and filter open PRs for a project"""
         # Mock GitHub API response
@@ -157,7 +157,7 @@ class TestGetProjectPrs:
         assert "--state" in call_args
         assert "open" in call_args
 
-    @patch("claudestep.pr_operations.run_gh_command")
+    @patch("claudestep.application.services.pr_operations.run_gh_command")
     def test_get_all_prs(self, mock_gh_command):
         """Should fetch all PRs regardless of state"""
         mock_prs = [
@@ -180,7 +180,7 @@ class TestGetProjectPrs:
 
         assert len(result) == 2
 
-    @patch("claudestep.pr_operations.run_gh_command")
+    @patch("claudestep.application.services.pr_operations.run_gh_command")
     def test_get_merged_prs(self, mock_gh_command):
         """Should fetch only merged PRs"""
         mock_prs = [
@@ -199,7 +199,7 @@ class TestGetProjectPrs:
         assert len(result) == 1
         assert result[0]["state"] == "merged"
 
-    @patch("claudestep.pr_operations.run_gh_command")
+    @patch("claudestep.application.services.pr_operations.run_gh_command")
     def test_filter_by_branch_prefix(self, mock_gh_command):
         """Should only return PRs with matching branch prefix"""
         mock_prs = [
@@ -227,7 +227,7 @@ class TestGetProjectPrs:
         assert len(result) == 2
         assert all("my-refactor" in pr["headRefName"] for pr in result)
 
-    @patch("claudestep.pr_operations.run_gh_command")
+    @patch("claudestep.application.services.pr_operations.run_gh_command")
     def test_custom_label(self, mock_gh_command):
         """Should use custom label when provided"""
         mock_gh_command.return_value = "[]"
@@ -238,7 +238,7 @@ class TestGetProjectPrs:
         assert "--label" in call_args
         assert "custom-label" in call_args
 
-    @patch("claudestep.pr_operations.run_gh_command")
+    @patch("claudestep.application.services.pr_operations.run_gh_command")
     def test_handle_empty_response(self, mock_gh_command):
         """Should handle empty PR list gracefully"""
         mock_gh_command.return_value = "[]"
@@ -247,7 +247,7 @@ class TestGetProjectPrs:
 
         assert result == []
 
-    @patch("claudestep.pr_operations.run_gh_command")
+    @patch("claudestep.application.services.pr_operations.run_gh_command")
     def test_handle_api_error(self, mock_gh_command):
         """Should handle GitHub API errors gracefully"""
         from claudestep.domain.exceptions import GitHubAPIError
@@ -259,7 +259,7 @@ class TestGetProjectPrs:
         # Should return empty list on error
         assert result == []
 
-    @patch("claudestep.pr_operations.run_gh_command")
+    @patch("claudestep.application.services.pr_operations.run_gh_command")
     def test_handle_invalid_json(self, mock_gh_command):
         """Should handle invalid JSON response gracefully"""
         mock_gh_command.return_value = "invalid json"

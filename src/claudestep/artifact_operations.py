@@ -1,1 +1,0 @@
-../../scripts/claudestep/artifact_operations.py

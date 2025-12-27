@@ -1,1 +1,0 @@
-../../scripts/claudestep/project_detection.py

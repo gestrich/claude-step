@@ -1,7 +1,7 @@
 """Data models for ClaudeStep operations"""
 
 from typing import Any, Dict, List, Optional
-from claudestep.table_formatter import TableFormatter
+from claudestep.application.formatters.table_formatter import TableFormatter
 
 
 class MarkdownFormatter:

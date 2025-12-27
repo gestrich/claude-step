@@ -9,10 +9,10 @@ from claudestep.domain.exceptions import ConfigurationError, FileNotFoundError, 
 from claudestep.infrastructure.git.operations import run_git_command
 from claudestep.infrastructure.github.actions import GitHubActionsHelper
 from claudestep.infrastructure.github.operations import ensure_label_exists
-from claudestep.pr_operations import format_branch_name
-from claudestep.project_detection import detect_project_from_pr, detect_project_paths
-from claudestep.reviewer_management import find_available_reviewer
-from claudestep.task_management import find_next_available_task, get_in_progress_task_indices
+from claudestep.application.services.pr_operations import format_branch_name
+from claudestep.application.services.project_detection import detect_project_from_pr, detect_project_paths
+from claudestep.application.services.reviewer_management import find_available_reviewer
+from claudestep.application.services.task_management import find_next_available_task, get_in_progress_task_indices
 
 
 def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:

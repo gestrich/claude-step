@@ -5,7 +5,7 @@ import pytest
 from datetime import datetime
 
 from claudestep.domain.models import TeamMemberStats, ProjectStats, StatisticsReport
-from claudestep.statistics_collector import count_tasks
+from claudestep.application.collectors.statistics_collector import count_tasks
 
 
 class TestProgressBar:
@@ -547,7 +547,7 @@ class TestCostExtraction:
 
     def test_extract_cost_from_valid_comment(self):
         """Test extracting cost from a valid cost breakdown comment"""
-        from claudestep.statistics_collector import extract_cost_from_comment
+        from claudestep.application.collectors.statistics_collector import extract_cost_from_comment
 
         comment = """## 💰 Cost Breakdown
 
@@ -567,7 +567,7 @@ This PR was generated using Claude Code with the following costs:
 
     def test_extract_cost_no_cost_comment(self):
         """Test extracting cost from comment without cost breakdown"""
-        from claudestep.statistics_collector import extract_cost_from_comment
+        from claudestep.application.collectors.statistics_collector import extract_cost_from_comment
 
         comment = "This is a regular comment without cost information."
         cost = extract_cost_from_comment(comment)
@@ -575,7 +575,7 @@ This PR was generated using Claude Code with the following costs:
 
     def test_extract_cost_malformed_comment(self):
         """Test extracting cost from malformed cost comment"""
-        from claudestep.statistics_collector import extract_cost_from_comment
+        from claudestep.application.collectors.statistics_collector import extract_cost_from_comment
 
         comment = """## 💰 Cost Breakdown
         

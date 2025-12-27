@@ -1,1 +1,0 @@
-../../scripts/claudestep/table_formatter.py
