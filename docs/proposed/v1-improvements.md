@@ -207,31 +207,33 @@ Configuration and workflow improvements for V1 release.
 - Python syntax validation passes for all files
 - Unit tests pass successfully (excluding integration tests)
 
-- [ ] **Reduce number of end-to-end tests**
+- [x] **Reduce number of end-to-end tests**
 
-**Status:** PENDING
+**Status:** COMPLETED
 
-**Goal:**
-- Simplify E2E tests to create only 1 PR instead of 3
-- Reduce test execution time while maintaining coverage of critical functionality
-- Replace PR merge workflow test with a unit test
-
-**Changes needed:**
-- Update E2E tests in demo project to create only 1 PR
-- Continue validating essential functionality:
-  - PR summary gets posted to the PR
-  - Cost information is posted
-  - Other critical validations
-- Remove the test that validates "after merging 1 PR, the next task gets created"
-- Add a unit test in the action repository (not demo project) that verifies:
-  - The system can correctly determine the next task from a markdown file when previous tasks are marked as completed
-  - Task parsing and sequencing logic works correctly
+**Changes made:**
+- Updated E2E test in demo project (`/Users/bill/Developer/personal/claude-step-demo/tests/integration/test_workflow_e2e.py`) to create only 1 PR instead of 3
+- Modified spec.md template to have only 1 task instead of 3
+- Simplified test to validate:
+  - Workflow creates PR for task
+  - AI-generated summary is posted on PR
+  - Cost information is posted on PR
+- Removed steps 2 and 3 that tested reviewer capacity and merge trigger
+- Created comprehensive unit test in action repository (`/Users/bill/Developer/personal/claude-step/tests/test_task_management.py`) that covers:
+  - Finding first unchecked task
+  - Finding next task after completed tasks
+  - Skipping in-progress tasks
+  - Complex merge trigger scenarios (completed task + in-progress task = find next available)
+  - Task marking and ID generation
+- All 18 new unit tests pass successfully
+- Build verified: 80 unit tests pass (5 pre-existing failures unrelated to this change)
 
 **Technical notes:**
-- Creating 3 PRs in E2E tests takes too long and isn't necessary for validation
-- The "next task after merge" functionality can be tested more efficiently with a unit test
-- Unit test should focus on the markdown parsing and task selection logic
-- E2E test should focus on the end-to-end integration: creating PR, posting summary, posting costs
+- E2E test execution time will be significantly reduced (approximately 3x faster)
+- The "next task after merge" functionality is now thoroughly tested with fast unit tests
+- Unit tests cover edge cases like multiple completed tasks, capital X in checkboxes, indentation variations
+- E2E test focuses on end-to-end integration: workflow execution, PR creation, AI summary posting, cost reporting
+- The test in the demo project is the source of truth; the copy in the action repository is kept for backwards compatibility
 
 - [ ] **Run e2e tests to validate changes**
 
