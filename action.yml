@@ -47,7 +47,7 @@ inputs:
   pr_label:
     description: 'Label to apply to ClaudeStep PRs'
     required: false
-    default: 'claude-step'
+    default: 'claudestep'
 
 outputs:
   pr_number:

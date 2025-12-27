@@ -434,7 +434,7 @@ def test_claudestep_workflow_e2e(gh, test_project, cleanup_prs):
     assert has_summary_2, f"PR #{pr_2_number} does not have an AI-generated summary comment"
 
     # Verify both PRs are open (reviewer at capacity)
-    all_prs = gh.get_prs_by_label("claude-step")
+    all_prs = gh.get_prs_by_label("claudestep")
     open_prs = [pr for pr in all_prs if pr["state"] == "OPEN"]
     assert len(open_prs) == 2, f"Expected 2 open PRs, found {len(open_prs)}"
     print(f"  ✓ Reviewer at capacity with 2 open PRs")
