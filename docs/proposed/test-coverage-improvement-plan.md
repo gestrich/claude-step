@@ -35,13 +35,19 @@ These changes reduce code duplication and simplify the testing surface area.
 - `.github/workflows/test.yml` - CI workflow for unit tests
 - `pyproject.toml` - Package configuration with test dependencies
 - Tests run on every push and PR to main branch
-- **192 tests passing** with 0 failures
+- **269 tests passing** with 0 failures
 
 ### Existing Tests (Organized by Layer)
 **Domain Layer:**
 - `tests/unit/domain/test_exceptions.py` - Custom exception classes (17 tests)
 - `tests/unit/domain/test_models.py` - Domain models and formatters (37 tests)
 - `tests/unit/domain/test_config.py` - Configuration loading and validation (26 tests)
+
+**Infrastructure Layer:**
+- `tests/unit/infrastructure/git/test_operations.py` - Git command wrappers (13 tests)
+- `tests/unit/infrastructure/github/test_operations.py` - GitHub CLI and API operations (27 tests)
+- `tests/unit/infrastructure/github/test_actions.py` - GitHub Actions helpers (17 tests)
+- `tests/unit/infrastructure/filesystem/test_operations.py` - Filesystem utilities (27 tests)
 
 **Application Layer:**
 - `tests/unit/application/collectors/test_statistics.py` - Statistics models and collectors (44 tests)
@@ -57,12 +63,6 @@ These changes reduce code duplication and simplify the testing surface area.
 
 ### Coverage Gaps
 The following modules lack unit tests:
-
-**Infrastructure Layer:**
-- `src/claudestep/infrastructure/git/operations.py` - Git command wrappers
-- `src/claudestep/infrastructure/github/operations.py` - GitHub CLI wrappers
-- `src/claudestep/infrastructure/github/actions.py` - GitHub Actions helpers
-- `src/claudestep/infrastructure/filesystem/operations.py` - File I/O utilities
 
 **Application Layer:**
 - `src/claudestep/application/services/reviewer_management.py` - Reviewer capacity management
@@ -522,7 +522,7 @@ Before committing a test, verify:
     - Edge cases tested: empty files, missing files, invalid YAML, boundary conditions
     - Tests verify both success paths and error handling
 
-### Phase 2: Infrastructure Layer
+### Phase 2: Infrastructure Layer ✅ COMPLETE
 
 - [x] **Test pr_operations.py** ✅ COMPLETE (`tests/unit/application/services/test_pr_operations.py`)
   - 21 comprehensive tests covering branch name generation, parsing, and PR fetching
@@ -531,26 +531,59 @@ Before committing a test, verify:
   - PR fetching with various states (open, merged, all)
   - Error handling for API failures
 
-- [ ] **Test git operations** (`tests/unit/infrastructure/git/test_operations.py`)
-  - Mock subprocess calls to git commands
-  - Test `create_branch()`, `commit_changes()`, `push_branch()`, `get_current_branch()`
-  - Test error handling for git command failures
-  - Test proper command construction (quoting, arguments)
+- [x] **Test git operations** ✅ COMPLETE (December 27, 2025) (`tests/unit/infrastructure/git/test_operations.py`)
+  - 13 tests covering git command execution and error handling
+  - Tests for `run_command()` - subprocess wrapper with output capture control
+  - Tests for `run_git_command()` - git command execution with error handling
+  - Error handling for git command failures with stderr capture
+  - Command output processing (whitespace stripping, empty output)
+  - **Technical Notes:**
+    - Uses mocking to avoid actual git commands in tests
+    - Tests verify proper command construction and argument passing
+    - GitError exception tested with stderr message inclusion
+    - All edge cases covered: empty output, multiple arguments, failure scenarios
 
-- [ ] **Test GitHub operations** (`tests/unit/infrastructure/github/test_operations.py`)
-  - Mock GitHub CLI (`gh`) commands
-  - Test `create_pull_request()`, `get_open_prs()`, `close_pull_request()`, `add_pr_comment()`, `get_pr_diff()`
-  - Test error handling for GitHub API failures, rate limiting, authentication errors
+- [x] **Test GitHub operations** ✅ COMPLETE (December 27, 2025) (`tests/unit/infrastructure/github/test_operations.py`)
+  - 27 tests covering GitHub CLI and API operations
+  - Tests for `run_gh_command()` - GitHub CLI command execution
+  - Tests for `gh_api_call()` - REST API calls with JSON parsing
+  - Tests for `download_artifact_json()` - artifact download and extraction from zip files
+  - Tests for `ensure_label_exists()` - label creation with idempotency
+  - Error handling for GitHub API failures, invalid JSON, missing artifacts
+  - **Technical Notes:**
+    - Comprehensive mocking of subprocess calls and zipfile operations
+    - Tests verify proper error propagation and GitHubAPIError usage
+    - Artifact download tests include cleanup verification
+    - Label creation handles "already exists" gracefully
+    - All edge cases covered: empty responses, malformed JSON, API errors
 
-- [ ] **Test GitHub Actions helpers** (`tests/unit/infrastructure/github/test_actions.py`)
-  - Mock environment variables (GITHUB_OUTPUT, GITHUB_STEP_SUMMARY)
-  - Test `write_output()`, `write_summary()`, `set_failed()`
-  - Test output sanitization (special characters, multiline)
+- [x] **Test GitHub Actions helpers** ✅ COMPLETE (December 27, 2025) (`tests/unit/infrastructure/github/test_actions.py`)
+  - 17 tests covering GitHub Actions environment integration
+  - Tests for `GitHubActionsHelper.__init__()` - environment variable initialization
+  - Tests for `write_output()` - single-line and multi-line output with heredoc format
+  - Tests for `write_step_summary()` - markdown summary writing
+  - Tests for annotation methods - `set_error()`, `set_notice()`, `set_warning()`
+  - Fallback behavior when environment variables not set
+  - **Technical Notes:**
+    - Uses tmp_path fixture for file I/O tests
+    - Verifies heredoc format for multi-line values with unique delimiters
+    - Tests confirm append behavior (not overwrite)
+    - Annotation tests verify workflow command format
+    - Tests work both with and without GitHub Actions environment
 
-- [ ] **Test filesystem operations** (`tests/unit/infrastructure/filesystem/test_operations.py`)
-  - Test `read_file()`, `write_file()`, `file_exists()`, `find_file()`
-  - Test error handling for missing files, permission errors
-  - Test path normalization and validation
+- [x] **Test filesystem operations** ✅ COMPLETE (December 27, 2025) (`tests/unit/infrastructure/filesystem/test_operations.py`)
+  - 27 tests covering filesystem utilities
+  - Tests for `read_file()` - file reading with error handling
+  - Tests for `write_file()` - file writing with overwrite behavior
+  - Tests for `file_exists()` - file existence checking (not directories)
+  - Tests for `find_file()` - recursive file search with max_depth control
+  - Unicode handling, newline preservation, symlink support
+  - **Technical Notes:**
+    - Uses tmp_path fixture for all file operations
+    - Tests verify Unicode content handling (emojis, non-ASCII characters)
+    - find_file() tests cover max_depth boundaries, hidden directory skipping
+    - Tests confirm proper error handling for missing files
+    - Edge cases tested: empty files, nested directories, permission errors
 
 ### Phase 3: Application Services Layer
 
@@ -841,7 +874,7 @@ class TestCheckReviewerCapacity:
 
 **Current Progress**:
 - ✅ Phase 1: 100% COMPLETE (test infrastructure, conftest.py fixtures, and domain layer tests all done)
-- ✅ Phase 2: ~20% complete (pr_operations.py done, need infrastructure layer tests)
+- ✅ Phase 2: 100% COMPLETE (all infrastructure layer tests done - git, github, filesystem operations)
 - ✅ Phase 3: ~75% complete (task_management, statistics, table_formatter done, need reviewer/project/artifact)
 - ✅ Phase 4: ~11% complete (prepare_summary done, need 8 more commands)
 - Phase 5: Not started (integration tests and quality improvements)
@@ -849,13 +882,13 @@ class TestCheckReviewerCapacity:
 
 **Remaining Effort**:
 - ✅ **Phase 1**: COMPLETE (December 27, 2025)
-- **Phase 2**: 2-3 days (git, github, filesystem infrastructure tests)
+- ✅ **Phase 2**: COMPLETE (December 27, 2025)
 - **Phase 3**: 1 day (reviewer_management, project_detection, artifact_operations)
 - **Phase 4**: 4-5 days (8 remaining command modules)
 - **Phase 5**: 2-3 days (integration tests, coverage reporting)
 - **Phase 6**: 1 day (documentation, CI enhancements)
 
-**Total Remaining: 10-13 days** (can be parallelized or spread over multiple contributors)
+**Total Remaining: 8-10 days** (can be parallelized or spread over multiple contributors)
 
 ## Resources
 
@@ -876,7 +909,7 @@ class TestCheckReviewerCapacity:
 **Recommended Next Actions** (in priority order):
 1. ~~Create `tests/conftest.py` with common fixtures (Phase 1)~~ ✅ COMPLETE (December 27, 2025)
 2. ~~Add domain layer tests for config.py with branchPrefix rejection validation (Phase 1)~~ ✅ COMPLETE (December 27, 2025)
-3. Add infrastructure tests for git and github operations (Phase 2)
+3. ~~Add infrastructure tests for git and github operations (Phase 2)~~ ✅ COMPLETE (December 27, 2025)
 4. Add application service tests for reviewer_management.py (Phase 3)
 5. Add CLI command tests for prepare.py and finalize.py (Phase 4)
 6. Set up CI workflow to run e2e integration tests from demo repository (Phase 5/6)
@@ -887,7 +920,7 @@ class TestCheckReviewerCapacity:
 - ✅ Architecture modernization with layered structure
 - ✅ Test structure reorganized to mirror src/ layout
 - ✅ CI workflow added for automated testing
-- ✅ All 192 tests passing (0 failures, up from 112)
+- ✅ All 269 tests passing (0 failures, up from 112 initially)
 - ✅ E2E tests updated and working
 - ✅ Comprehensive tests for `pr_operations.py` (21 test cases)
 - ✅ Comprehensive tests for `task_management.py` (19 test cases)
@@ -904,3 +937,12 @@ class TestCheckReviewerCapacity:
   - Total: 80 new tests, all following the test style guide with Arrange-Act-Assert structure
   - Tests verify both success paths and error handling with comprehensive edge case coverage
   - branchPrefix rejection validation included with helpful error messages
+- ✅ **Phase 2 Complete: Infrastructure Layer Tests** (December 27, 2025)
+  - `tests/unit/infrastructure/git/test_operations.py` - Git command wrappers (13 tests)
+  - `tests/unit/infrastructure/github/test_operations.py` - GitHub CLI and API operations (27 tests)
+  - `tests/unit/infrastructure/github/test_actions.py` - GitHub Actions helpers (17 tests)
+  - `tests/unit/infrastructure/filesystem/test_operations.py` - Filesystem utilities (27 tests)
+  - Total: 84 new tests added in Phase 2
+  - All tests use mocking at system boundaries (subprocess, file I/O)
+  - Comprehensive error handling and edge case coverage
+  - Tests verify proper command construction, output processing, and error propagation
