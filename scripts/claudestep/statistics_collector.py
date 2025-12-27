@@ -245,12 +245,12 @@ def collect_all_statistics(
         print(f"Single project mode: {config_path}")
 
         try:
-            config = load_json(config_path)
+            config = load_config(config_path)
             reviewers_config = config.get("reviewers", [])
             reviewers = [r.get("username") for r in reviewers_config if "username" in r]
 
             # Extract project name from path
-            # Path format: claude-step/{project}/configuration.json
+            # Path format: claude-step/{project}/configuration.yml
             project_name = os.path.basename(os.path.dirname(config_path))
 
             # Determine spec path
@@ -278,10 +278,7 @@ def collect_all_statistics(
         for project_name in project_names:
             try:
                 project_path = os.path.join("refactor", project_name)
-                # Check for .yml first, then .json
                 config_file = os.path.join(project_path, "configuration.yml")
-                if not os.path.exists(config_file):
-                    config_file = os.path.join(project_path, "configuration.json")
                 spec_file = os.path.join(project_path, "spec.md")
 
                 # Load config to get reviewers

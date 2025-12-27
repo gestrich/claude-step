@@ -1,6 +1,5 @@
 """Configuration file loading and validation"""
 
-import json
 import os
 import re
 from typing import Any, Dict
@@ -11,56 +10,26 @@ from claudestep.exceptions import ConfigurationError, FileNotFoundError
 
 
 def load_config(file_path: str) -> Dict[str, Any]:
-    """Load configuration file (YAML or JSON) and return parsed content
+    """Load YAML configuration file and return parsed content
 
     Args:
-        file_path: Path to configuration file (.yml or .json)
+        file_path: Path to YAML configuration file (.yml or .yaml)
 
     Returns:
         Parsed configuration as dictionary
 
     Raises:
         FileNotFoundError: If file doesn't exist
-        ConfigurationError: If file is invalid
+        ConfigurationError: If file is invalid YAML
     """
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
 
     try:
         with open(file_path, "r") as f:
-            if file_path.endswith('.yml') or file_path.endswith('.yaml'):
-                return yaml.safe_load(f)
-            else:
-                return json.load(f)
+            return yaml.safe_load(f)
     except yaml.YAMLError as e:
         raise ConfigurationError(f"Invalid YAML in {file_path}: {str(e)}")
-    except json.JSONDecodeError as e:
-        raise ConfigurationError(f"Invalid JSON in {file_path}: {str(e)}")
-
-
-def load_json(file_path: str) -> Dict[str, Any]:
-    """Load JSON file and return parsed content
-
-    Deprecated: Use load_config() instead
-
-    Args:
-        file_path: Path to JSON file
-
-    Returns:
-        Parsed JSON as dictionary
-
-    Raises:
-        FileNotFoundError: If file doesn't exist
-        ConfigurationError: If file is invalid JSON
-    """
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"File not found: {file_path}")
-
-    try:
-        with open(file_path, "r") as f:
-            return json.load(f)
-    except json.JSONDecodeError as e:
-        raise ConfigurationError(f"Invalid JSON in {file_path}: {str(e)}")
 
 
 def substitute_template(template: str, **kwargs) -> str:

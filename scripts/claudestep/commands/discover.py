@@ -9,7 +9,7 @@ from claudestep.github_actions import GitHubActionsHelper
 
 
 def find_all_projects(base_dir: str = "refactor") -> List[str]:
-    """Find all project directories with configuration.yml or configuration.json
+    """Find all project directories with configuration.yml
 
     Args:
         base_dir: Base directory to search for projects (default: refactor)
@@ -27,11 +27,10 @@ def find_all_projects(base_dir: str = "refactor") -> List[str]:
     for entry in os.listdir(base_dir):
         project_path = os.path.join(base_dir, entry)
 
-        # Check if it's a directory with a configuration file (.yml or .json)
+        # Check if it's a directory with a configuration file
         if os.path.isdir(project_path):
             config_yml = os.path.join(project_path, "configuration.yml")
-            config_json = os.path.join(project_path, "configuration.json")
-            if os.path.exists(config_yml) or os.path.exists(config_json):
+            if os.path.exists(config_yml):
                 projects.append(entry)
                 print(f"Found project: {entry}")
 

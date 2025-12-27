@@ -667,7 +667,7 @@ See [.github/workflows/claudestep-statistics.yml](.github/workflows/claudestep-s
 
 ---
 
-See [Configuration Reference](#configuration-reference) for details on `configuration.json` and `spec.md` format.
+See [Configuration Reference](#configuration-reference) for details on `configuration.yml` and `spec.md` format.
 
 ## Background
 

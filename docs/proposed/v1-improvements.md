@@ -104,25 +104,28 @@ Configuration and workflow improvements for V1 release.
 - Now supports custom `branchPrefix` by loading each project's config and matching the branch pattern
 - Backwards compatible with projects using default branch naming (no `branchPrefix` specified)
 
-- [ ] **Remove JSON config support**
+- [x] **Remove JSON config support**
 
-**Status:** PENDING
+**Status:** COMPLETED
 
-**Goal:**
-- Remove backwards compatibility for JSON configuration files
-- Only support YAML configuration format going forward
-- Simplify the codebase by removing JSON parsing logic
-
-**Changes needed:**
-- Remove JSON fallback logic from `config.py` `load_config()` function
-- Remove `.json` file detection from `project_detection.py`
-- Update documentation to reflect YAML-only support
-- Remove any references to `configuration.json` in examples and README
+**Changes made:**
+- Removed JSON support from `config.py` `load_config()` function - now only accepts YAML files
+- Removed deprecated `load_json()` function from `config.py`
+- Removed JSON import from `config.py` (no longer needed)
+- Updated `project_detection.py` to only look for `configuration.yml` files
+- Removed `load_json` import from `project_detection.py`
+- Updated `statistics_collector.py` to use `load_config()` instead of `load_json()`
+- Updated `statistics_collector.py` to only look for `.yml` configuration files
+- Updated `commands/discover.py` to only look for `.yml` configuration files
+- Removed `examples/configuration.json` file (YAML example already exists)
+- Updated README.md to reference `configuration.yml` instead of `configuration.json`
+- Updated all comments in code to reference `.yml` instead of `.json`
 
 **Technical notes:**
-- This is a breaking change - users with JSON configs will need to migrate to YAML
-- The migration is simple: just rename and convert the file format
-- Reduces code complexity and maintenance burden
+- This is a breaking change - projects using JSON configs must migrate to YAML format
+- All Python files compile successfully after changes
+- The codebase is now simpler with only YAML support
+- Migration path: rename `configuration.json` to `configuration.yml` and convert format
 
 - [ ] **Make Slack webhook an action input**
 

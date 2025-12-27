@@ -5,7 +5,6 @@ import json
 import os
 from typing import Optional, Tuple
 
-from claudestep.config import load_json
 from claudestep.github_operations import run_gh_command
 
 
@@ -50,16 +49,9 @@ def detect_project_from_pr(pr_number: str, repo: str) -> Optional[str]:
         # Check each project to see if its branch prefix matches
         for project in project_names:
             # Check for config file to get branchPrefix
-            config_path_yml = f"claude-step/{project}/configuration.yml"
-            config_path_json = f"claude-step/{project}/configuration.json"
+            config_path = f"claude-step/{project}/configuration.yml"
 
-            config_path = None
-            if os.path.exists(config_path_yml):
-                config_path = config_path_yml
-            elif os.path.exists(config_path_json):
-                config_path = config_path_json
-
-            if config_path:
+            if os.path.exists(config_path):
                 from claudestep.config import load_config
                 config = load_config(config_path)
                 branch_prefix = config.get("branchPrefix")
@@ -100,18 +92,7 @@ def detect_project_paths(project_name: str) -> Tuple[str, str, str, str]:
     Returns:
         Tuple of (config_path, spec_path, pr_template_path, project_path)
     """
-    # Default to .yml, but check if .json exists for backwards compatibility
-    yml_path = f"claude-step/{project_name}/configuration.yml"
-    json_path = f"claude-step/{project_name}/configuration.json"
-    # Prefer .yml, fall back to .json if it exists
-    if os.path.exists(yml_path):
-        config_path = yml_path
-    elif os.path.exists(json_path):
-        config_path = json_path
-    else:
-        # Default to .yml for new projects
-        config_path = yml_path
-
+    config_path = f"claude-step/{project_name}/configuration.yml"
     spec_path = f"claude-step/{project_name}/spec.md"
     pr_template_path = f"claude-step/{project_name}/pr-template.md"
     project_path = f"claude-step/{project_name}"
