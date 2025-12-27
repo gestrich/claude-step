@@ -35,7 +35,7 @@ These changes reduce code duplication and simplify the testing surface area.
 - `.github/workflows/test.yml` - CI workflow for unit tests
 - `pyproject.toml` - Package configuration with test dependencies
 - Tests run on every push and PR to main branch
-- **439 tests passing** with 0 failures (up from 421)
+- **463 tests passing** with 0 failures (up from 439)
 
 ### Existing Tests (Organized by Layer)
 **Domain Layer:**
@@ -66,6 +66,7 @@ These changes reduce code duplication and simplify the testing surface area.
 - `tests/unit/cli/commands/test_discover_ready.py` - Ready project discovery command (18 tests)
 - `tests/unit/cli/commands/test_statistics.py` - Statistics reporting command (15 tests)
 - `tests/unit/cli/commands/test_add_cost_comment.py` - Cost comment posting command (18 tests)
+- `tests/unit/cli/commands/test_extract_cost.py` - Cost extraction command (24 tests)
 
 **Integration:**
 - Demo repository: `claude-step-demo/tests/integration/test_workflow_e2e.py` - End-to-end workflow
@@ -74,8 +75,7 @@ These changes reduce code duplication and simplify the testing surface area.
 The following modules lack unit tests:
 
 **CLI Layer:**
-- `src/claudestep/cli/commands/extract_cost.py` - Cost extraction
-- `src/claudestep/cli/commands/notify_pr.py` - PR notifications
+- `src/claudestep/cli/commands/notify_pr.py` - PR notifications (LAST REMAINING COMMAND)
 
 ## Testing Principles to Follow
 
@@ -776,10 +776,26 @@ Before committing a test, verify:
     - Edge cases tested: zero costs, high precision values, invalid string inputs, missing env vars
     - All tests follow the style guide with Arrange-Act-Assert structure and descriptive names
 
-- [ ] **Test extract_cost.py** (`tests/unit/cli/commands/test_extract_cost.py`)
-  - Mock artifact reading
-  - Test cost data extraction from metadata, parsing various cost formats
-  - Test handling missing artifacts and output formatting
+- [x] **Test extract_cost.py** ✅ COMPLETE (December 27, 2025) (`tests/unit/cli/commands/test_extract_cost.py`)
+  - 24 comprehensive tests covering cost extraction functionality
+  - Tests for `extract_cost_from_execution()` - parsing cost from top-level and nested fields (9 tests)
+  - Tests for `cmd_extract_cost()` - full command orchestration (15 tests)
+  - Tests for execution file reading (dict and list formats)
+  - Tests for EXECUTION_INDEX handling (default last, specific index, out of range, negative)
+  - Tests for filtering list items by cost presence
+  - Tests for environment variable parsing (EXECUTION_FILE, EXECUTION_INDEX)
+  - Tests for output formatting (6 decimal places precision)
+  - Tests for graceful error handling (missing file, invalid JSON, missing cost, unexpected errors)
+  - Tests for default behavior (returns 0 on errors, doesn't fail workflow)
+  - **Technical Notes:**
+    - All 24 tests pass (total test count increased from 439 to 463)
+    - Tests use tmp_path fixture for file system operations
+    - Tests verify proper use of GitHubActionsHelper for outputs and error messages
+    - Tests confirm graceful degradation: always outputs a cost (0 if extraction fails)
+    - Tests verify list filtering logic (items with total_cost_usd vs fallback to last item)
+    - Tests verify EXECUTION_INDEX supports negative indexing (Python list semantics)
+    - Edge cases tested: empty list, list without cost items, invalid JSON, missing fields
+    - All tests follow the style guide with Arrange-Act-Assert structure and descriptive names
 
 - [ ] **Test notify_pr.py** (`tests/unit/cli/commands/test_notify_pr.py`)
   - Mock Slack webhook calls
@@ -999,7 +1015,7 @@ class TestCheckReviewerCapacity:
 - ✅ Phase 1: 100% COMPLETE (test infrastructure, conftest.py fixtures, and domain layer tests all done)
 - ✅ Phase 2: 100% COMPLETE (all infrastructure layer tests done - git, github, filesystem operations)
 - ✅ Phase 3: 100% COMPLETE (all application layer tests done - task_management, statistics, table_formatter, reviewer_management, project_detection, artifact_operations)
-- ✅ Phase 4: ~67% complete (prepare_summary, prepare, finalize, discover, discover_ready, and statistics done, need 3 more commands)
+- ✅ Phase 4: ~89% complete (8 of 9 command modules done: prepare_summary, prepare, finalize, discover, discover_ready, statistics, add_cost_comment, extract_cost; only notify_pr remains)
 - Phase 5: Not started (integration tests and quality improvements)
 - ✅ Phase 6: ~40% complete (CI set up, need documentation and enhancements)
 
@@ -1007,11 +1023,11 @@ class TestCheckReviewerCapacity:
 - ✅ **Phase 1**: COMPLETE (December 27, 2025)
 - ✅ **Phase 2**: COMPLETE (December 27, 2025)
 - ✅ **Phase 3**: COMPLETE (December 27, 2025)
-- **Phase 4**: 1-2 days (2 remaining command modules: extract_cost, notify_pr)
+- **Phase 4**: <1 day (1 remaining command module: notify_pr)
 - **Phase 5**: 2-3 days (integration tests, coverage reporting)
 - **Phase 6**: 1 day (documentation, CI enhancements)
 
-**Total Remaining: 4-6 days** (can be parallelized or spread over multiple contributors)
+**Total Remaining: 3-4 days** (can be parallelized or spread over multiple contributors)
 
 ## Resources
 
@@ -1039,8 +1055,9 @@ class TestCheckReviewerCapacity:
 7. ~~Add CLI command tests for prepare.py and finalize.py (Phase 4)~~ ✅ COMPLETE (December 27, 2025)
 8. ~~Add CLI command tests for discover.py and discover_ready.py (Phase 4)~~ ✅ COMPLETE (December 27, 2025)
 9. ~~Add CLI command tests for statistics.py and add_cost_comment.py (Phase 4)~~ ✅ COMPLETE (December 27, 2025)
-10. Add CLI command tests for extract_cost.py and notify_pr.py (Phase 4)
-11. Set up CI workflow to run e2e integration tests from demo repository (Phase 5/6)
+10. ~~Add CLI command tests for extract_cost.py (Phase 4)~~ ✅ COMPLETE (December 27, 2025)
+11. Add CLI command tests for notify_pr.py (Phase 4) - LAST COMMAND MODULE
+12. Set up CI workflow to run e2e integration tests from demo repository (Phase 5/6)
 
 ## Progress Summary
 
@@ -1048,7 +1065,7 @@ class TestCheckReviewerCapacity:
 - ✅ Architecture modernization with layered structure
 - ✅ Test structure reorganized to mirror src/ layout
 - ✅ CI workflow added for automated testing
-- ✅ All 421 tests passing (0 failures, up from 112 initially)
+- ✅ All 463 tests passing (0 failures, up from 112 initially)
 - ✅ E2E tests updated and working
 - ✅ Comprehensive tests for `pr_operations.py` (21 test cases)
 - ✅ Comprehensive tests for `task_management.py` (19 test cases)
@@ -1064,6 +1081,7 @@ class TestCheckReviewerCapacity:
 - ✅ Comprehensive tests for `discover_ready.py` (18 test cases) - December 27, 2025
 - ✅ Comprehensive tests for `statistics.py` (15 test cases) - December 27, 2025
 - ✅ Comprehensive tests for `add_cost_comment.py` (18 test cases) - December 27, 2025
+- ✅ Comprehensive tests for `extract_cost.py` (24 test cases) - December 27, 2025
 - ✅ **Common test fixtures** in `tests/conftest.py` (December 27, 2025)
   - 20+ reusable fixtures covering file system, git, GitHub, and configuration scenarios
   - All fixtures follow test style guide with clear docstrings and organized by category
