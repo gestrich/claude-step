@@ -182,12 +182,12 @@ on:
 
 jobs:
   refactor:
-    # Only run on merged PRs
-    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
     # ... rest of job
 ```
 
-Now when you merge a PR, it immediately creates the next one!
+Now when you close a PR (merged or not), it immediately creates the next one!
+
+> **Note:** The workflow triggers on both merged and closed-without-merging PRs. If you close a PR without merging and don't want it to re-open, first update `spec.md` to mark that task as complete (or remove it), merge that change, then close the PR.
 
 #### Multiple Projects
 
@@ -560,13 +560,13 @@ on:
 
 jobs:
   refactor:
-    if: github.event.pull_request.merged == true
     # ...
 ```
 
-- Creates next PR immediately when one merges
+- Creates next PR immediately when one closes (merged or not)
 - Fastest iteration speed
 - Best for active refactoring periods
+- **Important:** If closing without merging, update `spec.md` first to avoid the PR re-opening
 
 ## Setup
 

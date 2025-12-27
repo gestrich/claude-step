@@ -25,7 +25,8 @@ on:
           - typescript-conversion
           - api-refactor
 
-  # Automatic: Trigger on PR merge to create the next PR
+  # Automatic: Trigger on PR close (merged or not) to create the next PR
+  # Note: If closing without merging, update spec.md first to avoid the PR re-opening
   pull_request:
     types: [closed]
 
@@ -37,8 +38,6 @@ permissions:
 jobs:
   refactor:
     runs-on: ubuntu-latest
-    # Only run on merged PRs or non-PR triggers
-    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
 
     outputs:
       pr_created: ${{ steps.refactor.outputs.pr_number != '' }}
