@@ -35,7 +35,7 @@ These changes reduce code duplication and simplify the testing surface area.
 - `.github/workflows/test.yml` - CI workflow for unit tests
 - `pyproject.toml` - Package configuration with test dependencies
 - Tests run on every push and PR to main branch
-- **388 tests passing** with 0 failures (up from 372)
+- **406 tests passing** with 0 failures (up from 388)
 
 ### Existing Tests (Organized by Layer)
 **Domain Layer:**
@@ -62,6 +62,8 @@ These changes reduce code duplication and simplify the testing surface area.
 - `tests/unit/cli/commands/test_prepare_summary.py` - PR summary command (9 tests)
 - `tests/unit/cli/commands/test_prepare.py` - Preparation workflow command (19 tests)
 - `tests/unit/cli/commands/test_finalize.py` - Finalization workflow command (20 tests)
+- `tests/unit/cli/commands/test_discover.py` - Project discovery command (16 tests)
+- `tests/unit/cli/commands/test_discover_ready.py` - Ready project discovery command (18 tests)
 
 **Integration:**
 - Demo repository: `claude-step-demo/tests/integration/test_workflow_e2e.py` - End-to-end workflow
@@ -70,10 +72,6 @@ These changes reduce code duplication and simplify the testing surface area.
 The following modules lack unit tests:
 
 **CLI Layer:**
-- `src/claudestep/cli/commands/discover.py` - Project discovery
-- `src/claudestep/cli/commands/discover_ready.py` - Ready project discovery
-- `src/claudestep/cli/commands/prepare.py` - Task preparation
-- `src/claudestep/cli/commands/finalize.py` - Task finalization
 - `src/claudestep/cli/commands/statistics.py` - Statistics reporting
 - `src/claudestep/cli/commands/extract_cost.py` - Cost extraction
 - `src/claudestep/cli/commands/add_cost_comment.py` - Cost comment posting
@@ -717,10 +715,24 @@ Before committing a test, verify:
     - Tests verify JSON output format and project count are written correctly
     - All tests follow the style guide with Arrange-Act-Assert structure and descriptive names
 
-- [ ] **Test discover_ready.py** (`tests/unit/cli/commands/test_discover_ready.py`)
-  - Mock GitHub API for PR queries
-  - Test finding projects with available capacity, filtering by reviewer capacity
-  - Test output formatting, all reviewers at capacity scenario, projects with no reviewers
+- [x] **Test discover_ready.py** ✅ COMPLETE (December 27, 2025) (`tests/unit/cli/commands/test_discover_ready.py`)
+  - 18 comprehensive tests covering ready project discovery functionality
+  - Tests for `check_project_ready()` - validating project readiness with capacity and tasks
+  - Tests for `main()` - command orchestration and JSON output
+  - Tests for success scenario (all conditions met: config, spec, reviewers, capacity, tasks)
+  - Tests for all failure scenarios (missing config, missing spec, no reviewers, invalid spec, no capacity, no tasks)
+  - Tests for label usage (verifies 'claudestep' label used consistently)
+  - Tests for task counting and capacity reporting in output
+  - Tests for error handling (unexpected exceptions)
+  - **Technical Notes:**
+    - All 18 tests pass (total test count increased from 388 to 406)
+    - Tests mock at system boundaries: `detect_project_paths()`, `find_available_reviewer()`, `get_in_progress_task_indices()`, `find_next_available_task()`
+    - Tests verify proper GITHUB_REPOSITORY environment variable handling (returns error if missing)
+    - Tests verify filtering logic: only projects passing all checks are included in output
+    - Tests verify output format includes task count and capacity info (e.g., "1/2 PRs, 3 tasks remaining")
+    - Tests verify proper use of emojis in status messages (✅ ready, ⏭️ skipped, ❌ error)
+    - Tests verify JSON output matches discovery pattern (array of project names, project count)
+    - All tests follow the style guide with Arrange-Act-Assert structure and descriptive names
 
 - [ ] **Test statistics.py** (`tests/unit/cli/commands/test_statistics.py`)
   - Mock statistics collector
@@ -955,7 +967,7 @@ class TestCheckReviewerCapacity:
 - ✅ Phase 1: 100% COMPLETE (test infrastructure, conftest.py fixtures, and domain layer tests all done)
 - ✅ Phase 2: 100% COMPLETE (all infrastructure layer tests done - git, github, filesystem operations)
 - ✅ Phase 3: 100% COMPLETE (all application layer tests done - task_management, statistics, table_formatter, reviewer_management, project_detection, artifact_operations)
-- ✅ Phase 4: ~44% complete (prepare_summary, prepare, finalize, and discover done, need 5 more commands)
+- ✅ Phase 4: ~56% complete (prepare_summary, prepare, finalize, discover, and discover_ready done, need 4 more commands)
 - Phase 5: Not started (integration tests and quality improvements)
 - ✅ Phase 6: ~40% complete (CI set up, need documentation and enhancements)
 
@@ -963,11 +975,11 @@ class TestCheckReviewerCapacity:
 - ✅ **Phase 1**: COMPLETE (December 27, 2025)
 - ✅ **Phase 2**: COMPLETE (December 27, 2025)
 - ✅ **Phase 3**: COMPLETE (December 27, 2025)
-- **Phase 4**: 3-4 days (5 remaining command modules)
+- **Phase 4**: 2-3 days (4 remaining command modules: statistics, add_cost_comment, extract_cost, notify_pr)
 - **Phase 5**: 2-3 days (integration tests, coverage reporting)
 - **Phase 6**: 1 day (documentation, CI enhancements)
 
-**Total Remaining: 6-8 days** (can be parallelized or spread over multiple contributors)
+**Total Remaining: 5-7 days** (can be parallelized or spread over multiple contributors)
 
 ## Resources
 
@@ -992,8 +1004,10 @@ class TestCheckReviewerCapacity:
 4. ~~Add application service tests for reviewer_management.py (Phase 3)~~ ✅ COMPLETE (December 27, 2025)
 5. ~~Add application service tests for project_detection.py (Phase 3)~~ ✅ COMPLETE (December 27, 2025)
 6. ~~Add application service tests for artifact_operations.py (Phase 3)~~ ✅ COMPLETE (December 27, 2025)
-7. Add CLI command tests for prepare.py and finalize.py (Phase 4)
-8. Set up CI workflow to run e2e integration tests from demo repository (Phase 5/6)
+7. ~~Add CLI command tests for prepare.py and finalize.py (Phase 4)~~ ✅ COMPLETE (December 27, 2025)
+8. ~~Add CLI command tests for discover.py and discover_ready.py (Phase 4)~~ ✅ COMPLETE (December 27, 2025)
+9. Add CLI command tests for statistics.py, add_cost_comment.py, extract_cost.py, notify_pr.py (Phase 4)
+10. Set up CI workflow to run e2e integration tests from demo repository (Phase 5/6)
 
 ## Progress Summary
 
@@ -1001,7 +1015,7 @@ class TestCheckReviewerCapacity:
 - ✅ Architecture modernization with layered structure
 - ✅ Test structure reorganized to mirror src/ layout
 - ✅ CI workflow added for automated testing
-- ✅ All 388 tests passing (0 failures, up from 112 initially)
+- ✅ All 406 tests passing (0 failures, up from 112 initially)
 - ✅ E2E tests updated and working
 - ✅ Comprehensive tests for `pr_operations.py` (21 test cases)
 - ✅ Comprehensive tests for `task_management.py` (19 test cases)
@@ -1014,6 +1028,7 @@ class TestCheckReviewerCapacity:
 - ✅ Comprehensive tests for `prepare.py` (19 test cases) - December 27, 2025
 - ✅ Comprehensive tests for `finalize.py` (20 test cases) - December 27, 2025
 - ✅ Comprehensive tests for `discover.py` (16 test cases) - December 27, 2025
+- ✅ Comprehensive tests for `discover_ready.py` (18 test cases) - December 27, 2025
 - ✅ **Common test fixtures** in `tests/conftest.py` (December 27, 2025)
   - 20+ reusable fixtures covering file system, git, GitHub, and configuration scenarios
   - All fixtures follow test style guide with clear docstrings and organized by category
