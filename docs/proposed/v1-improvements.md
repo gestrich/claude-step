@@ -79,11 +79,28 @@ Configuration and workflow improvements for V1 release.
 - To prevent a closed PR from being re-opened, users should first update spec.md to mark the task as complete or remove it, merge that change, then close the PR
 - Tests pass successfully (62 passed, 6 pre-existing failures unrelated to this change)
 
-- [ ] **Run e2e tests to verify changes**
+- [x] **Run e2e tests to verify changes**
 
-After completing all the above tasks:
-1. Push changes to both claude-step and claude-step-demo repositories
-2. Run the e2e tests: `./tests/integration/run_test.sh`
-3. Verify the demo repo still works after all these changes
-4. The tests rely on code being pushed to GitHub, so make sure both repos are pushed before running tests
+**Status:** COMPLETED
+
+**Changes made:**
+- Fixed integration test to use correct branch pattern matching for custom `branchPrefix`
+- Updated test assertions to look for `refactor/{project_name}-{index}` format instead of `YYYY-MM-{project_name}-{index}`
+- Fixed `detect_project_from_pr()` function in `project_detection.py` to handle both default and custom branch prefix formats
+- The function now iterates through all project directories and checks each project's config to match the branch name correctly
+
+**Test results:**
+- All e2e tests passed successfully (1 passed in ~7 minutes)
+- Test validated:
+  - First PR creation with correct branch naming
+  - Second PR creation while reviewer at capacity
+  - Merge trigger functionality creating third PR automatically
+  - AI-generated PR summaries on all PRs
+  - YAML configuration support
+  - Custom branchPrefix support
+
+**Technical notes:**
+- The original `detect_project_from_pr()` assumed all branches followed the default `YYYY-MM-{project}-{index}` format
+- Now supports custom `branchPrefix` by loading each project's config and matching the branch pattern
+- Backwards compatible with projects using default branch naming (no `branchPrefix` specified)
 
