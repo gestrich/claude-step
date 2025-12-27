@@ -42,6 +42,10 @@ runs:
       with:
         python-version: '3.11'
 
+    - name: Install dependencies
+      shell: bash
+      run: pip install PyYAML
+
     - name: Generate statistics
       id: stats
       shell: bash
