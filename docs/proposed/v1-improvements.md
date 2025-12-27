@@ -167,23 +167,20 @@ Configuration and workflow improvements for V1 release.
 - Users can now customize the label to fit their own labeling conventions
 - The statistics collector functions still use "claudestep" as default in their parameters, but this is appropriate as they're utility functions that can be used independently
 
-- [ ] **Convert hourly job to daily in demo project**
+- [x] **Convert hourly job to daily in demo project**
 
-**Status:** PENDING
+**Status:** COMPLETED
 
-**Goal:**
-- Change the scheduled workflow in demo project at /Users/bill/Developer/personal/claude-step-demo from hourly to daily
-- Set it to run once per day at 5am EST
-- Reduce unnecessary workflow runs
-
-**Changes needed:**
-- Update the cron schedule in demo project's workflow file
-- Change from `0 * * * *` (hourly) to `0 9 * * *` (5am EST = 9am UTC)
-- Update any documentation that references the schedule
+**Changes made:**
+- Updated the cron schedule in `/Users/bill/Developer/personal/claude-step-demo/.github/workflows/claudestep.yml`
+- Changed from `0 2 * * *` (2am UTC) to `0 9 * * *` (9am UTC / 5am EST)
+- Updated the comment in the workflow file to reflect the new schedule
 
 **Technical notes:**
 - 5am EST = 9am UTC (10am UTC during DST)
 - Using `0 9 * * *` for simplicity (doesn't account for DST)
+- The workflow was already running daily, not hourly as initially thought
+- Previous schedule was 2am UTC, now it's 9am UTC (5am EST)
 
 - [ ] **Move E2E tests to demo project**
 
