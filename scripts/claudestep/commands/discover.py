@@ -8,15 +8,18 @@ from typing import List
 from claudestep.github_actions import GitHubActionsHelper
 
 
-def find_all_projects(base_dir: str = "refactor") -> List[str]:
+def find_all_projects(base_dir: str = None) -> List[str]:
     """Find all project directories with configuration.yml
 
     Args:
-        base_dir: Base directory to search for projects (default: refactor)
+        base_dir: Base directory to search for projects (default: auto-detect from environment or use 'claude-step')
 
     Returns:
         List of project names
     """
+    # Auto-detect base directory from environment or use default
+    if base_dir is None:
+        base_dir = os.environ.get("CLAUDESTEP_PROJECT_DIR", "claude-step")
     projects = []
 
     if not os.path.exists(base_dir):

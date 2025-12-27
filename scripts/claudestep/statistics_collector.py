@@ -361,7 +361,10 @@ def collect_all_statistics(
 
         from claudestep.commands.discover import find_all_projects
 
-        project_names = find_all_projects()
+        # Get base directory from environment or use default
+        base_dir = os.environ.get("CLAUDESTEP_PROJECT_DIR", "claude-step")
+
+        project_names = find_all_projects(base_dir)
 
         if not project_names:
             print("No projects found")
@@ -369,7 +372,7 @@ def collect_all_statistics(
 
         for project_name in project_names:
             try:
-                project_path = os.path.join("refactor", project_name)
+                project_path = os.path.join(base_dir, project_name)
                 config_file = os.path.join(project_path, "configuration.yml")
                 spec_file = os.path.join(project_path, "spec.md")
 
