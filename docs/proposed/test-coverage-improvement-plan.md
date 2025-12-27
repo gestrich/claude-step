@@ -35,7 +35,7 @@ These changes reduce code duplication and simplify the testing surface area.
 - `.github/workflows/test.yml` - CI workflow for unit tests
 - `pyproject.toml` - Package configuration with test dependencies
 - Tests run on every push and PR to main branch
-- **421 tests passing** with 0 failures (up from 406)
+- **439 tests passing** with 0 failures (up from 421)
 
 ### Existing Tests (Organized by Layer)
 **Domain Layer:**
@@ -65,6 +65,7 @@ These changes reduce code duplication and simplify the testing surface area.
 - `tests/unit/cli/commands/test_discover.py` - Project discovery command (16 tests)
 - `tests/unit/cli/commands/test_discover_ready.py` - Ready project discovery command (18 tests)
 - `tests/unit/cli/commands/test_statistics.py` - Statistics reporting command (15 tests)
+- `tests/unit/cli/commands/test_add_cost_comment.py` - Cost comment posting command (18 tests)
 
 **Integration:**
 - Demo repository: `claude-step-demo/tests/integration/test_workflow_e2e.py` - End-to-end workflow
@@ -73,9 +74,7 @@ These changes reduce code duplication and simplify the testing surface area.
 The following modules lack unit tests:
 
 **CLI Layer:**
-- `src/claudestep/cli/commands/statistics.py` - Statistics reporting
 - `src/claudestep/cli/commands/extract_cost.py` - Cost extraction
-- `src/claudestep/cli/commands/add_cost_comment.py` - Cost comment posting
 - `src/claudestep/cli/commands/notify_pr.py` - PR notifications
 
 ## Testing Principles to Follow
@@ -755,10 +754,27 @@ Before committing a test, verify:
     - Tests verify proper handling of format types (slack outputs both Slack and JSON, json outputs only JSON)
     - All tests follow the style guide with Arrange-Act-Assert structure and descriptive names
 
-- [ ] **Test add_cost_comment.py** (`tests/unit/cli/commands/test_add_cost_comment.py`)
-  - Mock GitHub API for comment posting
-  - Test cost extraction and formatting, comment creation on PR
-  - Test handling missing cost data and invalid PR numbers
+- [x] **Test add_cost_comment.py** ✅ COMPLETE (December 27, 2025) (`tests/unit/cli/commands/test_add_cost_comment.py`)
+  - 18 comprehensive tests covering cost comment posting functionality
+  - Tests for `format_cost_comment()` - markdown table formatting with workflow URL
+  - Tests for `cmd_add_cost_comment()` - full command orchestration
+  - Tests for environment variable parsing (PR_NUMBER, MAIN_COST, SUMMARY_COST, GITHUB_REPOSITORY, GITHUB_RUN_ID)
+  - Tests for successful comment posting with gh CLI integration
+  - Tests for graceful skipping when PR number not provided
+  - Tests for error handling (missing repository, missing run ID, subprocess errors, unexpected exceptions)
+  - Tests for input validation (invalid cost values treated as zero, whitespace stripping)
+  - Tests for temporary file management (creation, cleanup on success and error)
+  - Tests for cost calculation (total = main + summary with proper precision)
+  - Tests for output writing (comment_posted true/false)
+  - **Technical Notes:**
+    - All 18 tests pass (total test count increased from 421 to 439)
+    - Tests mock subprocess.run, tempfile.NamedTemporaryFile, and os.unlink
+    - Tests verify proper use of GitHubActionsHelper for outputs and error messages
+    - Tests confirm markdown formatting with 6 decimal places for all costs
+    - Tests verify temporary file cleanup happens in finally block (even on errors)
+    - Tests verify graceful handling of missing/invalid cost data (defaults to 0.0)
+    - Edge cases tested: zero costs, high precision values, invalid string inputs, missing env vars
+    - All tests follow the style guide with Arrange-Act-Assert structure and descriptive names
 
 - [ ] **Test extract_cost.py** (`tests/unit/cli/commands/test_extract_cost.py`)
   - Mock artifact reading
@@ -991,7 +1007,7 @@ class TestCheckReviewerCapacity:
 - ✅ **Phase 1**: COMPLETE (December 27, 2025)
 - ✅ **Phase 2**: COMPLETE (December 27, 2025)
 - ✅ **Phase 3**: COMPLETE (December 27, 2025)
-- **Phase 4**: 1-2 days (3 remaining command modules: add_cost_comment, extract_cost, notify_pr)
+- **Phase 4**: 1-2 days (2 remaining command modules: extract_cost, notify_pr)
 - **Phase 5**: 2-3 days (integration tests, coverage reporting)
 - **Phase 6**: 1 day (documentation, CI enhancements)
 
@@ -1022,8 +1038,9 @@ class TestCheckReviewerCapacity:
 6. ~~Add application service tests for artifact_operations.py (Phase 3)~~ ✅ COMPLETE (December 27, 2025)
 7. ~~Add CLI command tests for prepare.py and finalize.py (Phase 4)~~ ✅ COMPLETE (December 27, 2025)
 8. ~~Add CLI command tests for discover.py and discover_ready.py (Phase 4)~~ ✅ COMPLETE (December 27, 2025)
-9. Add CLI command tests for statistics.py, add_cost_comment.py, extract_cost.py, notify_pr.py (Phase 4)
-10. Set up CI workflow to run e2e integration tests from demo repository (Phase 5/6)
+9. ~~Add CLI command tests for statistics.py and add_cost_comment.py (Phase 4)~~ ✅ COMPLETE (December 27, 2025)
+10. Add CLI command tests for extract_cost.py and notify_pr.py (Phase 4)
+11. Set up CI workflow to run e2e integration tests from demo repository (Phase 5/6)
 
 ## Progress Summary
 
@@ -1046,6 +1063,7 @@ class TestCheckReviewerCapacity:
 - ✅ Comprehensive tests for `discover.py` (16 test cases) - December 27, 2025
 - ✅ Comprehensive tests for `discover_ready.py` (18 test cases) - December 27, 2025
 - ✅ Comprehensive tests for `statistics.py` (15 test cases) - December 27, 2025
+- ✅ Comprehensive tests for `add_cost_comment.py` (18 test cases) - December 27, 2025
 - ✅ **Common test fixtures** in `tests/conftest.py` (December 27, 2025)
   - 20+ reusable fixtures covering file system, git, GitHub, and configuration scenarios
   - All fixtures follow test style guide with clear docstrings and organized by category
