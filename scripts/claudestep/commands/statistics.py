@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 from claudestep.domain.exceptions import ConfigurationError
-from claudestep.github_actions import GitHubActionsHelper
+from claudestep.infrastructure.github.actions import GitHubActionsHelper
 from claudestep.statistics_collector import collect_all_statistics
 
 

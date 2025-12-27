@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch, mock_open
 import argparse
 
 from claudestep.commands.prepare_summary import cmd_prepare_summary
-from claudestep.github_actions import GitHubActionsHelper
+from claudestep.infrastructure.github.actions import GitHubActionsHelper
 
 
 class TestPrepareSummary:

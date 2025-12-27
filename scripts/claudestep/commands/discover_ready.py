@@ -5,7 +5,7 @@ import os
 
 from claudestep.commands.discover import find_all_projects
 from claudestep.domain.config import load_config, validate_spec_format
-from claudestep.github_actions import GitHubActionsHelper
+from claudestep.infrastructure.github.actions import GitHubActionsHelper
 from claudestep.project_detection import detect_project_paths
 from claudestep.reviewer_management import find_available_reviewer
 from claudestep.task_management import find_next_available_task, get_in_progress_task_indices

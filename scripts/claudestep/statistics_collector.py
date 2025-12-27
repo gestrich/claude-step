@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Tuple
 from claudestep.artifact_operations import find_project_artifacts
 from claudestep.domain.config import load_config
 from claudestep.domain.exceptions import FileNotFoundError as ClaudeStepFileNotFoundError
-from claudestep.github_operations import run_gh_command
+from claudestep.infrastructure.github.operations import run_gh_command
 from claudestep.domain.models import ProjectStats, StatisticsReport, TeamMemberStats
 from claudestep.task_management import get_in_progress_task_indices
 

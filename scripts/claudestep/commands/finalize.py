@@ -7,9 +7,9 @@ from datetime import datetime
 
 from claudestep.domain.config import substitute_template
 from claudestep.domain.exceptions import ConfigurationError, FileNotFoundError, GitError, GitHubAPIError
-from claudestep.git_operations import run_git_command
-from claudestep.github_actions import GitHubActionsHelper
-from claudestep.github_operations import run_gh_command
+from claudestep.infrastructure.git.operations import run_git_command
+from claudestep.infrastructure.github.actions import GitHubActionsHelper
+from claudestep.infrastructure.github.operations import run_gh_command
 from claudestep.task_management import mark_task_complete
 
 

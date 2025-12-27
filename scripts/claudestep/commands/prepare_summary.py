@@ -3,7 +3,7 @@
 import argparse
 import os
 
-from claudestep.github_actions import GitHubActionsHelper
+from claudestep.infrastructure.github.actions import GitHubActionsHelper
 
 
 def cmd_prepare_summary(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:

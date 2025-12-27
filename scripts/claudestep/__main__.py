@@ -18,7 +18,7 @@ from claudestep.commands.notify_pr import cmd_notify_pr
 from claudestep.commands.prepare import cmd_prepare
 from claudestep.commands.prepare_summary import cmd_prepare_summary
 from claudestep.commands.statistics import cmd_statistics
-from claudestep.github_actions import GitHubActionsHelper
+from claudestep.infrastructure.github.actions import GitHubActionsHelper
 
 
 def main():

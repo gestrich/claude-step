@@ -9,7 +9,7 @@ import re
 from typing import List, Optional, Tuple
 
 from claudestep.domain.exceptions import GitHubAPIError
-from claudestep.github_operations import run_gh_command
+from claudestep.infrastructure.github.operations import run_gh_command
 
 
 def format_branch_name(project_name: str, index: int) -> str:

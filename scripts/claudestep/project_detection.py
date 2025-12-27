@@ -3,7 +3,7 @@
 import json
 from typing import Optional, Tuple
 
-from claudestep.github_operations import run_gh_command
+from claudestep.infrastructure.github.operations import run_gh_command
 from claudestep.pr_operations import parse_branch_name
 
 

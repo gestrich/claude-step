@@ -6,9 +6,9 @@ import os
 
 from claudestep.domain.config import load_config, validate_spec_format
 from claudestep.domain.exceptions import ConfigurationError, FileNotFoundError, GitError, GitHubAPIError
-from claudestep.git_operations import run_git_command
-from claudestep.github_actions import GitHubActionsHelper
-from claudestep.github_operations import ensure_label_exists
+from claudestep.infrastructure.git.operations import run_git_command
+from claudestep.infrastructure.github.actions import GitHubActionsHelper
+from claudestep.infrastructure.github.operations import ensure_label_exists
 from claudestep.pr_operations import format_branch_name
 from claudestep.project_detection import detect_project_from_pr, detect_project_paths
 from claudestep.reviewer_management import find_available_reviewer

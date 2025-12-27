@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import List
 
-from claudestep.github_actions import GitHubActionsHelper
+from claudestep.infrastructure.github.actions import GitHubActionsHelper
 
 
 def find_all_projects(base_dir: str = None) -> List[str]:
