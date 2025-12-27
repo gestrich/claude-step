@@ -34,7 +34,6 @@ mkdir -p claude-step/my-refactor
 Create `claude-step/my-refactor/configuration.yml`:
 
 ```yaml
-branchPrefix: refactor/ai-refactor
 reviewers:
   - username: YOUR_GITHUB_USERNAME
     maxOpenPRs: 1
@@ -209,18 +208,18 @@ Review the generated PR, verify it follows your spec, and make any needed fixes.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `branchPrefix` | string | ❌ | Branch name prefix. Default: `{YYYY-MM}-{project_name}-{index}` |
 | `reviewers` | array | ✅ | Reviewers with `username` and `maxOpenPRs` |
 
 Example:
 ```yaml
-branchPrefix: refactor/migration
 reviewers:
   - username: alice
     maxOpenPRs: 1
   - username: bob
     maxOpenPRs: 2
 ```
+
+**Branch Naming:** All ClaudeStep PRs use the format `claude-step-{project_name}-{index}` (e.g., `claude-step-my-refactor-1`).
 
 ### spec.md Format
 

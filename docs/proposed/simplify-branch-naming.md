@@ -132,14 +132,31 @@ All code that fetches PRs will use this centralized function instead of duplicat
 - Created and verified validation test to ensure `branchPrefix` is properly rejected with helpful error message
 - Configurations without `branchPrefix` continue to load normally
 
-### Phase 5: Update Documentation and Tests
-- [ ] Update README.md to remove `branchPrefix` references
-- [ ] Update `docs/architecture/architecture.md` with new branch format
-- [ ] Update all example configuration files
-- [ ] Update tests to use new branch format
-- [ ] Add migration note to CHANGELOG or release notes
+### Phase 5: Update Documentation and Tests ✅
+- [x] Update README.md to remove `branchPrefix` references
+- [x] Update `docs/architecture/architecture.md` with new branch format
+- [x] Update all example configuration files
+- [x] Update tests to use new branch format
+- [x] Add migration note to CHANGELOG or release notes
 - [ ] **Push all changes to the repo** (required before running e2e tests)
 - [ ] Run end-to-end tests from demo project (`claude-step-demo/tests/integration/`) to verify everything works
+
+**Technical Notes:**
+- Updated README.md:
+  - Removed `branchPrefix` field from initial configuration example
+  - Removed `branchPrefix` field from Configuration Reference table and example
+  - Added new "Branch Naming" section documenting the standard `claude-step-{project_name}-{index}` format
+- Verified `docs/architecture/architecture.md` - already accurate, only mentions branch creation in general terms
+- Verified `examples/configuration.yml` - already updated in Phase 4
+- Updated `examples/advanced/workflow.yml`:
+  - Changed branch parsing regex from `^[0-9]{4}-[0-9]{2}-([^-]+)-[0-9]+$` to `^claude-step-([^-]+)-[0-9]+$`
+  - Updated comment to reflect new format: `claude-step-{project}-{index}`
+- Verified tests - no test changes needed:
+  - Tests already use the new branch format utilities
+  - No hardcoded references to old date-based or custom prefix formats
+- Migration notes already documented in the spec (no separate CHANGELOG file exists)
+- All existing tests continue to pass (107 passed)
+- The 5 test failures in `test_prepare_summary.py` are pre-existing and unrelated to this phase
 
 ## Benefits
 
