@@ -4,6 +4,18 @@
 
 This document outlines a comprehensive plan to improve test coverage in the ClaudeStep project by implementing Python testing best practices. The goal is to achieve robust, maintainable test coverage that enables confident refactoring and prevents regressions.
 
+## Recent Updates (December 2025)
+
+Following the completion of the branch naming simplification refactoring (see `docs/completed/simplify-branch-naming.md`), this test plan has been updated to reflect:
+
+1. **New `pr_operations.py` module** - Centralized PR utilities with comprehensive tests (21 test cases) already implemented
+2. **Simplified branch naming** - All tests should use the standard format `claude-step-{project}-{index}`
+3. **Removed `branchPrefix` configuration** - Tests should verify this field is rejected with a helpful error message
+4. **Simplified `project_detection.py`** - Uses centralized `parse_branch_name()` utility instead of multiple format parsing
+5. **Centralized PR fetching** - Multiple modules now use shared `get_project_prs()` utility
+
+These changes reduce code duplication and simplify the testing surface area.
+
 ## Current State
 
 ### Existing Tests
@@ -11,15 +23,16 @@ This document outlines a comprehensive plan to improve test coverage in the Clau
 - `tests/test_table_formatter.py` - Table formatting utilities
 - `tests/test_prepare_summary.py` - PR summary command
 - `tests/test_task_management.py` - Task finding and marking
+- `tests/test_pr_operations.py` - PR operations utilities (branch naming, parsing, PR fetching)
 - `tests/integration/test_workflow_e2e.py` - End-to-end workflow
 
 ### Coverage Gaps
 The following modules lack unit tests:
 - Core commands (prepare, finalize, discover, etc.)
 - GitHub and Git operations wrappers
-- Configuration loading
+- Configuration loading and validation
 - Reviewer capacity management
-- Project detection
+- Project detection (simplified after branch naming refactoring)
 - Custom exception hierarchy
 
 ## Testing Principles to Follow
@@ -60,6 +73,18 @@ Based on Python testing best practices:
 
 ### Phase 2: Operations Layer
 
+- [x] **Test pr_operations.py** (`tests/test_pr_operations.py`) - ✅ COMPLETED
+  - [x] Test `format_branch_name()` - branch name generation
+  - [x] Test `parse_branch_name()` - extract project and index from branch
+  - [x] Test `get_project_prs()` - fetch PRs by project using branch prefix
+  - [x] Test branch name format validation (`claude-step-{project}-{index}`)
+  - [x] Test complex project names with hyphens
+  - [x] Test invalid input handling
+  - [x] Test PR fetching with various states (open, merged, all)
+  - [x] Test error handling for API failures
+  - [x] Test roundtrip (format → parse → verify)
+  - **Note**: 21 comprehensive tests already implemented during branch naming refactoring
+
 - [ ] **Test git_operations.py** (`tests/test_git_operations.py`)
   - [ ] Mock subprocess calls to git commands
   - [ ] Test `create_branch()` - success and failure cases
@@ -95,7 +120,7 @@ Based on Python testing best practices:
   - [ ] Test invalid YAML syntax handling
   - [ ] Test default value application
   - [ ] Test reviewer configuration parsing
-  - [ ] Test branch prefix configuration
+  - [ ] Test branchPrefix rejection (should fail with helpful error message)
   - [ ] Test configuration validation rules
   - [ ] Test edge cases (empty files, malformed data)
 
@@ -110,12 +135,13 @@ Based on Python testing best practices:
 
 - [ ] **Test project_detection.py** (`tests/test_project_detection.py`)
   - [ ] Test detecting project from environment variable
-  - [ ] Test detecting project from PR branch name
+  - [ ] Test detecting project from PR branch name using `parse_branch_name()` utility
   - [ ] Test project path resolution
   - [ ] Test spec.md file discovery
   - [ ] Test configuration.yml file discovery
-  - [ ] Test error cases (project not found, missing files)
+  - [ ] Test error cases (project not found, missing files, invalid branch names)
   - [ ] Test multiple projects in claude-step/ directory
+  - [ ] Test simplified branch format parsing (`claude-step-{project}-{index}`)
 
 ### Phase 4: Command Layer
 
@@ -124,7 +150,8 @@ Based on Python testing best practices:
   - [ ] Test successful preparation workflow
   - [ ] Test reviewer capacity check integration
   - [ ] Test task discovery integration
-  - [ ] Test branch creation
+  - [ ] Test branch creation using `format_branch_name()` utility
+  - [ ] Test branch name format (`claude-step-{project}-{index}`)
   - [ ] Test prompt generation
   - [ ] Test output variable setting
   - [ ] Test failure scenarios (no capacity, no tasks, missing files)
@@ -190,8 +217,9 @@ Based on Python testing best practices:
 - [ ] **Improve existing tests**
   - [ ] Review test_statistics.py for additional edge cases
   - [ ] Review test_table_formatter.py for formatting edge cases
-  - [ ] Review test_prepare_summary.py for template variations
+  - [ ] Review test_prepare_summary.py for template variations (currently has 5 pre-existing failures to investigate)
   - [ ] Review test_task_management.py for additional scenarios
+  - [ ] Review test_pr_operations.py for additional PR fetching scenarios
   - [ ] Add parametrized tests where multiple similar cases exist
 
 - [ ] **Add integration test coverage**
@@ -358,14 +386,15 @@ class TestCheckReviewerCapacity:
 **High Priority** (implement first):
 - Test infrastructure and fixtures
 - git_operations.py and github_operations.py (foundational)
-- config.py (core functionality)
+- config.py (core functionality, including branchPrefix rejection validation)
 - reviewer_management.py (business logic)
 - commands/prepare.py and commands/finalize.py (main workflows)
+- **Note**: pr_operations.py already has comprehensive tests ✅
 
 **Medium Priority** (implement second):
 - task_management.py (already has tests, but enhance)
 - commands/discover.py and commands/discover_ready.py
-- project_detection.py
+- project_detection.py (simplified after branch naming refactoring - now uses parse_branch_name())
 - statistics_collector.py (already has tests, but enhance)
 
 **Low Priority** (implement as time allows):
@@ -388,13 +417,15 @@ class TestCheckReviewerCapacity:
 ## Timeline Estimate
 
 - **Phase 1**: 1-2 days (infrastructure setup)
-- **Phase 2**: 2-3 days (operations layer - 3 modules)
-- **Phase 3**: 2-3 days (business logic - 3 modules)
+- **Phase 2**: 1-2 days (operations layer - 2 modules remaining; pr_operations.py already complete ✅)
+- **Phase 3**: 2-3 days (business logic - 3 modules, including updated config validation)
 - **Phase 4**: 5-7 days (commands - 8 modules)
 - **Phase 5**: 2-3 days (integration and quality improvements)
 - **Phase 6**: 1-2 days (documentation and CI/CD)
 
-**Total: 13-20 days** (can be parallelized or spread over multiple contributors)
+**Total: 12-19 days** (can be parallelized or spread over multiple contributors)
+
+**Note**: Recent branch naming refactoring has already delivered comprehensive tests for pr_operations.py, reducing overall timeline by 1 day.
 
 ## Resources
 
@@ -411,3 +442,8 @@ class TestCheckReviewerCapacity:
 3. Begin implementing tests following the prioritization order
 4. Review and iterate based on learnings
 5. Update this document with progress and adjustments
+
+**Progress Made**: The branch naming simplification refactoring (December 2025) has already delivered:
+- ✅ Comprehensive tests for `pr_operations.py` (21 test cases)
+- ✅ Centralized PR fetching utilities that reduce testing surface area
+- ✅ Simplified branch naming logic that makes future tests easier to write
