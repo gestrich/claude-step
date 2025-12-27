@@ -1,0 +1,5 @@
+branchPrefix: refactor/my-project
+reviewers:
+  - username: your-github-username
+    maxOpenPRs: 1
+slackWebhookUrl: https://hooks.slack.com/services/YOUR/WEBHOOK/URL

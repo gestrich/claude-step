@@ -6,7 +6,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
-from claudestep.config import load_json
+from claudestep.config import load_config
 from claudestep.exceptions import FileNotFoundError as ClaudeStepFileNotFoundError
 from claudestep.github_operations import run_gh_command
 from claudestep.models import ProjectStats, StatisticsReport, TeamMemberStats
@@ -278,11 +278,14 @@ def collect_all_statistics(
         for project_name in project_names:
             try:
                 project_path = os.path.join("refactor", project_name)
-                config_file = os.path.join(project_path, "configuration.json")
+                # Check for .yml first, then .json
+                config_file = os.path.join(project_path, "configuration.yml")
+                if not os.path.exists(config_file):
+                    config_file = os.path.join(project_path, "configuration.json")
                 spec_file = os.path.join(project_path, "spec.md")
 
                 # Load config to get reviewers
-                config = load_json(config_file)
+                config = load_config(config_file)
                 reviewers_config = config.get("reviewers", [])
                 reviewers = [
                     r.get("username") for r in reviewers_config if "username" in r

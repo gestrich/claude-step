@@ -5,7 +5,7 @@ import json
 import os
 from datetime import datetime
 
-from claudestep.config import load_json, validate_spec_format
+from claudestep.config import load_config, validate_spec_format
 from claudestep.exceptions import ConfigurationError, FileNotFoundError, GitError, GitHubAPIError
 from claudestep.git_operations import run_git_command
 from claudestep.github_actions import GitHubActionsHelper
@@ -59,7 +59,7 @@ def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
 
         # === STEP 2: Load and Validate Configuration ===
         print("\n=== Step 2/6: Loading configuration ===")
-        config = load_json(config_path)
+        config = load_config(config_path)
         branch_prefix = config.get("branchPrefix")
         reviewers = config.get("reviewers")
         slack_webhook_url = config.get("slackWebhookUrl", "")  # Optional

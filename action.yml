@@ -78,6 +78,10 @@ runs:
       with:
         python-version: '3.11'
 
+    - name: Install Python dependencies
+      shell: bash
+      run: pip install PyYAML
+
     - name: Prepare for Claude Code execution
       id: prepare
       shell: bash

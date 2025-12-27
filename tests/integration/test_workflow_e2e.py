@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Optional
 
 import pytest
+import yaml
 
 
 class GitHubHelper:
@@ -216,15 +217,15 @@ Create simple text files with the specified content.
 """
         (self.project_path / "spec.md").write_text(spec_content)
 
-        # Create configuration.json
+        # Create configuration.yml
         config_content = {
             "branchPrefix": f"refactor/{self.project_name}",
             "reviewers": [
                 {"username": "gestrich", "maxOpenPRs": 2}
             ]
         }
-        (self.project_path / "configuration.json").write_text(
-            json.dumps(config_content, indent=2)
+        (self.project_path / "configuration.yml").write_text(
+            yaml.dump(config_content, default_flow_style=False)
         )
 
         # Create pr-template.md

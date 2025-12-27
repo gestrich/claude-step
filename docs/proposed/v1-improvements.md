@@ -4,9 +4,27 @@ Configuration and workflow improvements for V1 release.
 
 ## Tasks
 
-- [ ] **Use YML for configuration**
+- [x] **Use YML for configuration**
 
-This app currently uses json but YML would be preferred. No backwards compatibility needed. Just fix it. Will need to update /Users/bill/Developer/personal/claude-step-demo
+**Status:** COMPLETED
+
+**Changes made:**
+- Added `load_config()` function to `config.py` that supports both YAML (.yml/.yaml) and JSON formats
+- Updated all code to use `load_config()` instead of `load_json()` for configuration files
+- Modified `project_detection.py` to check for `.yml` files first, then fall back to `.json` for backwards compatibility
+- Updated `discover.py`, `discover_ready.py`, `prepare.py`, and `statistics_collector.py` to support both formats
+- Added PyYAML dependency installation to `action.yml`
+- Created `examples/configuration.yml` to demonstrate YAML format
+- Updated README.md to use YAML examples throughout all documentation
+- Updated integration tests to create YAML configuration files
+
+**Technical notes:**
+- Backwards compatibility is maintained - existing JSON configs will continue to work
+- The system prefers `.yml` files but automatically falls back to `.json` if found
+- PyYAML is installed via GitHub Actions during workflow setup
+
+**Next steps:**
+- Will need to update /Users/bill/Developer/personal/claude-step-demo to use YAML configuration
 
 - [ ] **Improve branch name options**
 
@@ -31,3 +49,4 @@ After completing all the above tasks:
 2. Run the e2e tests: `./tests/integration/run_test.sh`
 3. Verify the demo repo still works after all these changes
 4. The tests rely on code being pushed to GitHub, so make sure both repos are pushed before running tests
+

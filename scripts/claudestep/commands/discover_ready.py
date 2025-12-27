@@ -4,7 +4,7 @@ import json
 import os
 
 from claudestep.commands.discover import find_all_projects
-from claudestep.config import load_json, validate_spec_format
+from claudestep.config import load_config, validate_spec_format
 from claudestep.github_actions import GitHubActionsHelper
 from claudestep.project_detection import detect_project_paths
 from claudestep.reviewer_management import find_available_reviewer
@@ -27,7 +27,7 @@ def check_project_ready(project_name: str, repo: str) -> bool:
 
         # Check if files exist
         if not os.path.exists(config_path):
-            print(f"  ⏭️  No configuration.json found")
+            print(f"  ⏭️  No configuration file found")
             return False
 
         if not os.path.exists(spec_path):
@@ -35,7 +35,7 @@ def check_project_ready(project_name: str, repo: str) -> bool:
             return False
 
         # Load and validate configuration
-        config = load_json(config_path)
+        config = load_config(config_path)
         reviewers = config.get("reviewers", [])
 
         if not reviewers:

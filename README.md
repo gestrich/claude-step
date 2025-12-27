@@ -31,18 +31,13 @@ Create this directory structure in your repo:
 mkdir -p claude-step/my-refactor
 ```
 
-Create `claude-step/my-refactor/configuration.json`:
+Create `claude-step/my-refactor/configuration.yml`:
 
-```json
-{
-  "branchPrefix": "refactor/ai-refactor",
-  "reviewers": [
-    {
-      "username": "YOUR_GITHUB_USERNAME",
-      "maxOpenPRs": 1
-    }
-  ]
-}
+```yaml
+branchPrefix: refactor/ai-refactor
+reviewers:
+  - username: YOUR_GITHUB_USERNAME
+    maxOpenPRs: 1
 ```
 
 Create `claude-step/my-refactor/spec.md`:
@@ -165,19 +160,12 @@ The instructions will improve over time!
 
 Once comfortable:
 
-```json
-{
-  "reviewers": [
-    {
-      "username": "alice",
-      "maxOpenPRs": 2  // ← Increase capacity
-    },
-    {
-      "username": "bob",   // ← Add more reviewers
-      "maxOpenPRs": 1
-    }
-  ]
-}
+```yaml
+reviewers:
+  - username: alice
+    maxOpenPRs: 2  # ← Increase capacity
+  - username: bob  # ← Add more reviewers
+    maxOpenPRs: 1
 ```
 
 #### Add PR Merge Trigger
@@ -208,13 +196,13 @@ Create additional refactor projects:
 ```
 claude-step/
 ├── swift-migration/
-│   ├── configuration.json
+│   ├── configuration.yml
 │   └── spec.md
 ├── typescript-conversion/
-│   ├── configuration.json
+│   ├── configuration.yml
 │   └── spec.md
 └── api-refactor/
-    ├── configuration.json
+    ├── configuration.yml
     └── spec.md
 ```
 
@@ -307,7 +295,7 @@ The action uses artifacts to track PR assignments. If assignment seems wrong:
 | `anthropic_api_key` | ✅ | - | Anthropic API key for Claude Code |
 | `github_token` | ✅ | `${{ github.token }}` | GitHub token for PR operations |
 | `project_name` | ✅ | - | Project folder name under `/claude-step` |
-| `config_path` | ❌ | `claude-step/{project}/configuration.json` | Custom config path |
+| `config_path` | ❌ | `claude-step/{project}/configuration.yml` | Custom config path |
 | `spec_path` | ❌ | `claude-step/{project}/spec.md` | Custom spec file path |
 | `pr_template_path` | ❌ | `claude-step/{project}/pr-template.md` | Custom PR template path |
 | `claude_model` | ❌ | `claude-sonnet-4-5` | Claude model to use (sonnet-4-5 or opus-4-5) |
@@ -371,7 +359,7 @@ Get your API key from [console.anthropic.com](https://console.anthropic.com), th
 
 ## Configuration Reference
 
-### configuration.json
+### configuration.yml
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -385,15 +373,14 @@ Get your API key from [console.anthropic.com](https://console.anthropic.com), th
 - `maxOpenPRs` (number): Max open PRs per reviewer
 
 **Example:**
-```json
-{
-  "branchPrefix": "refactor/swift-migration",
-  "reviewers": [
-    { "username": "alice", "maxOpenPRs": 1 },
-    { "username": "bob", "maxOpenPRs": 2 }
-  ],
-  "slackWebhookUrl": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
-}
+```yaml
+branchPrefix: refactor/swift-migration
+reviewers:
+  - username: alice
+    maxOpenPRs: 1
+  - username: bob
+    maxOpenPRs: 2
+slackWebhookUrl: https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 ```
 
 All PRs are automatically labeled with `claudestep` for tracking purposes.
@@ -816,8 +803,8 @@ See [tests/integration/README.md](tests/integration/README.md) for detailed docu
 
 The action validates your configuration at runtime:
 
-**configuration.json:**
-- ✅ File exists and is valid JSON
+**configuration.yml:**
+- ✅ File exists and is valid YAML
 - ✅ Required fields present (`branchPrefix`, `reviewers`)
 - ✅ Reviewers array has at least one entry
 - ✅ Each reviewer has `username` and `maxOpenPRs`
