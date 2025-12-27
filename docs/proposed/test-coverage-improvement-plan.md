@@ -35,7 +35,7 @@ These changes reduce code duplication and simplify the testing surface area.
 - `.github/workflows/test.yml` - CI workflow for unit tests
 - `pyproject.toml` - Package configuration with test dependencies
 - Tests run on every push and PR to main branch
-- **302 tests passing** with 0 failures (up from 285)
+- **333 tests passing** with 0 failures (up from 302)
 
 ### Existing Tests (Organized by Layer)
 **Domain Layer:**
@@ -56,6 +56,7 @@ These changes reduce code duplication and simplify the testing surface area.
 - `tests/unit/application/services/test_task_management.py` - Task finding and marking (19 tests)
 - `tests/unit/application/services/test_reviewer_management.py` - Reviewer capacity and assignment (16 tests)
 - `tests/unit/application/services/test_project_detection.py` - Project detection from PRs and path resolution (17 tests)
+- `tests/unit/application/services/test_artifact_operations.py` - Artifact operations API (31 tests)
 
 **CLI Layer:**
 - `tests/unit/cli/commands/test_prepare_summary.py` - PR summary command (9 tests)
@@ -65,9 +66,6 @@ These changes reduce code duplication and simplify the testing surface area.
 
 ### Coverage Gaps
 The following modules lack unit tests:
-
-**Application Layer:**
-- `src/claudestep/application/services/artifact_operations.py` - Artifact management
 
 **CLI Layer:**
 - `src/claudestep/cli/commands/discover.py` - Project discovery
@@ -585,7 +583,7 @@ Before committing a test, verify:
     - Tests confirm proper error handling for missing files
     - Edge cases tested: empty files, nested directories, permission errors
 
-### Phase 3: Application Services Layer
+### Phase 3: Application Services Layer ✅ COMPLETE
 
 - [x] **Test task_management.py** ✅ COMPLETE (`tests/unit/application/services/test_task_management.py`)
   - 19 tests covering task finding, marking, ID generation
@@ -631,9 +629,26 @@ Before committing a test, verify:
     - Path generation tests confirm correct file extensions (.yml, .md) and consistent base directory
     - All tests follow style guide with Arrange-Act-Assert structure and descriptive names
 
-- [ ] **Test artifact_operations.py** (`tests/unit/application/services/test_artifact_operations.py`)
-  - Test artifact creation, reading, writing, metadata handling
-  - Test error cases (missing artifacts, malformed JSON)
+- [x] **Test artifact_operations.py** ✅ COMPLETE (December 27, 2025) (`tests/unit/application/services/test_artifact_operations.py`)
+  - 31 comprehensive tests covering artifact operations API
+  - Tests for `TaskMetadata.from_dict()` - parsing artifact JSON with datetime handling and default cost values
+  - Tests for `ProjectArtifact.task_index` - metadata access and fallback to name parsing
+  - Tests for `parse_task_index_from_name()` - extracting task index from artifact names
+  - Tests for `find_project_artifacts()` - finding artifacts by project, PR state filtering, metadata download
+  - Tests for `get_artifact_metadata()` - downloading and parsing individual artifacts
+  - Tests for `find_in_progress_tasks()` - convenience wrapper for open PR task indices
+  - Tests for `get_reviewer_assignments()` - mapping PR numbers to reviewers
+  - **Technical Notes:**
+    - All 31 tests pass (total test count increased from 302 to 333)
+    - Tests use proper mocking strategy: mock at system boundaries (`gh_api_call`, `download_artifact_json`, `get_project_prs`)
+    - Tests also mock internal functions (`_get_workflow_runs_for_branch`, `_get_artifacts_for_run`) where needed
+    - Tests verify artifact deduplication logic (same artifact ID only appears once)
+    - Tests verify filtering by project name prefix (`task-metadata-{project}-`)
+    - Tests verify graceful error handling with warning messages printed to console
+    - Tests confirm only successful workflow runs are processed (`conclusion == "success"`)
+    - Documented regex limitation: `parse_task_index_from_name()` doesn't support project names with hyphens
+    - Tests verify both "open" and "all" PR state handling paths
+    - All tests follow style guide with Arrange-Act-Assert structure and descriptive names
 
 ### Phase 4: CLI Commands Layer
 
@@ -897,7 +912,7 @@ class TestCheckReviewerCapacity:
 **Current Progress**:
 - ✅ Phase 1: 100% COMPLETE (test infrastructure, conftest.py fixtures, and domain layer tests all done)
 - ✅ Phase 2: 100% COMPLETE (all infrastructure layer tests done - git, github, filesystem operations)
-- ✅ Phase 3: ~92% complete (task_management, statistics, table_formatter, reviewer_management, project_detection done, need artifact_operations)
+- ✅ Phase 3: 100% COMPLETE (all application layer tests done - task_management, statistics, table_formatter, reviewer_management, project_detection, artifact_operations)
 - ✅ Phase 4: ~11% complete (prepare_summary done, need 8 more commands)
 - Phase 5: Not started (integration tests and quality improvements)
 - ✅ Phase 6: ~40% complete (CI set up, need documentation and enhancements)
@@ -905,12 +920,12 @@ class TestCheckReviewerCapacity:
 **Remaining Effort**:
 - ✅ **Phase 1**: COMPLETE (December 27, 2025)
 - ✅ **Phase 2**: COMPLETE (December 27, 2025)
-- **Phase 3**: 0.5 day (artifact_operations - reviewer_management and project_detection complete)
+- ✅ **Phase 3**: COMPLETE (December 27, 2025)
 - **Phase 4**: 4-5 days (8 remaining command modules)
 - **Phase 5**: 2-3 days (integration tests, coverage reporting)
 - **Phase 6**: 1 day (documentation, CI enhancements)
 
-**Total Remaining: 7.5-9.5 days** (can be parallelized or spread over multiple contributors)
+**Total Remaining: 7-9 days** (can be parallelized or spread over multiple contributors)
 
 ## Resources
 
@@ -934,7 +949,7 @@ class TestCheckReviewerCapacity:
 3. ~~Add infrastructure tests for git and github operations (Phase 2)~~ ✅ COMPLETE (December 27, 2025)
 4. ~~Add application service tests for reviewer_management.py (Phase 3)~~ ✅ COMPLETE (December 27, 2025)
 5. ~~Add application service tests for project_detection.py (Phase 3)~~ ✅ COMPLETE (December 27, 2025)
-6. Add application service tests for artifact_operations.py (Phase 3)
+6. ~~Add application service tests for artifact_operations.py (Phase 3)~~ ✅ COMPLETE (December 27, 2025)
 7. Add CLI command tests for prepare.py and finalize.py (Phase 4)
 8. Set up CI workflow to run e2e integration tests from demo repository (Phase 5/6)
 
@@ -944,7 +959,7 @@ class TestCheckReviewerCapacity:
 - ✅ Architecture modernization with layered structure
 - ✅ Test structure reorganized to mirror src/ layout
 - ✅ CI workflow added for automated testing
-- ✅ All 302 tests passing (0 failures, up from 112 initially)
+- ✅ All 333 tests passing (0 failures, up from 112 initially)
 - ✅ E2E tests updated and working
 - ✅ Comprehensive tests for `pr_operations.py` (21 test cases)
 - ✅ Comprehensive tests for `task_management.py` (19 test cases)
@@ -953,6 +968,7 @@ class TestCheckReviewerCapacity:
 - ✅ Comprehensive tests for `prepare_summary.py` (9 test cases)
 - ✅ Comprehensive tests for `reviewer_management.py` (16 test cases) - December 27, 2025
 - ✅ Comprehensive tests for `project_detection.py` (17 test cases) - December 27, 2025
+- ✅ Comprehensive tests for `artifact_operations.py` (31 test cases) - December 27, 2025
 - ✅ **Common test fixtures** in `tests/conftest.py` (December 27, 2025)
   - 20+ reusable fixtures covering file system, git, GitHub, and configuration scenarios
   - All fixtures follow test style guide with clear docstrings and organized by category
@@ -972,3 +988,10 @@ class TestCheckReviewerCapacity:
   - All tests use mocking at system boundaries (subprocess, file I/O)
   - Comprehensive error handling and edge case coverage
   - Tests verify proper command construction, output processing, and error propagation
+- ✅ **Phase 3 Complete: Application Services Layer Tests** (December 27, 2025)
+  - `tests/unit/application/services/test_artifact_operations.py` - Artifact operations API (31 tests)
+  - Total: 31 new tests added in Phase 3 (completing the layer)
+  - Tests cover TaskMetadata parsing, ProjectArtifact models, artifact finding, and convenience functions
+  - Tests verify deduplication logic, project filtering, metadata download, and error handling
+  - Documented regex limitation for hyphenated project names in artifact name parsing
+  - All tests use proper mocking at system boundaries and follow the style guide
