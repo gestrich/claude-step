@@ -446,35 +446,53 @@ def collect_project_costs(
 
 ## Implementation Plan
 
-### Phase 1: Artifact API (Priority: High)
+### - [ ] Phase 1: Create Centralized Artifact API (Priority: High)
 - [ ] Create `artifact_operations.py` module
 - [ ] Implement data models (TaskMetadata, ProjectArtifact)
 - [ ] Implement `find_project_artifacts()` core function
-- [ ] Implement helper functions
-- [ ] Implement convenience wrappers
+- [ ] Implement helper functions (_get_prs_with_label, _get_workflow_runs_for_branch, etc.)
+- [ ] Implement convenience wrappers (find_in_progress_tasks, get_reviewer_assignments)
 - [ ] Add comprehensive unit tests
 - [ ] Document API with examples
 
 **Estimated effort**: 4-6 hours
 **Risk**: Low - pure refactor, existing logic proven
 
-### Phase 2: Refactor Existing Code (Priority: High)
-- [ ] Update `reviewer_management.py` to use new API
-- [ ] Update `task_management.py` to use new API
-- [ ] Update `statistics_collector.py` to use new API
-- [ ] Remove duplicate helper functions
-- [ ] Test all workflows end-to-end
-- [ ] Update integration tests if needed
+### - [ ] Phase 2: Refactor reviewer_management.py (Priority: High)
+- [ ] Update `find_reviewer_with_capacity()` to use `get_reviewer_assignments()` API
+- [ ] Remove duplicate artifact fetching logic (60+ lines)
+- [ ] Test reviewer capacity detection works correctly
+- [ ] Verify existing workflows still function
 
-**Estimated effort**: 2-3 hours
-**Risk**: Medium - needs careful testing to ensure no regression
+**Estimated effort**: 1 hour
+**Risk**: Low - straightforward replacement
 
-### Phase 3: Cost in Metadata (Priority: Medium)
-- [ ] Update TaskMetadata model with cost fields
+### - [ ] Phase 3: Refactor task_management.py (Priority: High)
+- [ ] Update `get_in_progress_task_indices()` to use `find_in_progress_tasks()` API
+- [ ] Remove duplicate artifact parsing logic (50+ lines)
+- [ ] Test in-progress task detection works correctly
+- [ ] Verify task selection logic still works
+
+**Estimated effort**: 30 minutes
+**Risk**: Low - simple wrapper
+
+### - [ ] Phase 4: Refactor statistics_collector.py with Cost Tracking (Priority: High)
+- [ ] Update `collect_project_costs()` to use `find_project_artifacts()` API
+- [ ] Fix PR matching to use artifact metadata instead of branch names
+- [ ] Get PR numbers from artifacts, then fetch comments for costs
+- [ ] Test cost aggregation on merged PRs
+- [ ] Verify statistics report shows correct costs
+- [ ] Run end-to-end integration test
+
+**Estimated effort**: 1-2 hours
+**Risk**: Medium - needs careful testing to ensure cost collection is accurate
+
+### - [ ] Phase 5: Add Cost to Artifact Metadata (Priority: Medium, Optional)
+- [ ] Update TaskMetadata model with cost fields (main_task_cost_usd, pr_summary_cost_usd, total_cost_usd)
 - [ ] Update finalize.py to store costs in metadata
-- [ ] Update statistics collection to use metadata costs
-- [ ] Keep comment-based cost as fallback for old PRs
-- [ ] Test with new PRs
+- [ ] Update statistics collection to use metadata costs with comment fallback
+- [ ] Test with new PRs to verify cost is stored in metadata
+- [ ] Test with old PRs to verify fallback to comments works
 - [ ] Document cost tracking enhancement
 
 **Estimated effort**: 2 hours
