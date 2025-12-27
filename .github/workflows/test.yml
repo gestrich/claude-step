@@ -32,11 +32,24 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/scripts
         run: |
-          pytest tests/unit/ -v --cov=src/claudestep --cov-report=term-missing
+          pytest tests/unit/ -v
 
-      - name: Upload coverage reports
+      - name: Generate coverage report
+        if: always()
+        run: |
+          coverage report --show-missing
+          coverage html
+
+      - name: Upload coverage HTML report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-reports
+          name: coverage-html-report
+          path: htmlcov/
+
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data
           path: .coverage

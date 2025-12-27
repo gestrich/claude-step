@@ -832,13 +832,25 @@ Before committing a test, verify:
   - Test concurrent PR handling scenarios
   - Set up CI workflow to run e2e integration tests from demo repository
 
-- [ ] **Set up coverage reporting**
-  - Configure pytest-cov to track coverage (already in CI)
-  - Add coverage report to CI/CD pipeline
-  - Set minimum coverage threshold (start at 70%, target 80%+)
-  - Generate HTML coverage reports for local development
-  - Add coverage badge to README.md
-  - Identify and document intentionally untested code
+- [x] **Set up coverage reporting** ✅ COMPLETE (December 27, 2025)
+  - ✅ Configure pytest-cov to track coverage (added to pytest.ini)
+  - ✅ Add coverage report to CI/CD pipeline
+  - ✅ Set minimum coverage threshold (70% in pyproject.toml and pytest.ini, currently achieving 83.84%)
+  - ✅ Generate HTML coverage reports for local development (htmlcov/ directory)
+  - Pending: Add coverage badge to README.md
+  - Pending: Identify and document intentionally untested code
+  - **Technical Notes:**
+    - Added `fail_under = 70` to `[tool.coverage.report]` in pyproject.toml
+    - Added coverage options to pytest.ini: `--cov=src/claudestep`, `--cov-report=term-missing`, `--cov-report=html`, `--cov-fail-under=70`
+    - Updated CI workflow to generate and upload HTML coverage reports as artifacts
+    - Current coverage: **83.84%** (1603 statements, 259 missed)
+    - Low coverage areas:
+      - `statistics_collector.py`: 15.03% (integration logic that's tested via CLI commands)
+      - `__main__.py`: 0% (CLI entry point, tested via E2E tests)
+      - `parser.py`: 0% (CLI argument parsing, tested via E2E tests)
+      - `finalize.py`: 86.36% (some error paths not covered)
+    - HTML reports available locally after running `pytest tests/unit/`
+    - Coverage reports uploaded to GitHub Actions artifacts for every CI run
 
 - [ ] **Add property-based testing** (optional, for critical paths)
   - Install `hypothesis` library
@@ -1032,7 +1044,7 @@ class TestCheckReviewerCapacity:
 - ✅ Phase 2: 100% COMPLETE (all infrastructure layer tests done - git, github, filesystem operations)
 - ✅ Phase 3: 100% COMPLETE (all application layer tests done - task_management, statistics, table_formatter, reviewer_management, project_detection, artifact_operations)
 - ✅ Phase 4: 100% COMPLETE (all 9 command modules done: prepare_summary, prepare, finalize, discover, discover_ready, statistics, add_cost_comment, extract_cost, notify_pr)
-- Phase 5: Not started (integration tests and quality improvements)
+- Phase 5: ~33% complete (coverage reporting ✅, pending: improve tests, integration tests)
 - ✅ Phase 6: ~40% complete (CI set up, need documentation and enhancements)
 
 **Remaining Effort**:

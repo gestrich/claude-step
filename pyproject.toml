@@ -49,13 +49,19 @@ source = ["src/claudestep"]
 omit = ["*/tests/*"]
 
 [tool.coverage.report]
+# Minimum coverage threshold - start at 70%, target 80%+
+fail_under = 70
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
     "raise AssertionError",
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
 ]
+show_missing = true
+precision = 2
 
 [tool.mypy]
 python_version = "3.11"
