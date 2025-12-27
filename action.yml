@@ -245,6 +245,20 @@ runs:
         python3 -m claudestep notify-pr
       continue-on-error: true
 
+    - name: Check Slack configuration
+      if: steps.finalize.outputs.pr_number != ''
+      shell: bash
+      run: |
+        echo "=== Slack Notification Status ==="
+        echo "has_pr: ${{ steps.notify.outputs.has_pr }}"
+        echo "slack_webhook_url configured: ${{ steps.prepare.outputs.slack_webhook_url != '' }}"
+        if [ "${{ steps.prepare.outputs.slack_webhook_url }}" = "" ]; then
+          echo "⚠️  Slack webhook URL not configured - notifications will be skipped"
+          echo "To enable Slack notifications, add 'slack_webhook_url' input to your workflow"
+        else
+          echo "✓ Slack webhook URL is configured - notification will be posted"
+        fi
+
     - name: Post to Slack
       if: steps.notify.outputs.has_pr == 'true' && steps.prepare.outputs.slack_webhook_url != ''
       uses: slackapi/slack-github-action@v2
