@@ -63,7 +63,7 @@ Checklist items are formatted with a dash followed by open brackets (e.g., `- [ 
 
 ### Step 2: Add Workflow
 
-Create `.github/workflows/ai-refactor.yml`:
+Create `.github/workflows/claude-step.yml`:
 
 ```yaml
 name: ClaudeStep
@@ -72,6 +72,10 @@ on:
   pull_request:
     types: [closed]      # Triggers when you merge or close PRs
   workflow_dispatch:     # Allow manual trigger
+
+# Note: The workflow triggers on both merged and closed-without-merging PRs.
+# If you close a PR without merging and don't want it to re-open, first update
+# spec.md to mark that step as complete (or remove it), merge that change, then close the PR.
 
 permissions:
   contents: write
@@ -139,13 +143,25 @@ This installs the app at the GitHub repository level and grants the necessary pe
 
 ### Step 5: Run & Test
 
-#### Manual Test
+#### Push Changes to Main
+
+Before the workflow can run, your project configuration and spec need to be on the main branch:
+
+1. Commit your changes (configuration.yml, spec.md, workflow file)
+2. Push to your main branch
+3. Ensure all changes are merged
+
+#### Trigger Initial Workflow
+
+The workflow will run automatically when you merge PRs (assuming you set up the merge/close trigger above). However, for the first PR, you need to trigger it manually to get the workflow going:
 
 1. Go to Actions tab in GitHub
 2. Click "ClaudeStep" workflow
 3. Click "Run workflow"
 4. Wait ~2-5 minutes
 5. Check for new PR!
+
+Once the first PR is created, future PRs will be staged automatically when you merge.
 
 #### What to Expect
 
@@ -163,21 +179,11 @@ This installs the app at the GitHub repository level and grants the necessary pe
 1. Check the code changes
 2. Verify it follows your spec
 3. Make any needed fixes
-4. **Important**: If you fix issues, update spec.md in the same PR to improve future PRs
 
 #### Merge
 
 1. When satisfied, merge the PR
 2. After merge, workflow will create PR for next step
-
-#### Improve
-
-As you review PRs, update spec.md with:
-- More specific instructions
-- Edge cases you discover
-- Examples of good/bad patterns
-
-The instructions will improve over time!
 
 ### Scaling Up
 
@@ -212,18 +218,6 @@ Once comfortable, you can:
        ├── configuration.yml
        └── spec.md
    ```
-
-4. **Add scheduled triggers** for predictable daily runs:
-   ```yaml
-   on:
-     schedule:
-       - cron: '0 9 * * *'  # Daily at 9 AM UTC
-     pull_request:
-       types: [closed]
-     workflow_dispatch:
-   ```
-
-> **Note:** The workflow triggers on both merged and closed-without-merging PRs. If you close a PR without merging and don't want it to re-open, first update `spec.md` to mark that step as complete (or remove it), merge that change, then close the PR.
 
 ## Action Inputs & Outputs
 

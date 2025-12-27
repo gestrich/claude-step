@@ -57,7 +57,16 @@
 
 All three are GitHub configuration tasks and should be together.
 
-## Step 4: Update Workflow and Run & Test Sections
+## ✅ Step 4: Update Workflow and Run & Test Sections (COMPLETED)
+
+**Technical Notes:**
+- Renamed workflow file reference from `ai-refactor.yml` to `claude-step.yml` (README.md:66)
+- Moved PR trigger note up to workflow creation section as YAML comment (README.md:76-78)
+- Added "Push Changes to Main" subsection before "Trigger Initial Workflow" (README.md:146-152)
+- Renamed "Manual Test" to "Trigger Initial Workflow" with updated explanation (README.md:154-164)
+- Removed "If you fix issues, update spec.md in the same PR" sentence from Review the PR section (previously line 166)
+- Removed entire "Improve" subsection (previously lines 173-180)
+- Removed "Add Schedule Triggers" section and redundant PR trigger note (previously lines 216-226)
 
 ### Workflow File
 - Rename from `ai-refactor.yml` to `claude-step.yml`
