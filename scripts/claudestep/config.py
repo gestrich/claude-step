@@ -20,14 +20,24 @@ def load_config(file_path: str) -> Dict[str, Any]:
 
     Raises:
         FileNotFoundError: If file doesn't exist
-        ConfigurationError: If file is invalid YAML
+        ConfigurationError: If file is invalid YAML or contains deprecated fields
     """
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
 
     try:
         with open(file_path, "r") as f:
-            return yaml.safe_load(f)
+            config = yaml.safe_load(f)
+
+        # Validate configuration - reject deprecated fields
+        if "branchPrefix" in config:
+            raise ConfigurationError(
+                f"The 'branchPrefix' field is no longer supported. "
+                f"ClaudeStep now uses a standard branch format: claude-step-{{project}}-{{index}}. "
+                f"Please remove 'branchPrefix' from {file_path}"
+            )
+
+        return config
     except yaml.YAMLError as e:
         raise ConfigurationError(f"Invalid YAML in {file_path}: {str(e)}")
 

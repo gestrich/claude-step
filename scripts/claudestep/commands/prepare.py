@@ -55,7 +55,6 @@ def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
         # === STEP 2: Load and Validate Configuration ===
         print("\n=== Step 2/6: Loading configuration ===")
         config = load_config(config_path)
-        branch_prefix = config.get("branchPrefix")  # Optional
         reviewers = config.get("reviewers")
         slack_webhook_url = os.environ.get("SLACK_WEBHOOK_URL", "")  # From action input
         label = os.environ.get("PR_LABEL", "claudestep")  # From action input, defaults to "claudestep"
@@ -148,7 +147,6 @@ Now complete the task '{task}' following all the details and instructions in the
         gh.write_output("spec_path", spec_path)
         gh.write_output("pr_template_path", pr_template_path)
         gh.write_output("label", label)
-        gh.write_output("branch_prefix", branch_prefix)
         gh.write_output("reviewers_json", json.dumps(reviewers))
         gh.write_output("slack_webhook_url", slack_webhook_url)
         gh.write_output("task", task)
