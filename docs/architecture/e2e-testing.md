@@ -67,7 +67,8 @@ You need write access to the test repository:
 The easiest way to run the tests:
 
 ```bash
-# From the repository root
+# From the demo repository root
+cd /path/to/claude-step-demo
 ./tests/integration/run_test.sh
 ```
 
@@ -83,7 +84,8 @@ This script will:
 If you prefer to run pytest directly:
 
 ```bash
-# From the repository root
+# From the demo repository root
+cd /path/to/claude-step-demo
 pytest tests/integration/test_workflow_e2e.py -v -s -m integration
 ```
 
@@ -286,7 +288,7 @@ After running the tests successfully:
 
 ## References
 
-- Test file: `tests/integration/test_workflow_e2e.py`
-- Test runner: `tests/integration/run_test.sh`
+- Test file: `claude-step-demo/tests/integration/test_workflow_e2e.py`
+- Test runner: `claude-step-demo/tests/integration/run_test.sh`
 - Demo repository: https://github.com/gestrich/claude-step-demo
-- Feature plan: `docs/pr-summary-feature-plan.md`
+- Test documentation: https://github.com/gestrich/claude-step-demo/blob/main/tests/integration/README.md

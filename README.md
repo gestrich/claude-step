@@ -231,11 +231,15 @@ Markdown file combining instructions and steps. Steps use checkbox syntax (`- [ 
 ## Development
 
 **Running Integration Tests:**
+
+Integration tests are located in the [demo repository](https://github.com/gestrich/claude-step-demo) at `/tests/integration/`.
+
 ```bash
+cd /path/to/claude-step-demo
 ./tests/integration/run_test.sh
 ```
 
-Prerequisites: GitHub CLI, Python 3.11+, pytest. See [tests/integration/README.md](tests/integration/README.md) for details.
+Prerequisites: GitHub CLI, Python 3.11+, pytest. See [claude-step-demo/tests/integration/README.md](https://github.com/gestrich/claude-step-demo/blob/main/tests/integration/README.md) for details.
 
 ## Examples
 
