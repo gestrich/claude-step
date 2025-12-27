@@ -35,7 +35,7 @@ These changes reduce code duplication and simplify the testing surface area.
 - `.github/workflows/test.yml` - CI workflow for unit tests
 - `pyproject.toml` - Package configuration with test dependencies
 - Tests run on every push and PR to main branch
-- **333 tests passing** with 0 failures (up from 302)
+- **352 tests passing** with 0 failures (up from 333)
 
 ### Existing Tests (Organized by Layer)
 **Domain Layer:**
@@ -60,6 +60,7 @@ These changes reduce code duplication and simplify the testing surface area.
 
 **CLI Layer:**
 - `tests/unit/cli/commands/test_prepare_summary.py` - PR summary command (9 tests)
+- `tests/unit/cli/commands/test_prepare.py` - Preparation workflow command (19 tests)
 
 **Integration:**
 - Demo repository: `claude-step-demo/tests/integration/test_workflow_e2e.py` - End-to-end workflow
@@ -656,13 +657,23 @@ Before committing a test, verify:
   - 9 tests covering prompt template loading, variable substitution, output formatting
   - Tests for missing inputs, error handling, workflow URL construction
 
-- [ ] **Test prepare.py** (`tests/unit/cli/commands/test_prepare.py`)
-  - Mock all external dependencies (git, GitHub, file system)
-  - Test successful preparation workflow, reviewer capacity check, task discovery
-  - Test branch creation using `format_branch_name()` utility with format `claude-step-{project}-{index}`
-  - Test prompt generation, output variable setting
-  - Test failure scenarios (no capacity, no tasks, missing files)
-  - Test skip_indices handling for in-progress tasks
+- [x] **Test prepare.py** ✅ COMPLETE (December 27, 2025) (`tests/unit/cli/commands/test_prepare.py`)
+  - 19 comprehensive tests covering the full preparation workflow
+  - Tests for successful preparation with all 6 steps (detect project, load config, check capacity, find task, create branch, prepare prompt)
+  - Tests for merged PR detection and project name fallback
+  - Tests for all error scenarios (no project, no reviewers, no capacity, no tasks, git errors, API errors)
+  - Tests for branch creation using `format_branch_name()` with format `claude-step-{project}-{index}`
+  - Tests for Claude prompt generation with spec content
+  - Tests for all output variables being written correctly
+  - Tests for label existence check and spec format validation
+  - Tests for in-progress task handling
+  - **Technical Notes:**
+    - All 19 tests pass with comprehensive coverage of the prepare command
+    - Tests mock all external dependencies (git, GitHub API, file system) at system boundaries
+    - Tests verify proper error handling for FileNotFoundError, ConfigurationError, GitError, GitHubAPIError, and unexpected errors
+    - Tests confirm graceful exits (return 0) when no capacity or no tasks available (not errors)
+    - Tests verify step summary written with reviewer capacity information
+    - All tests follow the style guide with Arrange-Act-Assert structure and descriptive names
 
 - [ ] **Test finalize.py** (`tests/unit/cli/commands/test_finalize.py`)
   - Mock git and GitHub operations
@@ -913,7 +924,7 @@ class TestCheckReviewerCapacity:
 - ✅ Phase 1: 100% COMPLETE (test infrastructure, conftest.py fixtures, and domain layer tests all done)
 - ✅ Phase 2: 100% COMPLETE (all infrastructure layer tests done - git, github, filesystem operations)
 - ✅ Phase 3: 100% COMPLETE (all application layer tests done - task_management, statistics, table_formatter, reviewer_management, project_detection, artifact_operations)
-- ✅ Phase 4: ~11% complete (prepare_summary done, need 8 more commands)
+- ✅ Phase 4: ~22% complete (prepare_summary and prepare done, need 7 more commands)
 - Phase 5: Not started (integration tests and quality improvements)
 - ✅ Phase 6: ~40% complete (CI set up, need documentation and enhancements)
 
@@ -959,7 +970,7 @@ class TestCheckReviewerCapacity:
 - ✅ Architecture modernization with layered structure
 - ✅ Test structure reorganized to mirror src/ layout
 - ✅ CI workflow added for automated testing
-- ✅ All 333 tests passing (0 failures, up from 112 initially)
+- ✅ All 352 tests passing (0 failures, up from 112 initially)
 - ✅ E2E tests updated and working
 - ✅ Comprehensive tests for `pr_operations.py` (21 test cases)
 - ✅ Comprehensive tests for `task_management.py` (19 test cases)
@@ -969,6 +980,7 @@ class TestCheckReviewerCapacity:
 - ✅ Comprehensive tests for `reviewer_management.py` (16 test cases) - December 27, 2025
 - ✅ Comprehensive tests for `project_detection.py` (17 test cases) - December 27, 2025
 - ✅ Comprehensive tests for `artifact_operations.py` (31 test cases) - December 27, 2025
+- ✅ Comprehensive tests for `prepare.py` (19 test cases) - December 27, 2025
 - ✅ **Common test fixtures** in `tests/conftest.py` (December 27, 2025)
   - 20+ reusable fixtures covering file system, git, GitHub, and configuration scenarios
   - All fixtures follow test style guide with clear docstrings and organized by category
