@@ -482,14 +482,28 @@ def collect_project_costs(
 - All existing tests pass (86 passed, 5 pre-existing failures unrelated to this change)
 - Code is cleaner, more maintainable, and eliminates ~70 lines of duplicated artifact fetching logic
 
-### - [ ] Phase 3: Refactor task_management.py (Priority: High)
+### - [x] Phase 3: Refactor task_management.py (Priority: High) ✅ COMPLETED
 - Update `get_in_progress_task_indices()` to use `find_in_progress_tasks()` API
 - Remove duplicate artifact parsing logic (50+ lines)
 - Test in-progress task detection works correctly
 - Verify task selection logic still works
 
-**Estimated effort**: 30 minutes
-**Risk**: Low - simple wrapper
+**Completed**: 2025-12-27
+**Technical Notes**:
+- Refactored `scripts/claudestep/task_management.py` from 187 lines to 106 lines (81 line reduction)
+- Replaced complex artifact fetching logic (92 lines) with single call to `find_in_progress_tasks()`
+- Simplified imports: removed `json`, `GitHubAPIError`, `gh_api_call`, `run_gh_command`
+- Added import: `artifact_operations.find_in_progress_tasks`
+- The function now consists of just 11 lines (including docstring) vs. 92 lines previously
+- Module compiles successfully with Python 3.13
+- All existing tests pass (86 passed, 5 pre-existing failures in test_prepare_summary.py unrelated to this change)
+- The refactored function is now a simple wrapper that delegates to the centralized API
+- Eliminates duplicate logic for:
+  - Listing PRs with labels
+  - Getting workflow runs for branches
+  - Querying artifacts from runs
+  - Parsing task indices from artifact names
+  - Branch name pattern matching fallback logic
 
 ### - [ ] Phase 4: Refactor statistics_collector.py with Cost Tracking (Priority: High)
 - Update `collect_project_costs()` to use `find_project_artifacts()` API

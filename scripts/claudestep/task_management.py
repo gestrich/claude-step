@@ -1,12 +1,11 @@
 """Task finding, marking, and tracking operations"""
 
-import json
 import os
 import re
 from typing import Optional
 
-from claudestep.exceptions import FileNotFoundError, GitHubAPIError
-from claudestep.github_operations import gh_api_call, run_gh_command
+from claudestep.artifact_operations import find_in_progress_tasks
+from claudestep.exceptions import FileNotFoundError
 
 
 def generate_task_id(task: str, max_length: int = 30) -> str:
@@ -102,85 +101,5 @@ def get_in_progress_task_indices(repo: str, label: str, project: str) -> set:
 
     Returns:
         Set of task indices that are in progress
-
-    Raises:
-        GitHubAPIError: If GitHub API calls fail
     """
-    in_progress = set()
-
-    # Use gh CLI to list PRs
-    try:
-        pr_output = run_gh_command([
-            "pr", "list",
-            "--repo", repo,
-            "--label", label,
-            "--state", "open",
-            "--json", "number,headRefName"
-        ])
-        prs = json.loads(pr_output) if pr_output else []
-    except (GitHubAPIError, json.JSONDecodeError) as e:
-        print(f"Warning: Failed to list PRs: {e}")
-        return set()
-
-    print(f"Found {len(prs)} open PR(s) with label '{label}'")
-
-    for pr in prs:
-        branch = pr["headRefName"]
-        pr_number = pr["number"]
-
-        # First, try to extract task index from branch name as a quick check
-        # Branch format: YYYY-MM-{project}-{index}
-        # Example: 2025-12-test-project-abc123-1
-        try:
-            # Extract the last part after the final dash
-            parts = branch.rsplit("-", 1)
-            if len(parts) == 2:
-                task_index = int(parts[1])
-                in_progress.add(task_index)
-                print(f"Found in-progress task {task_index} from PR #{pr_number} (branch name)")
-                continue  # Skip artifact check if we got the index from branch name
-        except (ValueError, IndexError):
-            # Branch name doesn't match expected format, fall back to artifact check
-            pass
-
-        # Fallback: Get workflow runs for this branch and check artifacts
-        try:
-            api_response = gh_api_call(
-                f"/repos/{repo}/actions/runs?branch={branch}&status=completed&per_page=10"
-            )
-            runs = api_response.get("workflow_runs", [])
-        except GitHubAPIError as e:
-            print(f"Warning: Failed to get runs for PR #{pr_number}: {e}")
-            continue
-
-        # Check most recent successful run
-        for run in runs:
-            if run.get("conclusion") == "success":
-                # Get artifacts from this run
-                try:
-                    artifacts_data = gh_api_call(
-                        f"/repos/{repo}/actions/runs/{run['id']}/artifacts"
-                    )
-                    artifacts = artifacts_data.get("artifacts", [])
-
-                    for artifact in artifacts:
-                        # Parse task index from artifact name
-                        # Format: task-metadata-{project}-{index}.json
-                        name = artifact["name"]
-                        if name.startswith(f"task-metadata-{project}-"):
-                            try:
-                                # Extract index from name
-                                suffix = name.replace(f"task-metadata-{project}-", "")
-                                index_str = suffix.replace(".json", "")
-                                task_index = int(index_str)
-                                in_progress.add(task_index)
-                                print(f"Found in-progress task {task_index} from PR #{pr_number} (artifact)")
-                            except ValueError:
-                                print(f"Warning: Could not parse task index from artifact name: {name}")
-                                continue
-                except GitHubAPIError as e:
-                    print(f"Warning: Failed to get artifacts for run {run['id']}: {e}")
-                    continue
-                break  # Only check first successful run
-
-    return in_progress
+    return find_in_progress_tasks(repo, project, label)
