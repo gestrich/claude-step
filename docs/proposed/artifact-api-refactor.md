@@ -1,0 +1,520 @@
+# Artifact API Refactor and Cost Tracking Enhancement
+
+## Current State Analysis
+
+### Problem Statement
+
+Currently, artifact processing logic is duplicated across multiple modules:
+
+1. **reviewer_management.py** - Downloads full artifact metadata to get reviewer assignments
+2. **task_management.py** - Parses artifact names to get in-progress task indices  
+3. **statistics_collector.py** - Attempts to match PRs using branch names (incorrect approach)
+
+Each module reimplements:
+- Querying workflow runs
+- Filtering artifacts by project
+- Downloading/parsing artifact data
+- Matching artifacts to PRs
+
+This leads to:
+- Code duplication
+- Inconsistent logic
+- Difficult maintenance
+- Error-prone implementations
+
+### Current Artifact Metadata Structure
+
+```python
+{
+    "task_index": int,
+    "task_description": str,
+    "project": str,
+    "branch_name": str,
+    "reviewer": str,
+    "created_at": str,  # ISO format
+    "workflow_run_id": int,
+    "pr_number": int
+}
+```
+
+### Current Usage Patterns
+
+1. **Reviewer Capacity Management**
+   - Get all open PRs with label
+   - Download artifacts to find reviewer assignments
+   - Count PRs per reviewer to check capacity
+
+2. **In-Progress Task Detection**
+   - Get all open PRs with label
+   - Parse artifact names to extract task indices
+   - Return set of in-progress task indices
+
+3. **Cost Collection (needs fixing)**
+   - Should: Get merged PRs by label, download artifacts to get project info
+   - Currently: Incorrectly tries to match by branch name
+
+## Proposed Solution
+
+### Phase 1: Create Centralized Artifact API
+
+**Goal**: Create a clean, reusable API for artifact operations
+
+**New Module**: `scripts/claudestep/artifact_operations.py`
+
+#### Core Data Models
+
+```python
+from dataclasses import dataclass
+from typing import Optional, List
+from datetime import datetime
+
+@dataclass
+class TaskMetadata:
+    """Metadata from a task artifact"""
+    task_index: int
+    task_description: str
+    project: str
+    branch_name: str
+    reviewer: str
+    created_at: datetime
+    workflow_run_id: int
+    pr_number: int
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> 'TaskMetadata':
+        """Parse from artifact JSON"""
+        return cls(
+            task_index=data["task_index"],
+            task_description=data["task_description"],
+            project=data["project"],
+            branch_name=data["branch_name"],
+            reviewer=data["reviewer"],
+            created_at=datetime.fromisoformat(data["created_at"].replace('Z', '+00:00')),
+            workflow_run_id=data["workflow_run_id"],
+            pr_number=data["pr_number"]
+        )
+
+@dataclass
+class ProjectArtifact:
+    """An artifact with its metadata"""
+    artifact_id: int
+    artifact_name: str
+    workflow_run_id: int
+    metadata: Optional[TaskMetadata] = None
+    
+    @property
+    def task_index(self) -> Optional[int]:
+        """Convenience accessor for task index"""
+        if self.metadata:
+            return self.metadata.task_index
+        # Fallback: parse from name
+        return parse_task_index_from_name(self.artifact_name)
+```
+
+#### Core API Functions
+
+```python
+def find_project_artifacts(
+    repo: str,
+    project: str,
+    label: str = "claudestep",
+    pr_state: str = "all",  # "open", "merged", "all"
+    limit: int = 50,
+    download_metadata: bool = False
+) -> List[ProjectArtifact]:
+    """
+    Find all artifacts for a project based on PRs with the given label.
+    
+    This is the primary API for getting project artifacts.
+    
+    Args:
+        repo: GitHub repository (owner/name)
+        project: Project name to filter artifacts
+        label: GitHub label to filter PRs (default: "claudestep")
+        pr_state: PR state filter - "open", "merged", or "all"
+        limit: Maximum number of workflow runs to check
+        download_metadata: Whether to download full metadata JSON
+        
+    Returns:
+        List of ProjectArtifact objects, optionally with metadata populated
+        
+    Algorithm:
+        1. Query PRs with the given label and state
+        2. Get workflow runs for those PRs' branches
+        3. Query artifacts from successful runs
+        4. Filter artifacts by project name
+        5. Optionally download and parse metadata JSON
+    """
+    pass
+
+def get_artifact_metadata(
+    repo: str,
+    artifact_id: int
+) -> Optional[TaskMetadata]:
+    """
+    Download and parse metadata from a specific artifact.
+    
+    Args:
+        repo: GitHub repository (owner/name)
+        artifact_id: Artifact ID to download
+        
+    Returns:
+        TaskMetadata object or None if download fails
+    """
+    pass
+
+def find_in_progress_tasks(
+    repo: str,
+    project: str,
+    label: str = "claudestep"
+) -> set[int]:
+    """
+    Get task indices for all in-progress tasks (open PRs).
+    
+    This is a convenience wrapper around find_project_artifacts.
+    
+    Args:
+        repo: GitHub repository
+        project: Project name
+        label: GitHub label for filtering
+        
+    Returns:
+        Set of task indices that are currently in progress
+    """
+    artifacts = find_project_artifacts(
+        repo=repo,
+        project=project,
+        label=label,
+        pr_state="open",
+        download_metadata=False  # Just need names
+    )
+    
+    return {a.task_index for a in artifacts if a.task_index is not None}
+
+def get_reviewer_assignments(
+    repo: str,
+    project: str,
+    label: str = "claudestep"
+) -> dict[int, str]:
+    """
+    Get mapping of PR numbers to assigned reviewers.
+    
+    Args:
+        repo: GitHub repository
+        project: Project name
+        label: GitHub label for filtering
+        
+    Returns:
+        Dict mapping PR number -> reviewer username
+    """
+    artifacts = find_project_artifacts(
+        repo=repo,
+        project=project,
+        label=label,
+        pr_state="open",
+        download_metadata=True
+    )
+    
+    return {
+        a.metadata.pr_number: a.metadata.reviewer
+        for a in artifacts
+        if a.metadata and a.metadata.pr_number
+    }
+
+def parse_task_index_from_name(artifact_name: str) -> Optional[int]:
+    """
+    Parse task index from artifact name.
+    
+    Expected format: task-metadata-{project}-{index}.json
+    
+    Args:
+        artifact_name: Artifact name
+        
+    Returns:
+        Task index or None if parsing fails
+    """
+    pass
+```
+
+#### Internal Helper Functions
+
+```python
+def _get_prs_with_label(
+    repo: str,
+    label: str,
+    state: str,
+    limit: int = 100
+) -> List[dict]:
+    """Get PRs with label"""
+    pass
+
+def _get_workflow_runs_for_branch(
+    repo: str,
+    branch: str,
+    limit: int = 10
+) -> List[dict]:
+    """Get workflow runs for a branch"""
+    pass
+
+def _get_artifacts_for_run(
+    repo: str,
+    run_id: int
+) -> List[dict]:
+    """Get artifacts from a workflow run"""
+    pass
+
+def _filter_project_artifacts(
+    artifacts: List[dict],
+    project: str
+) -> List[dict]:
+    """Filter artifacts by project name pattern"""
+    pass
+```
+
+### Phase 2: Refactor Existing Code to Use New API
+
+#### 2.1 Update reviewer_management.py
+
+**Before:**
+```python
+# 60+ lines of complex logic duplicated
+```
+
+**After:**
+```python
+from claudestep.artifact_operations import get_reviewer_assignments
+
+def find_reviewer_with_capacity(
+    reviewers: List[Dict[str, Any]],
+    project: str,
+    repo: str,
+    label: str = "claudestep"
+) -> Tuple[Optional[str], ReviewerCapacityReport]:
+    # Get reviewer assignments from artifacts
+    pr_to_reviewer = get_reviewer_assignments(repo, project, label)
+    
+    # Count PRs per reviewer
+    reviewer_prs = defaultdict(list)
+    for pr_num, reviewer in pr_to_reviewer.items():
+        reviewer_prs[reviewer].append({
+            "pr_number": pr_num,
+            # ... other details if needed
+        })
+    
+    # Rest of capacity checking logic
+    # ...
+```
+
+#### 2.2 Update task_management.py
+
+**Before:**
+```python
+# Manual artifact parsing, 50+ lines
+```
+
+**After:**
+```python
+from claudestep.artifact_operations import find_in_progress_tasks
+
+def get_in_progress_task_indices(
+    repo: str,
+    label: str,
+    project: str
+) -> set[int]:
+    """Get indices of tasks that are currently in progress"""
+    return find_in_progress_tasks(repo, project, label)
+```
+
+#### 2.3 Update statistics_collector.py
+
+**Before:**
+```python
+# Incorrect branch name matching
+```
+
+**After:**
+```python
+from claudestep.artifact_operations import find_project_artifacts
+
+def collect_project_costs(
+    project_name: str,
+    repo: str,
+    label: str = "claudestep"
+) -> float:
+    """Collect total costs for a project from PR comments"""
+    
+    # Get all merged PR artifacts for this project
+    artifacts = find_project_artifacts(
+        repo=repo,
+        project=project_name,
+        label=label,
+        pr_state="merged",
+        download_metadata=True  # Need PR numbers
+    )
+    
+    total_cost = 0.0
+    prs_with_cost = 0
+    
+    # Get unique PR numbers from artifacts
+    pr_numbers = {a.metadata.pr_number for a in artifacts if a.metadata}
+    
+    print(f"  Found {len(pr_numbers)} merged PR(s) for {project_name}")
+    
+    # For each PR, get comments and extract cost
+    for pr_number in pr_numbers:
+        # Get PR comments
+        comments_output = run_gh_command([
+            "pr", "view", str(pr_number),
+            "--repo", repo,
+            "--json", "comments",
+            "--jq", ".comments[] | .body"
+        ])
+        
+        # Parse comments for cost breakdown
+        for comment_body in comments_output.split('\n\n'):
+            if "💰 Cost Breakdown" in comment_body or "Cost Breakdown" in comment_body:
+                cost = extract_cost_from_comment(comment_body)
+                if cost is not None:
+                    total_cost += cost
+                    prs_with_cost += 1
+                    print(f"    PR #{pr_number}: ${cost:.6f}")
+                    break
+    
+    if prs_with_cost > 0:
+        print(f"  Total cost: ${total_cost:.6f} ({prs_with_cost} PR(s) with cost data)")
+    else:
+        print(f"  No cost data found in PR comments")
+    
+    return total_cost
+```
+
+### Phase 3: Add Cost to Artifact Metadata (Optional Enhancement)
+
+**Goal**: Store cost directly in artifact metadata instead of parsing comments
+
+#### 3.1 Update Artifact Metadata Structure
+
+```python
+@dataclass
+class TaskMetadata:
+    # ... existing fields ...
+    main_task_cost_usd: float = 0.0
+    pr_summary_cost_usd: float = 0.0
+    total_cost_usd: float = 0.0
+```
+
+#### 3.2 Update finalize.py
+
+```python
+# Add cost to metadata when creating artifact
+metadata = {
+    "task_index": int(task_index),
+    # ... existing fields ...
+    "main_task_cost_usd": float(os.environ.get("MAIN_COST", "0")),
+    "pr_summary_cost_usd": float(os.environ.get("SUMMARY_COST", "0")),
+    "total_cost_usd": float(os.environ.get("MAIN_COST", "0")) + float(os.environ.get("SUMMARY_COST", "0"))
+}
+```
+
+#### 3.3 Simplify Cost Collection
+
+```python
+def collect_project_costs(
+    project_name: str,
+    repo: str,
+    label: str = "claudestep"
+) -> float:
+    """Collect total costs for a project from artifact metadata"""
+    
+    artifacts = find_project_artifacts(
+        repo=repo,
+        project=project_name,
+        label=label,
+        pr_state="merged",
+        download_metadata=True
+    )
+    
+    total_cost = sum(
+        a.metadata.total_cost_usd
+        for a in artifacts
+        if a.metadata and hasattr(a.metadata, 'total_cost_usd')
+    )
+    
+    print(f"  Total cost: ${total_cost:.6f} ({len(artifacts)} merged PRs)")
+    return total_cost
+```
+
+## Implementation Plan
+
+### Phase 1: Artifact API (Priority: High)
+- [ ] Create `artifact_operations.py` module
+- [ ] Implement data models (TaskMetadata, ProjectArtifact)
+- [ ] Implement `find_project_artifacts()` core function
+- [ ] Implement helper functions
+- [ ] Implement convenience wrappers
+- [ ] Add comprehensive unit tests
+- [ ] Document API with examples
+
+**Estimated effort**: 4-6 hours
+**Risk**: Low - pure refactor, existing logic proven
+
+### Phase 2: Refactor Existing Code (Priority: High)
+- [ ] Update `reviewer_management.py` to use new API
+- [ ] Update `task_management.py` to use new API
+- [ ] Update `statistics_collector.py` to use new API
+- [ ] Remove duplicate helper functions
+- [ ] Test all workflows end-to-end
+- [ ] Update integration tests if needed
+
+**Estimated effort**: 2-3 hours
+**Risk**: Medium - needs careful testing to ensure no regression
+
+### Phase 3: Cost in Metadata (Priority: Medium)
+- [ ] Update TaskMetadata model with cost fields
+- [ ] Update finalize.py to store costs in metadata
+- [ ] Update statistics collection to use metadata costs
+- [ ] Keep comment-based cost as fallback for old PRs
+- [ ] Test with new PRs
+- [ ] Document cost tracking enhancement
+
+**Estimated effort**: 2 hours
+**Risk**: Low - additive change, backward compatible
+
+## Benefits
+
+1. **Code Reuse**: Single source of truth for artifact operations
+2. **Maintainability**: Changes only need to happen in one place
+3. **Consistency**: All modules use the same logic and data structures
+4. **Type Safety**: Defined data models with clear contracts
+5. **Testability**: Centralized API is easier to unit test
+6. **Correctness**: Proper PR matching via artifacts instead of branch names
+7. **Performance**: Can optimize caching/batching in one place
+8. **Documentation**: Clear API makes onboarding easier
+
+## Success Criteria
+
+- [ ] All existing functionality works identically
+- [ ] Cost collection correctly aggregates merged PRs
+- [ ] Code duplication reduced by >100 lines
+- [ ] All integration tests pass
+- [ ] New API has >90% test coverage
+- [ ] Documentation is complete and clear
+
+## Risks and Mitigations
+
+**Risk**: Breaking existing workflows during refactor
+**Mitigation**: 
+- Implement new API alongside existing code
+- Comprehensive testing before removing old code
+- Feature flag for gradual rollout
+
+**Risk**: Artifact download performance
+**Mitigation**:
+- Only download metadata when needed (download_metadata flag)
+- Batch operations where possible
+- Cache artifact data within a single workflow run
+
+**Risk**: Old PRs without cost metadata
+**Mitigation**:
+- Keep comment parsing as fallback in Phase 3
+- Gracefully handle missing fields in TaskMetadata
