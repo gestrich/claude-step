@@ -163,8 +163,13 @@ Any documentation referencing "504 tests" should be updated to "493 tests" after
 - YAML structure validated - workflow file is syntactically correct
 - Test collection verified - 506 tests still collecting properly
 
-### Phase 4: Update pytest Configuration
-- [ ] Remove benchmark marker from `pytest.ini`
+### Phase 4: Update pytest Configuration ✅
+- [x] Remove benchmark marker from `pytest.ini`
+
+**Technical Notes:**
+- Removed "benchmark: Performance benchmark tests" marker from pytest.ini (line 24)
+- Test collection verified - 511 tests collecting successfully
+- Configuration validation successful
 
 ### Phase 5: Update Documentation (Optional)
 - [ ] Update references in `docs/completed/test-coverage-improvement-2.md` (optional)
