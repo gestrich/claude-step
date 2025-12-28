@@ -151,10 +151,17 @@ Any documentation referencing "504 tests" should be updated to "493 tests" after
 - Syntax validation successful
 - Test collection still works (506 tests found)
 
-### Phase 3: Update CI Workflow
-- [ ] Remove benchmark pip install from `.github/workflows/test.yml`
-- [ ] Remove "Run benchmarks" step from `.github/workflows/test.yml`
-- [ ] Remove "Upload benchmark results" step from `.github/workflows/test.yml`
+### Phase 3: Update CI Workflow ✅
+- [x] Remove benchmark pip install from `.github/workflows/test.yml`
+- [x] Remove "Run benchmarks" step from `.github/workflows/test.yml`
+- [x] Remove "Upload benchmark results" step from `.github/workflows/test.yml`
+
+**Technical Notes:**
+- Removed `pytest-benchmark` from pip install command (line 30)
+- Removed "Run benchmarks" step that ran pytest on tests/benchmarks/ (lines 38-42)
+- Removed "Upload benchmark results" artifact upload step (lines 44-49)
+- YAML structure validated - workflow file is syntactically correct
+- Test collection verified - 506 tests still collecting properly
 
 ### Phase 4: Update pytest Configuration
 - [ ] Remove benchmark marker from `pytest.ini`
