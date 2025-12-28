@@ -94,7 +94,7 @@ runs:
         SLACK_WEBHOOK_URL: ${{ inputs.slack_webhook_url }}
         PR_LABEL: ${{ inputs.pr_label }}
       run: |
-        export PYTHONPATH="$ACTION_PATH/src:$ACTION_PATH/scripts:$PYTHONPATH"
+        export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
         python3 -m claudestep prepare
 
     # WORKAROUND: Clean stale Claude Code lock files before installation
@@ -130,7 +130,7 @@ runs:
         EXECUTION_INDEX: '-1'  # Last item (only main task execution at this point)
         ACTION_PATH: ${{ github.action_path }}
       run: |
-        export PYTHONPATH="$ACTION_PATH/src:$ACTION_PATH/scripts:$PYTHONPATH"
+        export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
         python3 -m claudestep extract-cost
       continue-on-error: true
 
@@ -157,7 +157,7 @@ runs:
         HAS_TASK: ${{ steps.prepare.outputs.has_task }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
-        export PYTHONPATH="$ACTION_PATH/src:$ACTION_PATH/scripts:$PYTHONPATH"
+        export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
         python3 -m claudestep finalize
 
     - name: Prepare summary prompt
@@ -175,7 +175,7 @@ runs:
         GITHUB_RUN_ID: ${{ github.run_id }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
-        export PYTHONPATH="$ACTION_PATH/src:$ACTION_PATH/scripts:$PYTHONPATH"
+        export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
         python3 -m claudestep prepare-summary
 
     - name: Generate and post PR summary
@@ -205,7 +205,7 @@ runs:
         EXECUTION_INDEX: '-1'  # Last item (PR summary)
         ACTION_PATH: ${{ github.action_path }}
       run: |
-        export PYTHONPATH="$ACTION_PATH/src:$ACTION_PATH/scripts:$PYTHONPATH"
+        export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
         python3 -m claudestep extract-cost
       continue-on-error: true
 
@@ -222,7 +222,7 @@ runs:
         GITHUB_RUN_ID: ${{ github.run_id }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
-        export PYTHONPATH="$ACTION_PATH/src:$ACTION_PATH/scripts:$PYTHONPATH"
+        export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
         python3 -m claudestep add-cost-comment
       continue-on-error: true
 
@@ -241,7 +241,7 @@ runs:
         GITHUB_REPOSITORY: ${{ github.repository }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
-        export PYTHONPATH="$ACTION_PATH/src:$ACTION_PATH/scripts:$PYTHONPATH"
+        export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
         python3 -m claudestep notify-pr
       continue-on-error: true
 

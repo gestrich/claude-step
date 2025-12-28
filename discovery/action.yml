@@ -41,5 +41,5 @@ runs:
         GITHUB_REPOSITORY: ${{ github.repository }}
         ACTION_PATH: ${{ github.action_path }}/../
       run: |
-        export PYTHONPATH="$ACTION_PATH/src:$ACTION_PATH/scripts:$PYTHONPATH"
+        export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
         python3 -m claudestep discover-ready
