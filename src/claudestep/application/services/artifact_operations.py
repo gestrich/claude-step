@@ -89,7 +89,9 @@ def parse_task_index_from_name(artifact_name: str) -> Optional[int]:
     """
     # Pattern: task-metadata-{project}-{index}.json
     # Example: task-metadata-myproject-1.json
-    pattern = r"task-metadata-[^-]+-(\d+)\.json"
+    # Note: Project names can contain dashes, so we use .+ to match the entire project name
+    # and capture the last number before .json
+    pattern = r"task-metadata-.+-(\d+)\.json"
     match = re.match(pattern, artifact_name)
     if match:
         try:
