@@ -57,7 +57,7 @@ Modify `action.yml` in the "Run Claude Code" step (around line 112-122):
 
 **Key change:** Add `--model ${{ inputs.claude_model }}` to the `claude_args` parameter.
 
-- [ ] Phase 2: Update PR summary generation to pass model parameter
+- [x] Phase 2: Update PR summary generation to pass model parameter
 
 Modify `action.yml` in the "Generate and post PR summary" step (around line 181-193):
 
@@ -164,3 +164,9 @@ Update `README.md` to clarify how the `claude_model` parameter works:
 - Updated `action.yml` line 120 to include `--model ${{ inputs.claude_model }}` in the `claude_args` parameter for the main task execution step
 - Verified tests pass (507/511 passing, 3 E2E failures unrelated to this change)
 - The model parameter will now be passed through to Claude Code CLI for all main task executions
+
+### Phase 2 Completion (2025-12-28)
+- Updated `action.yml` line 191 to include `--model ${{ inputs.claude_model }}` in the `claude_args` parameter for the PR summary generation step
+- Verified tests pass (494/511 passing, same 3 E2E failures plus 13 errors unrelated to this change)
+- The model parameter will now be passed through to Claude Code CLI for both main task execution and PR summary generation
+- Both invocations of `anthropics/claude-code-action@v1` now respect the `claude_model` input parameter

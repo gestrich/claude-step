@@ -188,7 +188,7 @@ runs:
         prompt: ${{ steps.prepare_summary.outputs.summary_prompt }}
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
         github_token: ${{ inputs.github_token }}
-        claude_args: '--allowedTools Bash'
+        claude_args: '--allowedTools Bash --model ${{ inputs.claude_model }}'
         show_full_output: true
       continue-on-error: true
 
