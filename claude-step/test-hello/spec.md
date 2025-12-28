@@ -8,4 +8,4 @@ Create a simple test file.
 
 ## Tasks
 
-- [ ] Create a file called test-hello.txt with the content "Hello from ClaudeStep!"
+- [x] Create a file called test-hello.txt with the content "Hello from ClaudeStep!"
