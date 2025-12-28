@@ -1,0 +1,3 @@
+reviewers:
+  - username: octocat
+    maxOpenPRs: 2
