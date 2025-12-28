@@ -229,21 +229,10 @@ def test_reviewer_capacity_limits(
 
 ## Tasks
 
-### - [ ] Task 1: First task
-
-First task description.
-
-### - [ ] Task 2: Second task
-
-Second task description.
-
-### - [ ] Task 3: Third task
-
-Third task description.
-
-### - [ ] Task 4: Fourth task
-
-Fourth task description.
+- [ ] Task 1: First task - First task description.
+- [ ] Task 2: Second task - Second task description.
+- [ ] Task 3: Third task - Third task description.
+- [ ] Task 4: Fourth task - Fourth task description.
 """
 
     config_content = """reviewers:
@@ -346,12 +335,12 @@ def test_workflow_handles_empty_spec(
         project_id: Unique project ID fixture
         cleanup_prs: PR cleanup fixture
     """
-    # Create a project with no tasks
+    # Create a project with no incomplete tasks
     spec_content = """# Test Project Spec
 
 ## Tasks
 
-No tasks defined yet.
+- [x] Completed task - This task is already done.
 """
 
     project_name = project_manager.create_test_project(
