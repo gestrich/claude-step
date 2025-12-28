@@ -511,7 +511,7 @@ def test_check_capacity():
 - Updated `scripts/claudestep/__main__.py` to use new CLI module paths for backward compatibility
 - Updated test file `tests/test_prepare_summary.py` to import from `claudestep.cli.commands.prepare_summary`
 - Removed symlink to old commands directory from `src/claudestep/`
-- **Note**: `prompts/` directory remains as symlink from `src/claudestep/` to `scripts/claudestep/prompts` for backward compatibility
+- **Note**: The `prompts/` symlink from `src/claudestep/` to `scripts/claudestep/prompts` was later removed when prompt templates were moved to `src/claudestep/resources/prompts/` (see `docs/proposed/move-prompt-template-to-resources.md`)
 - Validated package structure with import tests and CLI help command
 - Test results: 107 tests passed, 5 pre-existing failures (in test_prepare_summary.py due to prompt template path issues, unrelated to Phase 5)
 - CLI works identically to pre-migration state, all commands accessible via `python3 -m claudestep <command>`

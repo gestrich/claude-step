@@ -1,5 +1,7 @@
 # PR Summary Comment Feature - Implementation Plan
 
+> **Note**: The prompt template was later moved from `scripts/claudestep/prompts/summary_prompt.md` to `src/claudestep/resources/prompts/summary_prompt.md` as part of a package restructuring effort. See `docs/proposed/move-prompt-template-to-resources.md` for details.
+
 ## Overview
 
 Add an optional feature to post AI-generated summary comments on PRs created by ClaudeStep. The summary will analyze the PR diff and workflow context, explaining what was done and why in <200 words.

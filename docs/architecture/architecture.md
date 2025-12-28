@@ -437,7 +437,7 @@ The PR summary feature adds AI-generated comments to PRs explaining what was cha
 
 2. **Two-step process**: Separate prompt preparation from Claude Code execution
    - Keeps prompt template readable and maintainable
-   - Template stored in `prompts/summary_prompt.md`
+   - Template stored in `src/claudestep/resources/prompts/summary_prompt.md`
    - Variables substituted by `prepare-summary` command
 
 3. **Graceful degradation**: Summary failures don't fail the workflow
