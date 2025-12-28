@@ -189,7 +189,7 @@ class TestProjectManager:
     def _default_config_content() -> str:
         """Generate default configuration.yml content for testing."""
         return """reviewers:
-  - username: octocat
+  - username: gestrich
     maxOpenPRs: 2
 """
 

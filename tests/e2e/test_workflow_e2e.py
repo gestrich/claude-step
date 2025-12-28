@@ -236,7 +236,7 @@ def test_reviewer_capacity_limits(
 """
 
     config_content = """reviewers:
-  - username: octocat
+  - username: gestrich
     maxOpenPRs: 2
 """
 
