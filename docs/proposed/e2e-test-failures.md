@@ -368,33 +368,46 @@ The test was expecting incorrect behavior. After investigating the ClaudeStep wo
 
 **Result**: Statistics has both E2E validation and comprehensive unit test coverage ✅
 
-### Phase 4: Documentation (30 minutes)
+### Phase 4: Documentation (30 minutes) ✅ COMPLETED
 **Goal**: Document E2E testing philosophy
 
-1. **Update E2E test README**:
-   ```markdown
-   # E2E Testing Philosophy
+**Status**: Completed on 2025-12-28
 
-   ## What to Test
-   - Integration between ClaudeStep components
-   - GitHub API interactions (PR creation, comments)
-   - End-to-end workflow execution
+**Changes Made**:
 
-   ## What NOT to Test
-   - Individual function behavior (use unit tests)
-   - AI response quality (mock Claude API)
-   - Complex business logic (use unit tests)
-   - Statistics and reporting (use unit tests)
+1. **Updated E2E test README** ✅:
+   - Added comprehensive "E2E Testing Philosophy" section to `tests/e2e/README.md`
+   - Documented **What to Test**: Integration points, GitHub API interactions, E2E workflows
+   - Documented **What NOT to Test**: Individual functions, AI quality, complex business logic, edge cases
+   - Added **Speed Guidelines**: Target < 10-12 minutes for full suite, < 3 minutes per test
+   - Added **Test Consolidation Strategy**: Explained how to minimize redundant workflow runs
+   - Added **Unit Test Coverage** section: Documented comprehensive unit test coverage (43 statistics tests)
 
-   ## Speed Guidelines
-   - E2E suite should complete in < 5 minutes
-   - Each test should complete in < 3 minutes
-   - If a test takes longer, consider splitting or mocking
-   ```
+2. **Enhanced test module documentation** ✅:
+   - Updated `test_workflow_e2e.py` module docstring with "TESTS IN THIS MODULE" section
+   - Lists all 4 tests with: What they test, Why they're E2E tests
+   - Updated `test_statistics_e2e.py` module docstring with test details
+   - Documented why statistics test runs LAST and mentions 43 unit tests for edge cases
 
-2. **Add comments to remaining tests** explaining what they validate
+3. **Individual test comments** ✅:
+   - All tests already had excellent explanatory docstrings
+   - test_basic_workflow_end_to_end: Explains consolidation of 3 tests into 1
+   - test_reviewer_capacity_limits: Explains one-PR-per-run behavior and multi-trigger approach
+   - test_z_statistics_end_to_end: Explains why it runs last and validates real data
 
-**Result**: Future contributors understand E2E testing boundaries
+**Technical Notes**:
+- Philosophy emphasizes **integration testing** over **feature testing**
+- Encourages consolidation to reduce API costs and execution time
+- Documents the hybrid approach: E2E for integration, unit tests for logic/edge cases
+- Tests successfully collect with pytest (verified with --collect-only)
+- All docstrings visible in pytest collection output
+
+**Files Modified**:
+- `tests/e2e/README.md` - Added E2E Testing Philosophy section
+- `tests/e2e/test_workflow_e2e.py` - Enhanced module docstring
+- `tests/e2e/test_statistics_e2e.py` - Enhanced module docstring
+
+**Result**: Future contributors understand E2E testing boundaries ✅
 
 ## Summary of Changes
 
@@ -429,15 +442,16 @@ The test was expecting incorrect behavior. After investigating the ClaudeStep wo
 
 ### Expected Improvements
 
-| Metric | Before | After Phase 0 | After Phase 1 | After Phase 2 | After Phase 3 |
-|--------|--------|---------------|---------------|---------------|---------------|
-| Total Runtime | 25m 34s | ~8-10m | ~4-5m ✅ | ~10-12m (3 extra workflow runs) ✅ | ~10-12m ✅ |
-| Test Count | 9 tests | 6 tests (3 stats → 1) | 4 tests ✅ | 4 tests ✅ | 4 tests ✅ |
-| Failures | 4 | 0 | 0 ✅ | 0 ✅ | 0 ✅ |
-| Skipped | 1 | 2 | 2 ✅ | 1 ✅ | 1 ✅ |
-| Reviewer Capacity Test | Failing | Skipped | Skipped ✅ | Working ✅ | Working ✅ |
-| Statistics Coverage | Broken (timeouts) | Working E2E | Working E2E ✅ | Working E2E ✅ | E2E + 43 unit tests ✅ |
-| Coverage Focus | Mixed | Improved | Integration only ✅ | Integration only ✅ | Integration + Unit ✅ |
+| Metric | Before | After Phase 0 | After Phase 1 | After Phase 2 | After Phase 3 | After Phase 4 |
+|--------|--------|---------------|---------------|---------------|---------------|---------------|
+| Total Runtime | 25m 34s | ~8-10m | ~4-5m ✅ | ~10-12m (3 extra workflow runs) ✅ | ~10-12m ✅ | ~10-12m ✅ |
+| Test Count | 9 tests | 6 tests (3 stats → 1) | 4 tests ✅ | 4 tests ✅ | 4 tests ✅ | 4 tests ✅ |
+| Failures | 4 | 0 | 0 ✅ | 0 ✅ | 0 ✅ | 0 ✅ |
+| Skipped | 1 | 2 | 2 ✅ | 1 ✅ | 1 ✅ | 1 ✅ |
+| Reviewer Capacity Test | Failing | Skipped | Skipped ✅ | Working ✅ | Working ✅ | Working ✅ |
+| Statistics Coverage | Broken (timeouts) | Working E2E | Working E2E ✅ | Working E2E ✅ | E2E + 43 unit tests ✅ | E2E + 43 unit tests ✅ |
+| Coverage Focus | Mixed | Improved | Integration only ✅ | Integration only ✅ | Integration + Unit ✅ | Integration + Unit ✅ |
+| Documentation | Minimal | Minimal | Minimal ✅ | Minimal ✅ | Minimal ✅ | **Comprehensive E2E philosophy** ✅ |
 
 ## Risk Assessment
 
@@ -483,14 +497,30 @@ To ensure statistics test runs last and can validate data from previous tests:
 
 ## Next Steps
 
-1. **Immediate** (Phase 0): Fix statistics tests (3→1), fix branch filter, skip capacity test → Get to green
-2. **This week** (Phase 1): Consolidate workflow tests (3→1) → Speed up suite
-3. **Next sprint** (Phase 2): Fix reviewer capacity bug → Full coverage
-4. **Ongoing** (Phase 3-4): Enhance statistics testing and documentation → Maintainability
+~~1. **Immediate** (Phase 0): Fix statistics tests (3→1), fix branch filter, skip capacity test → Get to green~~ ✅ COMPLETED
+~~2. **This week** (Phase 1): Consolidate workflow tests (3→1) → Speed up suite~~ ✅ COMPLETED
+~~3. **Next sprint** (Phase 2): Fix reviewer capacity bug → Full coverage~~ ✅ COMPLETED
+~~4. **Ongoing** (Phase 3-4): Enhance statistics testing and documentation → Maintainability~~ ✅ COMPLETED
+
+**All phases completed!** The E2E test suite now:
+- Runs in ~10-12 minutes (down from 25+ minutes)
+- Has 0 failures (down from 4)
+- Has comprehensive E2E testing philosophy documentation
+- Consolidates redundant tests to minimize API costs
+- Combines E2E integration tests with 43+ unit tests for complete coverage
 
 ## Open Questions
 
-1. **Reviewer capacity**: Should one workflow run create multiple PRs, or is it designed to create one per run?
+~~1. **Reviewer capacity**: Should one workflow run create multiple PRs, or is it designed to create one per run?~~ **ANSWERED**: One PR per run (by design). Phase 2 fixed the test to trigger workflow multiple times.
+
 2. **Test coverage**: Are we missing any critical E2E scenarios?
+   - Current coverage is solid for core integration points
+   - Merge-triggered workflow is skipped (requires special permissions)
+
 3. **Performance**: Can we parallelize test execution to run even faster?
+   - Current approach runs tests sequentially to avoid conflicts
+   - Parallel execution would require isolated test environments/projects
+
 4. **CI/CD**: Should E2E tests run on every commit, or only on PR merges?
+   - Currently manual due to API costs and execution time
+   - Consider running on PR merge or scheduled daily runs

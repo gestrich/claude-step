@@ -11,6 +11,14 @@ The test triggers the claudestep-statistics.yml workflow and verifies that it:
 NOTE: This test is designed to run LAST (after other E2E tests) so that it can
 validate statistics from actual PRs created by previous E2E tests. The 'z_' prefix
 ensures pytest runs it last alphabetically.
+
+TESTS IN THIS MODULE:
+
+1. test_z_statistics_end_to_end
+   - What: Verifies statistics workflow collects data from PRs created by other E2E tests
+   - Why E2E: Tests integration between GitHub API, statistics collection, and workflow execution
+   - Why LAST: Needs real PR data from previous E2E tests for realistic validation
+   - Unit tests (43 tests) cover: edge cases, error handling, formatting, empty data
 """
 
 import time

@@ -10,6 +10,24 @@ tests itself by triggering the claudestep-test.yml workflow.
 Note: These tests have been optimized to reduce redundant workflow executions.
 The main workflow test (test_basic_workflow_end_to_end) validates PR creation,
 AI summaries, and cost information in a single test run.
+
+TESTS IN THIS MODULE:
+
+1. test_basic_workflow_end_to_end
+   - What: Verifies complete workflow execution (spec → PR with summary + cost)
+   - Why E2E: Tests integration of all workflow steps and GitHub API interactions
+
+2. test_reviewer_capacity_limits
+   - What: Verifies reviewer maxOpenPRs capacity enforcement across multiple runs
+   - Why E2E: Tests integration between reviewer management and PR creation
+
+3. test_merge_triggered_workflow (SKIPPED)
+   - What: Would verify merge triggers next PR creation
+   - Why E2E: Would test GitHub Actions trigger-on-merge integration
+
+4. test_workflow_handles_empty_spec
+   - What: Verifies workflow gracefully handles specs with no tasks
+   - Why E2E: Tests edge case in complete workflow execution
 """
 
 import time

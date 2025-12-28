@@ -2,6 +2,55 @@
 
 This directory contains end-to-end integration tests for ClaudeStep using a recursive workflow pattern where the action tests itself.
 
+## E2E Testing Philosophy
+
+### What to Test
+
+E2E tests should verify **integration points**, not individual features:
+
+- **Integration between ClaudeStep components** - How the action coordinates prepare → claude_code → finalize → summary steps
+- **GitHub API interactions** - PR creation, comments, branch management, workflow triggers
+- **End-to-end workflow execution** - Complete workflow runs from trigger to PR creation
+- **Critical integration scenarios** - Reviewer assignment, capacity limits, merge triggers
+
+### What NOT to Test
+
+These belong in unit tests for faster feedback and better isolation:
+
+- **Individual function behavior** - Pure business logic and data transformations
+- **AI response quality** - Mock Claude API responses in unit tests
+- **Complex business logic** - Statistics calculation, cost parsing, progress tracking
+- **Edge cases and error handling** - Empty data, missing files, API errors
+- **Formatting and presentation** - Report generation, leaderboards, output formatting
+
+### Speed Guidelines
+
+E2E tests are expensive (time, API costs, real GitHub operations):
+
+- **E2E suite should complete in < 10-12 minutes** (current target after optimizations)
+- **Each test should complete in < 3 minutes** (except multi-workflow tests)
+- **If a test takes longer**, consider:
+  - Splitting into separate unit tests
+  - Mocking external dependencies
+  - Consolidating with other tests to avoid redundant workflow runs
+
+### Test Consolidation Strategy
+
+To minimize redundant workflow runs:
+
+- **Consolidate related validations** - One workflow run, multiple assertions
+- **Example**: Instead of 3 tests (PR created + has summary + has cost), use 1 test that checks all three
+- **Saves time and API costs** - Reduces 3 workflow runs (~7min) to 1 (~2min)
+
+### Unit Test Coverage
+
+For comprehensive coverage without E2E overhead:
+
+- **Statistics**: 43 unit tests cover edge cases, error handling, formatting
+- **Reviewer Management**: Unit tests verify capacity checking logic
+- **Cost Calculation**: Unit tests validate parsing and formatting
+- **Use mocks extensively** - Mock GitHub API, Claude API, file system operations
+
 ## Quick Start
 
 ```bash
