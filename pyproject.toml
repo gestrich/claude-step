@@ -43,6 +43,20 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--disable-warnings",
+    "--cov=src/claudestep",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=70",
+]
+markers = [
+    "integration: End-to-end integration tests (may be slow)",
+    "unit: Fast unit tests",
+]
 
 [tool.coverage.run]
 source = ["src/claudestep"]
