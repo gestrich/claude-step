@@ -239,14 +239,20 @@ Markdown file combining instructions and steps. Steps use checkbox syntax (`- [ 
 
 ## Development
 
-**Running Unit Tests:**
+**Running Unit and Integration Tests:**
 
 ```bash
 # Set Python path
 export PYTHONPATH=src:scripts
 
-# Run tests with coverage
+# Run all unit and integration tests with coverage
+pytest tests/unit/ tests/integration/ -v
+
+# Run only unit tests (fast, isolated)
 pytest tests/unit/ -v
+
+# Run only integration tests (CLI commands)
+pytest tests/integration/ -v
 
 # View coverage report
 coverage report --show-missing
@@ -284,7 +290,7 @@ To require tests to pass before merging PRs:
 1. Go to **Settings** > **Branches**
 2. Add or edit a branch protection rule for `main`
 3. Enable **Require status checks to pass before merging**
-4. Select **test** from the list of status checks
+4. Select **unit-and-integration-tests** from the list of status checks
 5. Optionally enable **Require branches to be up to date before merging**
 
 This ensures all PRs must pass the test suite (493 tests, 85% coverage minimum) before merging.

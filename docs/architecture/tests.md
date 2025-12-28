@@ -233,36 +233,39 @@ Tests mirror the `src/` directory structure, making it easy to find tests for an
 ```
 tests/
 ├── conftest.py                           # Shared fixtures (imported automatically)
-└── unit/
-    ├── domain/                           # Domain layer tests
-    │   ├── test_config.py               # Configuration parsing
-    │   ├── test_models.py               # Domain models
-    │   └── test_exceptions.py           # Custom exceptions
-    ├── infrastructure/                   # Infrastructure layer tests
-    │   ├── git/
-    │   │   └── test_operations.py       # Git operations (branch, commit)
-    │   ├── github/
-    │   │   ├── test_operations.py       # GitHub API (PRs, comments)
-    │   │   └── test_actions.py          # GitHub Actions helpers
-    │   └── filesystem/
-    │       └── test_operations.py       # File I/O operations
-    ├── application/                      # Application layer tests
-    │   ├── collectors/
-    │   │   └── test_statistics.py       # Statistics collection
-    │   ├── formatters/
-    │   │   └── test_table_formatter.py  # Table formatting
-    │   └── services/
-    │       ├── test_pr_operations.py           # PR management
-    │       ├── test_task_management.py         # Task finding/completion
-    │       ├── test_reviewer_management.py     # Reviewer assignment
-    │       ├── test_project_detection.py       # Project detection
-    │       └── test_artifact_operations.py     # Artifact management
-    └── cli/                              # CLI layer tests
-        └── commands/
-            ├── test_prepare.py           # prepare command
-            ├── test_finalize.py          # finalize command
-            ├── test_discover.py          # discover command
-            └── ...                       # Other CLI commands
+├── unit/
+│   ├── domain/                           # Domain layer tests
+│   │   ├── test_config.py               # Configuration parsing
+│   │   ├── test_models.py               # Domain models
+│   │   └── test_exceptions.py           # Custom exceptions
+│   ├── infrastructure/                   # Infrastructure layer tests
+│   │   ├── git/
+│   │   │   └── test_operations.py       # Git operations (branch, commit)
+│   │   ├── github/
+│   │   │   ├── test_operations.py       # GitHub API (PRs, comments)
+│   │   │   └── test_actions.py          # GitHub Actions helpers
+│   │   └── filesystem/
+│   │       └── test_operations.py       # File I/O operations
+│   └── application/                      # Application layer tests
+│       ├── collectors/
+│       │   └── test_statistics.py       # Statistics collection
+│       ├── formatters/
+│       │   └── test_table_formatter.py  # Table formatting
+│       └── services/
+│           ├── test_pr_operations.py           # PR management
+│           ├── test_task_management.py         # Task finding/completion
+│           ├── test_reviewer_management.py     # Reviewer assignment
+│           ├── test_project_detection.py       # Project detection
+│           └── test_artifact_operations.py     # Artifact management
+├── integration/                          # Integration tests
+│   └── cli/                              # CLI command integration tests
+│       └── commands/
+│           ├── test_prepare.py           # prepare command
+│           ├── test_finalize.py          # finalize command
+│           ├── test_discover.py          # discover command
+│           └── ...                       # Other CLI commands
+├── e2e/                                  # End-to-end tests
+└── builders/                             # Test helpers/factories
 ```
 
 ### Layer-Based Testing Strategy
@@ -315,9 +318,9 @@ class TestPrepareCommand:
         ...
 ```
 
-### Integration vs Unit Test Boundaries
+### Test Type Boundaries
 
-**Unit tests** test a single function or class in isolation:
+**Unit tests** (`tests/unit/`) test a single function or class in isolation:
 ```python
 def test_parse_task_index_from_branch():
     """Unit test - tests one function"""
@@ -325,7 +328,7 @@ def test_parse_task_index_from_branch():
     assert result == ("my-project", 5)
 ```
 
-**Integration tests** test how multiple components work together:
+**Integration tests** (`tests/integration/`) test how multiple components work together:
 ```python
 def test_prepare_workflow_creates_pr_with_task_from_spec(
     mock_subprocess, tmp_path, mock_github_api
@@ -336,7 +339,11 @@ def test_prepare_workflow_creates_pr_with_task_from_spec(
     assert result == 0
 ```
 
-**ClaudeStep uses mostly unit tests** with some CLI integration tests. True end-to-end tests exist in the demo repository.
+**E2E tests** (`tests/e2e/`) test complete workflows with real GitHub API:
+- Located in `tests/e2e/` with comprehensive README
+- Test actual workflow runs using ClaudeStep on itself
+- Create real PRs, branches, and workflow runs
+- Slower and more expensive, run manually
 
 ## Testing by Layer
 
@@ -495,9 +502,11 @@ class TestFindAvailableReviewer:
 
 **Key principle:** Application tests verify business logic while treating infrastructure as a black box.
 
-### CLI Layer (98% average coverage)
+### CLI Integration Tests (98% average coverage)
 
-**Files:** `src/claudestep/cli/commands/`
+**Location:** `tests/integration/cli/commands/`
+
+**Files under test:** `src/claudestep/cli/commands/`
 - `prepare.py` - Prepare next task (find task, create branch, assign reviewer)
 - `finalize.py` - Finalize completed task (mark complete, create PR)
 - `discover.py` - Discover next task without creating PR
@@ -510,8 +519,11 @@ class TestFindAvailableReviewer:
 
 **What to mock:** Everything except the command logic itself
 
+**Note:** These tests are in `tests/integration/` (not `tests/unit/`) because they test how multiple components work together, even though external dependencies are mocked.
+
 **Example:**
 ```python
+# tests/integration/cli/commands/test_prepare.py
 class TestCmdPrepare:
     """Tests for the prepare command"""
 
@@ -561,7 +573,7 @@ class TestCmdPrepare:
             )
 ```
 
-**Key principle:** CLI tests verify commands orchestrate lower layers correctly without re-testing those layers' logic.
+**Key principle:** CLI integration tests verify commands orchestrate lower layers correctly without re-testing those layers' logic.
 
 ## What to Test vs What Not to Test
 
@@ -884,7 +896,7 @@ Real examples from the codebase:
 - **Domain tests:** `tests/unit/domain/test_models.py` - Testing domain models
 - **Infrastructure tests:** `tests/unit/infrastructure/git/test_operations.py` - Testing git operations
 - **Application tests:** `tests/unit/application/services/test_task_management.py` - Testing business logic
-- **CLI tests:** `tests/unit/cli/commands/test_prepare.py` - Testing command orchestration
+- **CLI integration tests:** `tests/integration/cli/commands/test_prepare.py` - Testing command orchestration
 
 ### External Resources
 

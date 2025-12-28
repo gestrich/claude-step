@@ -15,13 +15,14 @@ E2E tests should verify **integration points**, not individual features:
 
 ### What NOT to Test
 
-These belong in unit tests for faster feedback and better isolation:
+These belong in unit or integration tests for faster feedback and better isolation:
 
-- **Individual function behavior** - Pure business logic and data transformations
+- **Individual function behavior** - Pure business logic and data transformations (unit tests in `tests/unit/`)
 - **AI response quality** - Mock Claude API responses in unit tests
-- **Complex business logic** - Statistics calculation, cost parsing, progress tracking
-- **Edge cases and error handling** - Empty data, missing files, API errors
-- **Formatting and presentation** - Report generation, leaderboards, output formatting
+- **Complex business logic** - Statistics calculation, cost parsing, progress tracking (unit tests in `tests/unit/`)
+- **Command orchestration** - CLI command workflows (integration tests in `tests/integration/`)
+- **Edge cases and error handling** - Empty data, missing files, API errors (unit tests)
+- **Formatting and presentation** - Report generation, leaderboards, output formatting (unit tests)
 
 ### Speed Guidelines
 
@@ -42,13 +43,17 @@ To minimize redundant workflow runs:
 - **Example**: Instead of 3 tests (PR created + has summary + has cost), use 1 test that checks all three
 - **Saves time and API costs** - Reduces 3 workflow runs (~7min) to 1 (~2min)
 
-### Unit Test Coverage
+### Unit and Integration Test Coverage
 
 For comprehensive coverage without E2E overhead:
 
-- **Statistics**: 43 unit tests cover edge cases, error handling, formatting
-- **Reviewer Management**: Unit tests verify capacity checking logic
-- **Cost Calculation**: Unit tests validate parsing and formatting
+- **Unit Tests** (`tests/unit/`): 337 tests covering domain, infrastructure, and application layers
+  - Domain logic, data models, configuration parsing
+  - Infrastructure operations (git, GitHub API, filesystem) with mocked external dependencies
+  - Business logic (statistics, reviewer management, cost calculation)
+- **Integration Tests** (`tests/integration/`): 169 tests covering CLI command orchestration
+  - Command workflows that coordinate multiple components
+  - CLI commands like prepare, finalize, discover with mocked external dependencies
 - **Use mocks extensively** - Mock GitHub API, Claude API, file system operations
 
 ## Quick Start

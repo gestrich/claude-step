@@ -10,24 +10,30 @@ This guide documents the testing practices, conventions, and workflows for the C
 # Run all unit tests
 PYTHONPATH=src:scripts pytest tests/unit/ -v
 
+# Run all integration tests
+PYTHONPATH=src:scripts pytest tests/integration/ -v
+
+# Run both unit and integration tests
+PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ -v
+
 # Run with coverage report
-PYTHONPATH=src:scripts pytest tests/unit/ --cov=src/claudestep --cov-report=term-missing --cov-report=html
+PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=term-missing --cov-report=html
 
 # Run tests for a specific module
-PYTHONPATH=src:scripts pytest tests/unit/cli/commands/test_prepare.py -v
+PYTHONPATH=src:scripts pytest tests/integration/cli/commands/test_prepare.py -v
 
 # Run a specific test
-PYTHONPATH=src:scripts pytest tests/unit/cli/commands/test_prepare.py::TestCmdPrepare::test_successful_preparation -v
+PYTHONPATH=src:scripts pytest tests/integration/cli/commands/test_prepare.py::TestCmdPrepare::test_successful_preparation -v
 ```
 
 ### Understanding Test Results
 
 ```bash
 # View coverage in terminal
-PYTHONPATH=src:scripts pytest tests/unit/ --cov=src/claudestep --cov-report=term-missing
+PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=term-missing
 
 # View detailed HTML coverage report (opens in browser)
-PYTHONPATH=src:scripts pytest tests/unit/ --cov=src/claudestep --cov-report=html
+PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=html
 open htmlcov/index.html  # macOS
 xdg-open htmlcov/index.html  # Linux
 ```
@@ -54,18 +60,19 @@ tests/
 │   │   │   └── test_actions.py
 │   │   └── filesystem/
 │   │       └── test_operations.py
-│   ├── application/                      # Application layer tests
-│   │   ├── collectors/
-│   │   │   └── test_statistics.py
-│   │   ├── formatters/
-│   │   │   └── test_table_formatter.py
-│   │   └── services/
-│   │       ├── test_pr_operations.py
-│   │       ├── test_task_management.py
-│   │       ├── test_reviewer_management.py
-│   │       ├── test_project_detection.py
-│   │       └── test_artifact_operations.py
-│   └── cli/                              # CLI layer tests
+│   └── application/                      # Application layer tests
+│       ├── collectors/
+│       │   └── test_statistics.py
+│       ├── formatters/
+│       │   └── test_table_formatter.py
+│       └── services/
+│           ├── test_pr_operations.py
+│           ├── test_task_management.py
+│           ├── test_reviewer_management.py
+│           ├── test_project_detection.py
+│           └── test_artifact_operations.py
+├── integration/                          # Integration tests
+│   └── cli/                              # CLI command integration tests
 │       └── commands/
 │           ├── test_prepare.py
 │           ├── test_prepare_summary.py
@@ -76,14 +83,17 @@ tests/
 │           ├── test_add_cost_comment.py
 │           ├── test_extract_cost.py
 │           └── test_notify_pr.py
+├── e2e/                                  # End-to-end tests
+└── builders/                             # Test helpers/factories
 ```
 
 ### Test Layers
 
-1. **Domain Tests** - Test models, configuration, exceptions
-2. **Infrastructure Tests** - Test external integrations (git, GitHub, filesystem)
-3. **Application Tests** - Test business logic and services
-4. **CLI Tests** - Test command orchestration and user interactions
+1. **Domain Tests** (`tests/unit/domain/`) - Test models, configuration, exceptions
+2. **Infrastructure Tests** (`tests/unit/infrastructure/`) - Test external integrations (git, GitHub, filesystem)
+3. **Application Tests** (`tests/unit/application/`) - Test business logic and services
+4. **CLI Integration Tests** (`tests/integration/cli/`) - Test command orchestration across multiple components
+5. **E2E Tests** (`tests/e2e/`) - Test complete workflows with real GitHub API
 
 ## Test Style Guide
 
@@ -368,14 +378,14 @@ As of December 2025:
 
 ```bash
 # Generate HTML coverage report
-PYTHONPATH=src:scripts pytest tests/unit/ --cov=src/claudestep --cov-report=html
+PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=html
 
 # Open in browser
 open htmlcov/index.html  # macOS
 xdg-open htmlcov/index.html  # Linux
 
 # View in terminal with missing lines
-PYTHONPATH=src:scripts pytest tests/unit/ --cov=src/claudestep --cov-report=term-missing
+PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=term-missing
 ```
 
 Coverage reports are also available in GitHub Actions artifacts for every CI run.
@@ -393,9 +403,9 @@ Tests run automatically on:
 
 ```yaml
 # .github/workflows/test.yml
-- name: Run unit tests with coverage
+- name: Run unit and integration tests with coverage
   run: |
-    PYTHONPATH=src:scripts pytest tests/unit/ \
+    PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ \
       --cov=src/claudestep \
       --cov-report=term-missing \
       --cov-report=html \
@@ -414,7 +424,7 @@ Tests run automatically on:
 ### Testing a Command
 
 ```python
-# tests/unit/cli/commands/test_prepare.py
+# tests/integration/cli/commands/test_prepare.py
 class TestCmdPrepare:
     """Tests for the prepare command"""
 
@@ -507,7 +517,23 @@ Before committing a test, verify:
 ## Getting Help
 
 If you have questions about testing:
-1. Review existing tests in `tests/unit/` for examples
+1. Review existing tests in `tests/unit/` and `tests/integration/` for examples
 2. Check the [Test Coverage Improvement Plan](proposed/test-coverage-improvement-plan.md) for detailed patterns
 3. Ask in code review for guidance on testing approach
 4. Run tests locally before pushing to catch issues early
+
+## Running Different Test Types
+
+```bash
+# Run only unit tests (fast, isolated functions)
+PYTHONPATH=src:scripts pytest tests/unit/ -v
+
+# Run only integration tests (CLI commands, component orchestration)
+PYTHONPATH=src:scripts pytest tests/integration/ -v
+
+# Run both unit and integration tests (standard for CI)
+PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ -v
+
+# Run e2e tests (slow, real GitHub API - manual only)
+pytest tests/e2e/ -v -s
+```

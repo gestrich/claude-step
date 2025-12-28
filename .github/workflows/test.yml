@@ -1,4 +1,4 @@
-name: Unit Tests
+name: Unit & Integration Tests
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
   pull-requests: write  # For coverage comments
 
 jobs:
-  test:
+  unit-and-integration-tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,11 +29,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-cov pytest-mock pyyaml
 
-      - name: Run unit tests
+      - name: Run unit and integration tests
         env:
           PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/scripts
         run: |
-          pytest tests/unit/ -v
+          pytest tests/unit/ tests/integration/ -v
 
       - name: Generate coverage report
         if: always()
