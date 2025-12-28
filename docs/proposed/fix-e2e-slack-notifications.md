@@ -41,7 +41,7 @@ Modify `.github/workflows/claudestep-test.yml` to pass the Slack webhook URL as 
 - This change aligns with how other secrets are passed (anthropic_api_key, github_token)
 - The webhook URL will now flow through: workflow input → action.yml input (line 43) → prepare step env var (line 94) → prepare step output → Slack action webhook parameter (line 266)
 
-- [ ] Phase 2: Document the requirement
+- [x] Phase 2: Document the requirement
 
 Update documentation to clarify that the `slack_webhook_url` input is required for PR notifications.
 
@@ -58,6 +58,13 @@ Update documentation to clarify that the `slack_webhook_url` input is required f
 **Expected outcome:**
 - Users understand they need to pass `slack_webhook_url` to get PR notifications
 - Clear example showing both secrets being passed (ANTHROPIC_API_KEY and SLACK_WEBHOOK_URL)
+
+**Technical notes:**
+- Updated README.md at line 122-127 in the "Add Secrets" section to clarify that the `slack_webhook_url` input must be passed to the action (not just set as a secret) for PR notifications to work
+- Added detailed explanation in the "Input Details" section at line 211 documenting the `slack_webhook_url` parameter, emphasizing it must be passed as an action input
+- Clarified the distinction between statistics notifications (which use job-level environment variables) and PR notifications (which require the action input)
+- The example workflow at line 109 already shows the commented-out `slack_webhook_url` input, making it easy for users to enable
+- Build passes: 493 tests passed, 84.78% coverage maintained
 
 - [ ] Phase 3: Validation
 

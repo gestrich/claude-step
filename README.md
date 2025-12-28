@@ -122,7 +122,9 @@ Settings > Secrets and variables > Actions > New repository secret:
 **Optional - Slack Notifications:**
 - Name: `SLACK_WEBHOOK_URL`
 - Value: your Slack webhook URL from [api.slack.com/messaging/webhooks](https://api.slack.com/messaging/webhooks)
-- Uncomment `slack_webhook_url` in your workflow file to enable
+- Uncomment the `slack_webhook_url` line in your workflow file to enable PR creation notifications
+
+**Note:** The `slack_webhook_url` input is required for PR creation notifications. If you only have the `SLACK_WEBHOOK_URL` secret set without passing it as an action input, you will not receive PR notifications (though weekly statistics notifications will still work if you have the statistics workflow configured).
 
 #### Enable PR Creation
 
@@ -205,6 +207,8 @@ Review the generated PR, verify it follows your spec, and make any needed fixes.
 **add_pr_summary:** When `true` (default), posts an AI-generated summary comment on each PR (~$0.002-0.005 per summary)
 
 **pr_label:** Label for ClaudeStep PRs. Default: `claude-step`. Used to identify PRs and track reviewer capacity.
+
+**slack_webhook_url:** Optional. Webhook URL for Slack notifications when PRs are created. Get from [api.slack.com/messaging/webhooks](https://api.slack.com/messaging/webhooks). Must be passed as an action input (not just set as an environment variable) for PR notifications to work. Add as GitHub secret named `SLACK_WEBHOOK_URL` and pass via `slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}` in your workflow.
 
 **anthropic_api_key:** Get from [console.anthropic.com](https://console.anthropic.com). Add as GitHub secret named `ANTHROPIC_API_KEY`.
 
