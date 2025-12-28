@@ -108,9 +108,9 @@ class TestProjectManager:
         """
         project_path = self.projects_dir / project_name
 
-        # Add project to git
+        # Add project to git (force add to override .gitignore)
         subprocess.run(
-            ["git", "add", str(project_path)],
+            ["git", "add", "-f", str(project_path)],
             cwd=self.repo_root,
             check=True
         )
@@ -152,12 +152,18 @@ class TestProjectManager:
         if not project_path.exists():
             return  # Already removed
 
-        # Remove from git
-        subprocess.run(
-            ["git", "rm", "-rf", str(project_path)],
+        # Remove from git (using -f to handle gitignored files)
+        result = subprocess.run(
+            ["git", "rm", "-rf", "-f", str(project_path)],
             cwd=self.repo_root,
-            check=True
+            capture_output=True,
+            text=True
         )
+
+        # If git rm fails (e.g., file not tracked), just remove it from filesystem
+        if result.returncode != 0:
+            import shutil
+            shutil.rmtree(project_path)
 
         # Commit
         commit_msg = f"Remove test project: {project_name}"
