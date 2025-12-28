@@ -39,9 +39,41 @@ jobs:
           git config --global user.name 'ClaudeStep E2E Tests'
           git config --global user.email 'claudestep-e2e@users.noreply.github.com'
 
+      - name: Set up ephemeral test branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 << 'EOF'
+          import sys
+          sys.path.insert(0, 'tests/e2e/helpers')
+          from test_branch_manager import TestBranchManager
+
+          manager = TestBranchManager()
+          manager.setup_test_branch()
+          EOF
+
       - name: Run E2E tests
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           ./tests/e2e/run_test.sh
+
+      - name: Cleanup test branch (on success)
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 << 'EOF'
+          import sys
+          sys.path.insert(0, 'tests/e2e/helpers')
+          from test_branch_manager import TestBranchManager
+
+          manager = TestBranchManager()
+          manager.cleanup_test_branch()
+          EOF
+
+      # Leave branch for debugging on failure
+      - name: Branch left for debugging
+        if: failure()
+        run: echo "Test branch 'e2e-test' left intact for debugging"

@@ -89,13 +89,23 @@ Use an **ephemeral `e2e-test` branch** that is deleted and recreated fresh for e
 - All operations use `check=True` where failures should halt execution
 - The class auto-detects repo root using `git rev-parse --show-toplevel`
 
-- [ ] **Phase 3: Update E2E Test Workflow**
-  - Update `.github/workflows/e2e-test.yml` to:
-    - Delete e2e-test branch if exists (clean slate)
-    - Create fresh e2e-test branch from main
-    - Write test workflows (statistics.yml, claudestep-test.yml) to branch
-    - Run tests on the e2e-test branch
-    - Optionally delete branch after tests complete
+- [x] **Phase 3: Update E2E Test Workflow** ✅ COMPLETED
+
+**What was done:**
+- Updated `.github/workflows/e2e-test.yml` to manage ephemeral test branch lifecycle
+- Added "Set up ephemeral test branch" step that calls `TestBranchManager.setup_test_branch()`
+- Added "Cleanup test branch (on success)" step that deletes branch after successful tests
+- Added "Branch left for debugging" step that logs when branch is preserved on failure
+- Integrated with existing test execution workflow seamlessly
+
+**Technical notes:**
+- The workflow now creates a fresh `e2e-test` branch before every test run
+- Test branch setup happens after Git configuration but before test execution
+- Branch cleanup only runs on success (`if: success()`) to preserve failed test state for debugging
+- Uses inline Python with heredoc to call TestBranchManager without additional scripts
+- Maintains all existing permissions (contents: write, pull-requests: write, actions: write)
+- Test branch manager handles all git operations (delete old branch, create fresh, push workflows)
+- The claudestep-test.yml workflow is written to the ephemeral branch by TestBranchManager
 
 - [ ] **Phase 4: Update Test Code**
   - `tests/e2e/helpers/project_manager.py`: Change default branch to `e2e-test`
