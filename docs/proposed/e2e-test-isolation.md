@@ -67,11 +67,27 @@ Use an **ephemeral `e2e-test` branch** that is deleted and recreated fresh for e
 - `e2e-test.yml` orchestrates E2E tests and will be updated in Phase 3 to manage the ephemeral branch
 - Main branch is now clean of test execution artifacts
 
-- [ ] **Phase 2: Add Test Setup Helper**
-  - Create `tests/e2e/helpers/test_branch_manager.py` to manage ephemeral branch
-  - Implement: `setup_test_branch()` - deletes and recreates e2e-test branch
-  - Implement: `create_test_workflows()` - writes test-specific workflows to branch
-  - Implement: `cleanup_test_branch()` - deletes branch after tests
+- [x] **Phase 2: Add Test Setup Helper** ✅ COMPLETED
+
+**What was done:**
+- Created `tests/e2e/helpers/test_branch_manager.py` with `TestBranchManager` class
+- Implemented `setup_test_branch()` - orchestrates complete test branch setup
+- Implemented `delete_remote_branch()` - safely deletes remote branch if it exists
+- Implemented `create_fresh_branch()` - creates new e2e-test branch from main
+- Implemented `create_test_workflows()` - writes claudestep-test.yml to the branch
+- Implemented `create_test_workspace()` - creates claude-step/ directory with README
+- Implemented `push_test_branch()` - pushes the prepared branch to remote
+- Implemented `cleanup_test_branch()` - deletes branch after tests complete
+- Added `claude_model: 'claude-3-haiku-20240307'` to the workflow template for cost savings
+
+**Technical notes:**
+- The manager handles all git operations using subprocess for reliability
+- Remote branch deletion checks for existence before attempting deletion
+- Fresh branch creation includes pulling latest main to ensure clean state
+- Local branch cleanup uses `capture_output=True` to avoid errors if branch doesn't exist
+- Workflow template includes the cheapest Claude model (Haiku 3) from Phase 0
+- All operations use `check=True` where failures should halt execution
+- The class auto-detects repo root using `git rev-parse --show-toplevel`
 
 - [ ] **Phase 3: Update E2E Test Workflow**
   - Update `.github/workflows/e2e-test.yml` to:
