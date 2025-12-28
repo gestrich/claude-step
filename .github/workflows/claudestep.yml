@@ -1,4 +1,4 @@
-name: ClaudeStep Test
+name: ClaudeStep
 
 on:
   workflow_dispatch:

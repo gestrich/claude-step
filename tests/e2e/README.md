@@ -67,7 +67,7 @@ For comprehensive coverage without E2E overhead:
 
 The E2E tests validate the complete ClaudeStep workflow by:
 - Creating temporary test projects in `claude-step/test-*`
-- Triggering the ClaudeStep workflow on itself via `claudestep-test.yml`
+- Triggering the ClaudeStep workflow on itself via `claudestep.yml`
 - Verifying PRs are created with AI-generated summaries and cost info
 - Testing reviewer capacity limits and merge triggers
 - Automatically cleaning up all test resources
@@ -77,7 +77,7 @@ The E2E tests validate the complete ClaudeStep workflow by:
 Unlike traditional testing approaches that require a separate demo repository, these tests use a **recursive pattern** where ClaudeStep tests itself:
 
 1. **E2E Test** creates a test project and commits it to the repository
-2. **E2E Test** triggers `.github/workflows/claudestep-test.yml`
+2. **E2E Test** triggers `.github/workflows/claudestep.yml`
 3. **Workflow** runs ClaudeStep using `uses: ./` (the current repository)
 4. **ClaudeStep** creates PRs for the test project's tasks
 5. **E2E Test** verifies the PRs and cleans up
@@ -239,7 +239,7 @@ Provides methods for:
 tests/e2e/test_workflow_e2e.py::test_creates_pr_with_summary
 Creating test project: test-project-a1b2c3d4
 Committing and pushing test project...
-Triggering workflow: claudestep-test.yml
+Triggering workflow: claudestep.yml
 Workflow run ID: 12345678
 Waiting for workflow completion...
   Status: queued
@@ -282,7 +282,7 @@ git config --global user.email "your.email@example.com"
 - Check that `gh auth status` shows you're authenticated
 
 ### "Workflow not found"
-- Ensure `.github/workflows/claudestep-test.yml` exists
+- Ensure `.github/workflows/claudestep.yml` exists
 - Check that you're on the correct branch
 
 ### "Test hangs during workflow wait"

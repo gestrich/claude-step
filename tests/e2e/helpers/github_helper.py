@@ -30,7 +30,7 @@ class GitHubHelper:
         """Trigger a GitHub workflow manually.
 
         Args:
-            workflow_name: Name of the workflow file (e.g., "claudestep-test.yml")
+            workflow_name: Name of the workflow file (e.g., "claudestep.yml")
             inputs: Dictionary of workflow inputs
             ref: Git ref to run workflow on (branch/tag/SHA)
         """

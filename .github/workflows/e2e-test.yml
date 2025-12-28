@@ -3,7 +3,7 @@ name: E2E Integration Tests
 # This workflow runs the E2E test suite which validates ClaudeStep by testing it
 # against test projects within this repository (recursive workflow pattern).
 #
-# The tests create temporary test projects, trigger the claudestep-test.yml workflow,
+# The tests create temporary test projects, trigger the claudestep.yml workflow,
 # verify PRs are created correctly, and clean up all test resources.
 
 on:

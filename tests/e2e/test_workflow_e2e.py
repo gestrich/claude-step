@@ -5,7 +5,7 @@ creates PRs correctly, generates AI summaries, includes cost information, and
 handles edge cases like empty specs.
 
 The tests use a recursive workflow pattern where the claude-step repository
-tests itself by triggering the claudestep-test.yml workflow.
+tests itself by triggering the claudestep.yml workflow.
 
 Note: These tests have been optimized to reduce redundant workflow executions.
 The main workflow test (test_basic_workflow_end_to_end) validates PR creation,
@@ -49,7 +49,7 @@ def test_basic_workflow_end_to_end(
     This consolidated test verifies the entire E2E workflow by:
     1. Creating a test project with a spec containing tasks
     2. Committing and pushing the project to e2e-test branch
-    3. Triggering the claudestep-test.yml workflow
+    3. Triggering the claudestep.yml workflow
     4. Waiting for workflow completion
     5. Verifying a PR was created with expected content
     6. Verifying the PR has an AI-generated summary comment
@@ -71,7 +71,7 @@ def test_basic_workflow_end_to_end(
 
     # Trigger the claudestep-test workflow
     gh.trigger_workflow(
-        workflow_name="claudestep-test.yml",
+        workflow_name="claudestep.yml",
         inputs={"project_name": test_project},
         ref="e2e-test"
     )
@@ -81,7 +81,7 @@ def test_basic_workflow_end_to_end(
 
     # Wait for workflow to complete
     workflow_run = gh.wait_for_workflow_completion(
-        workflow_name="claudestep-test.yml",
+        workflow_name="claudestep.yml",
         timeout=600  # 10 minutes
     )
 
@@ -186,13 +186,13 @@ def test_reviewer_capacity_limits(
 
         # === First workflow run: should create PR for task 1 ===
         gh.trigger_workflow(
-            workflow_name="claudestep-test.yml",
+            workflow_name="claudestep.yml",
             inputs={"project_name": project_name},
             ref="e2e-test"
         )
         time.sleep(5)
         workflow_run_1 = gh.wait_for_workflow_completion(
-            workflow_name="claudestep-test.yml",
+            workflow_name="claudestep.yml",
             timeout=600
         )
         assert workflow_run_1["conclusion"] == "success", \
@@ -205,13 +205,13 @@ def test_reviewer_capacity_limits(
 
         # === Second workflow run: should create PR for task 2 ===
         gh.trigger_workflow(
-            workflow_name="claudestep-test.yml",
+            workflow_name="claudestep.yml",
             inputs={"project_name": project_name},
             ref="e2e-test"
         )
         time.sleep(5)
         workflow_run_2 = gh.wait_for_workflow_completion(
-            workflow_name="claudestep-test.yml",
+            workflow_name="claudestep.yml",
             timeout=600
         )
         assert workflow_run_2["conclusion"] == "success", \
@@ -224,13 +224,13 @@ def test_reviewer_capacity_limits(
 
         # === Third workflow run: should NOT create PR (at capacity) ===
         gh.trigger_workflow(
-            workflow_name="claudestep-test.yml",
+            workflow_name="claudestep.yml",
             inputs={"project_name": project_name},
             ref="e2e-test"
         )
         time.sleep(5)
         workflow_run_3 = gh.wait_for_workflow_completion(
-            workflow_name="claudestep-test.yml",
+            workflow_name="claudestep.yml",
             timeout=600
         )
         # Workflow should still succeed, but not create a PR
@@ -329,7 +329,7 @@ def test_workflow_handles_empty_spec(
 
         # Trigger the workflow
         gh.trigger_workflow(
-            workflow_name="claudestep-test.yml",
+            workflow_name="claudestep.yml",
             inputs={"project_name": project_name},
             ref="e2e-test"
         )
@@ -337,7 +337,7 @@ def test_workflow_handles_empty_spec(
         # Wait for workflow completion
         time.sleep(5)
         workflow_run = gh.wait_for_workflow_completion(
-            workflow_name="claudestep-test.yml",
+            workflow_name="claudestep.yml",
             timeout=600
         )
 
