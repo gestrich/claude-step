@@ -11,11 +11,29 @@ E2E tests pollute the main branch by:
 
 ## Solution
 
-Use an **ephemeral `e2e-test` branch** that is deleted and recreated fresh for each test run:
-- Branch is **deleted at test start** for clean environment
-- Test-specific workflows are **written during test setup** (not on main)
-- All test operations happen on this isolated branch
-- Main branch stays completely clean - no test directories, no test-specific workflows
+Use an **ephemeral `e2e-test` branch** that is deleted and recreated fresh for each test run.
+
+### What Lives on Main Branch
+
+**E2E test code lives on main** (like any other code):
+- `tests/e2e/` - All test files and helpers
+- `.github/workflows/e2e-test.yml` - Workflow that orchestrates test execution
+- Test fixtures, utilities, and helper classes
+
+### What Lives on Ephemeral Test Branch
+
+**Test execution happens on isolated branch** (created fresh each run):
+- `claude-step/` - Test projects created during test execution
+- `.github/workflows/claudestep-test.yml` - Workflow triggered by tests (written dynamically)
+- `.github/workflows/statistics/` - Statistics workflow triggered on PR merge (written dynamically)
+- Test-specific workflows that trigger on git events (push, merge, etc.)
+
+### Key Principle
+
+**Code on main, execution on ephemeral branch**:
+- Test code is version-controlled on main
+- Test execution (pushing projects, creating PRs, merging) happens on e2e-test branch
+- Main branch stays clean - no test execution artifacts
 
 ## Implementation Phases
 
@@ -47,9 +65,9 @@ Use an **ephemeral `e2e-test` branch** that is deleted and recreated fresh for e
 
 - [ ] **Phase 5: Test and Document**
   - Run E2E tests to verify clean branch creation works
-  - Verify main branch has no test infrastructure
-  - Update README.md with E2E test isolation info
-  - Document the ephemeral branch approach
+  - Verify main branch has no test execution artifacts (claude-step/, test workflows)
+  - Create/update `docs/architecture/e2e-testing.md` documenting the ephemeral branch approach
+  - Document test isolation architecture and workflow
 
 ## Detailed Implementation
 
