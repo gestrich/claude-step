@@ -2,6 +2,7 @@
 .netrc
 
 # Python
+.venv/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -15,3 +16,4 @@ dist/
 htmlcov/
 .mypy_cache/
 .ruff_cache/
+.benchmarks/
