@@ -14,17 +14,78 @@ The E2E tests are located in this repository at `tests/e2e/` and use a **recursi
 - Tests merge trigger functionality
 - Cleans up all created resources
 
+## Test Isolation Architecture
+
+To prevent test pollution of the main branch, ClaudeStep uses an **ephemeral test branch** strategy:
+
+### Branch Isolation Model
+
+**Main Branch** - Clean and production-ready:
+- Contains all test code (`tests/e2e/`)
+- Contains the E2E test orchestration workflow (`.github/workflows/e2e-test.yml`)
+- NO test execution artifacts
+- NO test projects (`claude-step/` directory)
+- NO test-specific workflows (`claudestep-test.yml`)
+
+**Ephemeral `e2e-test` Branch** - Created fresh for each test run:
+- Created from main at test start
+- Contains test projects (`claude-step/test-*`)
+- Contains test-specific workflows (`.github/workflows/claudestep-test.yml`)
+- Used for all test execution (commits, pushes, PRs)
+- **Deleted after successful tests** or left for debugging on failure
+
+### Test Branch Lifecycle
+
+Each E2E test run follows this lifecycle:
+
+1. **Setup Phase**:
+   - Delete old `e2e-test` branch if it exists (cleanup from previous runs)
+   - Create fresh `e2e-test` branch from current `main`
+   - Write test-specific workflows to the branch (e.g., `claudestep-test.yml`)
+   - Create `claude-step/` workspace directory
+   - Push `e2e-test` branch to remote
+
+2. **Execution Phase**:
+   - Tests run and operate on the `e2e-test` branch
+   - Test projects are created in `claude-step/test-*`
+   - PRs are created with `e2e-test` as base branch
+   - Workflows are triggered on `e2e-test` branch
+
+3. **Cleanup Phase**:
+   - On success: Delete `e2e-test` branch completely
+   - On failure: Leave branch for debugging
+
+### Benefits of Ephemeral Branches
+
+1. **Clean main branch**: No test artifacts ever committed to main
+2. **Test isolation**: Each run starts from a known clean state
+3. **No conflicts**: Parallel test runs can't interfere with each other
+4. **Easy debugging**: Failed test branches preserved for investigation
+5. **True separation**: Test workflows can't accidentally trigger on main
+
+### Code vs. Execution Separation
+
+| Aspect | Lives on Main | Lives on e2e-test |
+|--------|---------------|-------------------|
+| Test code files | ✅ Yes | No |
+| Test helpers | ✅ Yes | No |
+| E2E orchestration workflow | ✅ Yes | No |
+| Test projects (`claude-step/`) | ❌ No | ✅ Yes |
+| Test-specific workflows | ❌ No | ✅ Yes |
+| Test execution (git ops) | ❌ No | ✅ Yes |
+
 ### Recursive Workflow Pattern
 
 The key innovation is that the `claude-step` repository tests itself:
 
-1. **E2E Test Workflow** (`.github/workflows/e2e-test.yml`) runs the test suite
-2. **Tests create** temporary projects in `claude-step/test-project-{id}/`
-3. **Tests trigger** the ClaudeStep Test Workflow (`.github/workflows/claudestep-test.yml`)
+1. **E2E Test Workflow** (`.github/workflows/e2e-test.yml`) sets up ephemeral `e2e-test` branch
+2. **Tests create** temporary projects in `claude-step/test-project-{id}/` on the `e2e-test` branch
+3. **Tests trigger** the ClaudeStep Test Workflow (`.github/workflows/claudestep-test.yml`) on `e2e-test` branch
 4. **ClaudeStep Test Workflow** runs the action using `uses: ./` (current repository)
-5. **Action creates PRs** in the same repository for the test project tasks
+5. **Action creates PRs** in the same repository for the test project tasks (base branch: `e2e-test`)
 6. **Tests verify** the PRs were created correctly with summaries
 7. **Tests clean up** all test resources (projects, PRs, branches)
+8. **E2E Test Workflow** deletes the ephemeral `e2e-test` branch (on success)
 
 ## Prerequisites
 
@@ -68,9 +129,10 @@ git config --global user.email "your.email@example.com"
 ### 4. Repository Access
 
 You need write access to the `claude-step` repository:
-- The tests will create/delete test projects in `claude-step/test-*`
-- The tests will create and close test PRs
-- The tests will create and delete test branches
+- The tests will create/delete the ephemeral `e2e-test` branch
+- The tests will create/delete test projects in `claude-step/test-*` on the `e2e-test` branch
+- The tests will create and close test PRs (with `e2e-test` as base branch)
+- The tests will create and delete test branches for each PR
 
 ## Running the Tests
 
@@ -273,10 +335,13 @@ gh run view <run_id> --repo gestrich/claude-step --log
 The tests use fixtures defined in `tests/e2e/conftest.py`:
 
 - **Repository**: `gestrich/claude-step` (configured in `GitHubHelper`)
-- **Workflow**: `claudestep-test.yml` (recursive workflow)
+- **Test branch**: `e2e-test` (ephemeral branch created by E2E workflow)
+- **Workflow**: `claudestep-test.yml` (written to `e2e-test` branch, not on main)
+- **Base branch for PRs**: `e2e-test` (all test PRs merge to test branch, not main)
 - **Reviewer capacity**: 2 PRs (configured in test projects)
 - **Workflow timeout**: 300 seconds (5 minutes)
 - **Test project naming**: `test-project-{uuid}` for isolation
+- **Branch manager**: `TestBranchManager` handles ephemeral branch lifecycle
 
 ## CI/CD Integration
 
@@ -287,14 +352,18 @@ name: E2E Integration Tests
 
 on:
   workflow_dispatch:  # Manual trigger
-  pull_request:
-    types: [closed]   # Optional: Run after merges
+
+permissions:
+  contents: write      # Needed to create/delete e2e-test branch
+  pull-requests: write # Needed to create test PRs
+  actions: write       # Needed to trigger workflows
 
 jobs:
   e2e-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -304,11 +373,47 @@ jobs:
       - name: Install dependencies
         run: pip install pytest pyyaml
 
+      - name: Configure Git
+        run: |
+          git config --global user.name 'ClaudeStep E2E Tests'
+          git config --global user.email 'claudestep-e2e@users.noreply.github.com'
+
+      - name: Set up ephemeral test branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 << 'EOF'
+          import sys
+          sys.path.insert(0, 'tests/e2e/helpers')
+          from test_branch_manager import TestBranchManager
+
+          manager = TestBranchManager()
+          manager.setup_test_branch()
+          EOF
+
       - name: Run E2E tests
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: ./tests/e2e/run_test.sh
+
+      - name: Cleanup test branch (on success)
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 << 'EOF'
+          import sys
+          sys.path.insert(0, 'tests/e2e/helpers')
+          from test_branch_manager import TestBranchManager
+
+          manager = TestBranchManager()
+          manager.cleanup_test_branch()
+          EOF
+
+      - name: Branch left for debugging
+        if: failure()
+        run: echo "Test branch 'e2e-test' left intact for debugging"
 ```
 
 **Note:** E2E tests are typically run manually due to API costs and execution time. They can be triggered via:
@@ -319,11 +424,14 @@ jobs:
 ## Important Notes
 
 1. **Real GitHub Operations**: These tests create real PRs and trigger real workflows in the claude-step repository
-2. **API Costs**: Each test run uses Claude API credits for workflow execution and PR summary generation
-3. **Cleanup**: Tests clean up after themselves automatically using pytest fixtures
-4. **Test Isolation**: Each test uses unique project IDs (`test-project-{uuid}`) to prevent conflicts
-5. **Self-Testing**: The action tests itself using the recursive workflow pattern (`uses: ./`)
-6. **Test Artifacts**: All test projects, PRs, and branches are temporary and cleaned up automatically
+2. **Ephemeral Test Branch**: All test execution happens on the `e2e-test` branch, which is created fresh and deleted after each run
+3. **Main Branch Protection**: The main branch never contains test artifacts - it stays completely clean
+4. **API Costs**: Each test run uses Claude API credits (using cheapest model: claude-3-haiku-20240307)
+5. **Cleanup**: Tests clean up after themselves automatically using pytest fixtures and `TestBranchManager`
+6. **Test Isolation**: Each test uses unique project IDs (`test-project-{uuid}`) to prevent conflicts
+7. **Self-Testing**: The action tests itself using the recursive workflow pattern (`uses: ./`)
+8. **Test Artifacts**: All test projects, PRs, and branches are temporary and cleaned up automatically
+9. **Debugging Failed Tests**: On test failure, the `e2e-test` branch is left intact for investigation
 
 ## Troubleshooting Failed Tests
 
@@ -348,8 +456,11 @@ After running the tests successfully:
 
 - Test files: `tests/e2e/test_workflow_e2e.py`, `tests/e2e/test_statistics_e2e.py`
 - Test runner: `tests/e2e/run_test.sh`
-- Helper modules: `tests/e2e/helpers/github_helper.py`, `tests/e2e/helpers/project_manager.py`
+- Helper modules:
+  - `tests/e2e/helpers/github_helper.py` - GitHub API interactions
+  - `tests/e2e/helpers/project_manager.py` - Test project management
+  - `tests/e2e/helpers/test_branch_manager.py` - Ephemeral branch lifecycle
 - Fixtures: `tests/e2e/conftest.py`
-- E2E workflow: `.github/workflows/e2e-test.yml`
-- Recursive workflow: `.github/workflows/claudestep-test.yml`
-- Migration plan: `docs/proposed/e2e-test-migration.md`
+- E2E workflow: `.github/workflows/e2e-test.yml` (on main branch)
+- Test-specific workflow: `.github/workflows/claudestep-test.yml` (written to e2e-test branch)
+- Implementation plan: `docs/proposed/e2e-test-isolation.md`
