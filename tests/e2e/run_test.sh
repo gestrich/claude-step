@@ -127,7 +127,8 @@ cd "$(git rev-parse --show-toplevel)"
 
 # Run pytest with E2E tests
 # Pass through any additional arguments (e.g., -v, -k, --pdb)
-pytest tests/e2e/ "$@"
+# Note: --no-cov disables coverage checks since E2E tests run code in remote workflows
+pytest tests/e2e/ --no-cov "$@"
 
 # Capture exit code
 EXIT_CODE=$?
