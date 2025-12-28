@@ -236,8 +236,8 @@ def test_reviewer_capacity_limits(
 """
 
     config_content = """reviewers:
-  - octocat
-max_prs_per_reviewer: 2
+  - username: octocat
+    maxOpenPRs: 2
 """
 
     project_name = project_manager.create_test_project(

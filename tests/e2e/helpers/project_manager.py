@@ -195,8 +195,8 @@ class TestProjectManager:
     def _default_config_content() -> str:
         """Generate default configuration.yml content for testing."""
         return """reviewers:
-  - octocat
-max_prs_per_reviewer: 2
+  - username: octocat
+    maxOpenPRs: 2
 """
 
     @staticmethod
