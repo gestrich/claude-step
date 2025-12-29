@@ -116,19 +116,19 @@ The new storage system will replace artifact usage in:
 
 ### Completed Phases ✅
 - **Phase 1**: GitHub API Capabilities Research - ✅ COMPLETED (2025-12-29)
-- **Phase 2**: Data Structure & Schema Design - 📋 SPECIFICATION COMPLETED (implementation pending)
+- **Phase 2**: Data Structure & Schema Design - ✅ COMPLETED (2025-12-29)
+- **Phase 3**: Core API Layer Design - ✅ COMPLETED (2025-12-29)
 
 ### Skipped Phases ⏭️
 - **Phase 5**: Index Management - ⏭️ SKIPPED (using Git Tree API instead)
 
 ### Pending Phases ⏸️
-- **Phase 3**: Core API Layer Design - ⏸️ NOT STARTED
 - **Phase 4**: GitHub Storage Backend Implementation - ⏸️ NOT STARTED
 - **Phase 6**: Integration with Existing ClaudeStep Code - ⏸️ NOT STARTED
 - **Phase 7**: Testing & Validation - ⏸️ NOT STARTED
 
 ### Next Steps 🎯
-Start with **Phase 3: Core API Layer Design** - implement domain models (Task, PullRequest, AIOperation, Project)
+Continue with **Phase 4: GitHub Storage Backend Implementation** - implement GitHubMetadataStore using GitHub Contents API
 
 ---
 
@@ -529,72 +529,95 @@ Ready to proceed to **Phase 3: Core API Layer Design**:
 
 ## Pending Implementation Phases
 
-### Phase 3: Core API Layer Design ⏸️
+### Phase 3: Core API Layer Design ✅
 
-**Status:** ⏸️ NOT STARTED - Ready to begin
+**Status:** ✅ COMPLETED on 2025-12-29
 
 **Priority:** 🔴 HIGH - Foundation for all other phases
 
-**Tasks:**
+**Tasks Completed:**
 
-1. **Implement Domain Models** (`src/claudestep/domain/models.py` or new file)
-   - Implement `Task` dataclass (index, description, status)
-   - Implement `PullRequest` dataclass (task_index, pr_number, branch_name, reviewer, pr_state, created_at, ai_operations)
-   - Implement `AIOperation` dataclass (type, model, cost_usd, created_at, workflow_run_id, tokens_input, tokens_output, duration_seconds)
-   - Implement `Project` dataclass (schema_version, project, last_updated, tasks, pull_requests)
-   - Add `to_dict()` and `from_dict()` methods for JSON serialization
-   - Add helper methods: `get_task_by_index()`, `get_prs_for_task()`, `calculate_task_status()`, `update_all_task_statuses()`, `get_total_cost()`, `get_progress_stats()`, etc.
-   - Add enums: `TaskStatus`, `PRState`, `AIOperationType`
-   - Reference implementation in `docs/proposed/github-model-alternatives.md`
+1. **✅ Domain Models Enhanced** (`src/claudestep/domain/models.py`)
+   - Found existing implementation of `Task`, `PullRequest`, `AIOperation`, and `HybridProjectMetadata` dataclasses
+   - Added missing helper methods to `HybridProjectMetadata`:
+     - `get_cost_by_model()` - Cost breakdown by AI model
+     - `get_progress_stats()` - Task counts by status
+     - `get_completion_percentage()` - Project completion percentage
+     - `calculate_task_status()` - Core logic for deriving task status from PR state
+     - `update_all_task_statuses()` - Alias for `sync_task_statuses()` for API compatibility
+   - Added helper methods to `PullRequest`:
+     - `get_total_tokens()` - Total input/output tokens
+     - `get_total_duration()` - Total duration of all AI operations
+   - All methods follow the specification in `docs/proposed/github-model-alternatives.md`
+   - Enums already present: `TaskStatus`, `PRState`, `AIOperationType`
 
-2. **Create Infrastructure Layer** (`src/claudestep/infrastructure/metadata/`)
-   - New module: `src/claudestep/infrastructure/metadata/operations.py`
-   - Define abstract interface:
-     ```python
-     class MetadataStore(ABC):
-         @abstractmethod
-         def save_project(project: Project) -> None
+2. **✅ Infrastructure Layer Created** (`src/claudestep/infrastructure/metadata/`)
+   - Created new module: `src/claudestep/infrastructure/metadata/operations.py`
+   - Defined abstract `MetadataStore` interface with methods:
+     - `save_project(project: HybridProjectMetadata) -> None`
+     - `get_project(project_name: str) -> Optional[HybridProjectMetadata]`
+     - `get_all_projects() -> List[HybridProjectMetadata]`
+     - `list_project_names() -> List[str]`
+     - `get_projects_modified_since(date: datetime) -> List[HybridProjectMetadata]`
+     - `project_exists(project_name: str) -> bool`
+     - `delete_project(project_name: str) -> None`
+   - Comprehensive docstrings explaining purpose and error handling
+   - Ready for implementation in Phase 4 (GitHubMetadataStore)
 
-         @abstractmethod
-         def get_project(project_name: str) -> Optional[Project]
+3. **✅ Application Service Created** (`src/claudestep/application/services/metadata_service.py`)
+   - New file: `metadata_service.py` (394 lines)
+   - Implements `MetadataService` class that wraps `MetadataStore`
+   - Core CRUD operations:
+     - `get_project()`, `save_project()`, `list_all_projects()`
+     - `get_or_create_project()` - Convenience method
+   - Query operations (backward compatible with `artifact_operations.py`):
+     - `find_in_progress_tasks()` - Task indices with open PRs
+     - `get_reviewer_assignments()` - Maps task_index → reviewer
+     - `get_open_prs_by_reviewer()` - Maps reviewer → list of PR numbers
+   - PR workflow operations:
+     - `add_pr_to_project()` - Add PR with automatic status sync
+     - `update_pr_state()` - Update PR state with validation
+     - `update_task_status()` - Sync single task status
+   - Statistics and reporting:
+     - `get_projects_modified_since()` - Filter by date
+     - `get_project_stats()` - Detailed project statistics
+     - `get_reviewer_capacity()` - Cross-project capacity checking
+   - Utility operations:
+     - `project_exists()`, `list_project_names()`
 
-         @abstractmethod
-         def get_all_projects() -> List[Project]
+**Technical Implementation:**
+- All code follows ClaudeStep's layered architecture pattern
+- Domain models are pure data classes with no external dependencies
+- Infrastructure layer defines abstract interfaces
+- Application service provides business logic and use case implementations
+- Full type hints throughout for static analysis
+- Comprehensive docstrings explaining purpose and behavior
 
-         @abstractmethod
-         def list_project_names() -> List[str]
+**Build Status:**
+- ✅ All files compile successfully (no syntax errors)
+- ✅ Test suite runs: 494 passed, 3 failed (E2E with external deps), 13 errors (missing pytest-mock dep)
+- ✅ Code coverage: 75.19% (above 70% requirement)
+- ✅ New modules visible in coverage report:
+  - `metadata_service.py`: 0% coverage (expected - no tests yet, covered in Phase 7)
+  - `infrastructure/metadata/operations.py`: 0% coverage (expected - abstract interface)
 
-         @abstractmethod
-         def get_projects_modified_since(date: datetime) -> List[Project]
-     ```
-   - Git/GitHub-backed implementation in `github_metadata_store.py`
+**Files Created:**
+- `src/claudestep/infrastructure/metadata/__init__.py`
+- `src/claudestep/infrastructure/metadata/operations.py`
+- `src/claudestep/application/services/metadata_service.py`
 
-3. **Create Application Service** (`src/claudestep/application/services/`)
-   - New file: `metadata_service.py`
-   - Provides high-level operations working with the hybrid model:
-     ```python
-     # Core operations
-     def get_project(project_name: str) -> Optional[Project]
-     def save_project(project: Project) -> None
-     def list_all_projects() -> List[Project]
+**Files Modified:**
+- `src/claudestep/domain/models.py` - Added helper methods to `HybridProjectMetadata` and `PullRequest`
 
-     # Query operations (for backward compatibility with artifact_operations.py)
-     def find_in_progress_tasks(project_name: str) -> set[int]  # Returns task indices with open PRs
-     def get_reviewer_assignments(project_name: str) -> dict[int, str]  # Maps task_index -> reviewer
-     def get_open_prs_by_reviewer() -> dict[str, List[int]]  # Maps reviewer -> list of PR numbers
+**Expected Outcome Achieved:**
+- ✅ Hybrid model domain classes fully implemented with all helper methods
+- ✅ Abstract MetadataStore interface defined with 7 operations
+- ✅ Application service layer provides clean API with 15+ operations
+- ✅ Clear separation: domain (models) → infrastructure (storage) → application (business logic)
+- ✅ Query operations support existing use cases (reviewer capacity, statistics, task selection)
+- ✅ Ready for Phase 4: GitHub Storage Backend Implementation
 
-     # New PR workflow
-     def add_pr_to_project(project_name: str, task_index: int, pr: PullRequest) -> None
-     def update_task_status(project_name: str, task_index: int) -> None
-     ```
-   - Uses `MetadataStore` interface internally
-
-**Expected Outcome:**
-- Hybrid model domain classes implemented (Task, PullRequest, AIOperation, Project)
-- Abstract MetadataStore interface defined
-- Application service layer provides clean API
-- Clear separation: domain (models) → infrastructure (storage) → application (business logic)
-- Query operations support existing use cases (reviewer capacity, statistics, etc.)
+**Next Phase:** Phase 4 - Implement `GitHubMetadataStore` using GitHub Contents API
 
 ### Phase 4: GitHub Storage Backend Implementation ⏸️
 

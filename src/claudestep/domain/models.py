@@ -992,6 +992,24 @@ class PullRequest:
         """
         return sum(op.cost_usd for op in self.ai_operations)
 
+    def get_total_tokens(self) -> tuple[int, int]:
+        """Get total input and output tokens
+
+        Returns:
+            Tuple of (total_input_tokens, total_output_tokens)
+        """
+        total_input = sum(op.tokens_input for op in self.ai_operations)
+        total_output = sum(op.tokens_output for op in self.ai_operations)
+        return (total_input, total_output)
+
+    def get_total_duration(self) -> float:
+        """Calculate total duration of all AI operations in seconds
+
+        Returns:
+            Total duration in seconds
+        """
+        return sum(op.duration_seconds for op in self.ai_operations)
+
 
 @dataclass
 class HybridProjectMetadata:
@@ -1168,3 +1186,82 @@ class HybridProjectMetadata:
             Total cost in USD
         """
         return sum(pr.get_total_cost() for pr in self.pull_requests)
+
+    def get_cost_by_model(self) -> Dict[str, float]:
+        """Get cost breakdown by AI model
+
+        Returns:
+            Dictionary mapping model name to total cost
+        """
+        costs: Dict[str, float] = {}
+        for pr in self.pull_requests:
+            for op in pr.ai_operations:
+                costs[op.model] = costs.get(op.model, 0.0) + op.cost_usd
+        return costs
+
+    def get_progress_stats(self) -> Dict[str, int]:
+        """Get task counts by status
+
+        Returns:
+            Dictionary with total, pending, in_progress, and completed counts
+        """
+        stats = {
+            "total": len(self.tasks),
+            "pending": 0,
+            "in_progress": 0,
+            "completed": 0,
+        }
+        for task in self.tasks:
+            if task.status == TaskStatus.PENDING:
+                stats["pending"] += 1
+            elif task.status == TaskStatus.IN_PROGRESS:
+                stats["in_progress"] += 1
+            elif task.status == TaskStatus.COMPLETED:
+                stats["completed"] += 1
+        return stats
+
+    def get_completion_percentage(self) -> float:
+        """Calculate project completion percentage
+
+        Returns:
+            Completion percentage (0-100)
+        """
+        if not self.tasks:
+            return 0.0
+        stats = self.get_progress_stats()
+        return (stats["completed"] / stats["total"]) * 100.0
+
+    def calculate_task_status(self, task_index: int) -> TaskStatus:
+        """Calculate task status from PR state
+
+        This is the core logic that derives task status:
+        - No PR → pending
+        - PR open → in_progress
+        - PR merged → completed
+        - Multiple PRs → use latest by created_at
+
+        Args:
+            task_index: Task index (1-based)
+
+        Returns:
+            TaskStatus enum value
+        """
+        latest_pr = self.get_latest_pr_for_task(task_index)
+
+        if latest_pr is None:
+            return TaskStatus.PENDING
+
+        if latest_pr.pr_state == "merged":
+            return TaskStatus.COMPLETED
+        elif latest_pr.pr_state in ["open", "closed"]:
+            return TaskStatus.IN_PROGRESS
+        else:
+            return TaskStatus.PENDING
+
+    def update_all_task_statuses(self) -> None:
+        """Update all task statuses based on current PR states
+
+        Call this after loading from JSON to ensure consistency.
+        This is an alias for sync_task_statuses() for API compatibility.
+        """
+        self.sync_task_statuses()
