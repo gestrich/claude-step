@@ -1,5 +1,6 @@
 """GitHub CLI and API operations"""
 
+import base64
 import json
 import os
 import subprocess
@@ -124,3 +125,54 @@ def ensure_label_exists(label: str, gh: GitHubActionsHelper) -> None:
         else:
             # Re-raise if it's a different error
             raise
+
+
+def get_file_from_branch(repo: str, branch: str, file_path: str) -> Optional[str]:
+    """Fetch file content from a specific branch via GitHub API
+
+    Args:
+        repo: GitHub repository in format "owner/repo"
+        branch: Branch name to fetch from
+        file_path: Path to file within repository
+
+    Returns:
+        File content as string, or None if file not found
+
+    Raises:
+        GitHubAPIError: If API call fails for reasons other than file not found
+    """
+    endpoint = f"/repos/{repo}/contents/{file_path}?ref={branch}"
+
+    try:
+        response = gh_api_call(endpoint, method="GET")
+
+        # GitHub API returns content as Base64 encoded
+        if "content" in response:
+            # Remove newlines that GitHub adds to the base64 string
+            encoded_content = response["content"].replace("\n", "")
+            decoded_content = base64.b64decode(encoded_content).decode("utf-8")
+            return decoded_content
+        else:
+            return None
+
+    except GitHubAPIError as e:
+        # If it's a 404 (file not found), return None
+        if "404" in str(e) or "Not Found" in str(e):
+            return None
+        # Re-raise other errors
+        raise
+
+
+def file_exists_in_branch(repo: str, branch: str, file_path: str) -> bool:
+    """Check if a file exists in a specific branch
+
+    Args:
+        repo: GitHub repository in format "owner/repo"
+        branch: Branch name to check
+        file_path: Path to file within repository
+
+    Returns:
+        True if file exists, False otherwise
+    """
+    content = get_file_from_branch(repo, branch, file_path)
+    return content is not None

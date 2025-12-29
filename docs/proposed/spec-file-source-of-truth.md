@@ -53,24 +53,33 @@ Add support for configurable base branch across all actions and workflows.
 **Expected Outcome:**
 ✅ All workflows can accept a configurable base branch name (defaults to "main")
 
-- [ ] Phase 2: Create GitHub API Helper for Spec File Retrieval
+- [x] Phase 2: Create GitHub API Helper for Spec File Retrieval ✅
 
 Add infrastructure support for fetching files from specific branches via GitHub API.
 
 **Tasks:**
-- Add function to `src/claudestep/infrastructure/github/operations.py`:
+- ✅ Add function to `src/claudestep/infrastructure/github/operations.py`:
   - `get_file_from_branch(repo: str, branch: str, file_path: str) -> Optional[str]`
   - Uses GitHub Contents API to fetch file content
   - Returns file content as string, or None if not found
   - Handles Base64 decoding (GitHub API returns Base64 encoded)
-- Add function to check if file exists:
+- ✅ Add function to check if file exists:
   - `file_exists_in_branch(repo: str, branch: str, file_path: str) -> bool`
 
-**Files to Create/Modify:**
-- `src/claudestep/infrastructure/github/operations.py` - Add new functions
+**Files Modified:**
+- `src/claudestep/infrastructure/github/operations.py` - Added two new functions (lines 130-179)
+
+**Technical Notes:**
+- Added `base64` import to the module imports (line 3)
+- `get_file_from_branch()` uses the existing `gh_api_call()` helper to call GitHub Contents API
+- The function fetches content from `/repos/{repo}/contents/{file_path}?ref={branch}` endpoint
+- GitHub API returns file content as Base64 encoded, which is decoded to UTF-8 string
+- Returns `None` if file is not found (404 error), but re-raises other GitHubAPIError exceptions
+- `file_exists_in_branch()` is a simple wrapper that checks if `get_file_from_branch()` returns content
+- Both functions are ready to be used in subsequent phases for fetching spec files from the base branch
 
 **Expected Outcome:**
-Python code can fetch any file from any branch via GitHub API without filesystem access
+✅ Python code can fetch any file from any branch via GitHub API without filesystem access
 
 - [ ] Phase 3: Update Prepare Command to Validate Spec Existence
 
