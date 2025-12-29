@@ -181,7 +181,50 @@ Update user-facing documentation to reflect the new requirement.
 **Expected Outcome:**
 Users understand they must merge specs before running workflows
 
-- [ ] Phase 8: Testing & Validation
+- [ ] Phase 8: Update E2E Tests to Use Real Project
+
+Update E2E tests to use a permanent test project with many steps instead of creating temporary fake projects.
+
+**Background:**
+The new design requires specs to exist in the main branch. This means E2E tests can no longer create temporary "fake" projects on the fly (since those specs won't be in main). Instead, we need a permanent test project with many steps (300+) committed to the main branch that E2E tests can use.
+
+**Tasks:**
+- Create a permanent test project in main branch:
+  - Location: `claude-step/e2e-test-project/`
+  - Create `spec.md` with 300+ simple tasks (e.g., "Task 1", "Task 2", etc.)
+  - Create `configuration.yml` with test reviewer configuration
+  - Create `pr-template.md` with standard template
+  - Commit to main branch
+- Update E2E test files to use this permanent project:
+  - `tests/e2e/test_workflow_e2e.py` - Remove temporary project creation logic
+  - `tests/e2e/helpers/github_helper.py` - Update to use permanent project name
+  - `tests/e2e/helpers/test_branch_manager.py` - Simplify to not create project files
+- Update E2E tests to:
+  - Use `e2e-test-project` as the project name
+  - Skip project creation steps (files already in main)
+  - Still create ephemeral test branches for running workflows
+  - Clean up PRs and branches after tests (but leave project files in main)
+- Benefits:
+  - Tests run faster (no project creation overhead)
+  - More realistic (uses actual main branch specs like users will)
+  - Simpler test code (no mocking project creation)
+  - Can test many tasks (300+) to ensure scalability
+
+**Files to Create:**
+- `claude-step/e2e-test-project/spec.md` - 300+ tasks
+- `claude-step/e2e-test-project/configuration.yml` - Test config
+- `claude-step/e2e-test-project/pr-template.md` - Template
+
+**Files to Modify:**
+- `tests/e2e/test_workflow_e2e.py` - Use permanent project
+- `tests/e2e/test_statistics_e2e.py` - Use permanent project
+- `tests/e2e/helpers/github_helper.py` - Remove project creation
+- `tests/e2e/helpers/test_branch_manager.py` - Simplify
+
+**Expected Outcome:**
+E2E tests use a real project from main branch, validating the actual user workflow
+
+- [ ] Phase 9: Testing & Validation
 
 Comprehensive testing to ensure spec file handling works correctly.
 
