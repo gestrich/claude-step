@@ -30,7 +30,6 @@ TESTS IN THIS MODULE:
    - Why E2E: Tests edge case in complete workflow execution
 """
 
-import time
 import pytest
 from typing import List
 
@@ -76,8 +75,12 @@ def test_basic_workflow_end_to_end(
         ref="e2e-test"
     )
 
-    # Wait a moment for workflow to start
-    time.sleep(5)
+    # Wait for workflow to start (smart polling replaces fixed sleep)
+    gh.wait_for_workflow_to_start(
+        workflow_name="claudestep.yml",
+        timeout=30,
+        branch="e2e-test"
+    )
 
     # Wait for workflow to complete
     workflow_run = gh.wait_for_workflow_completion(
@@ -199,7 +202,7 @@ def test_reviewer_capacity_limits(
             inputs={"project_name": project_name},
             ref="e2e-test"
         )
-        time.sleep(5)
+        gh.wait_for_workflow_to_start(workflow_name="claudestep.yml", timeout=30, branch="e2e-test")
         workflow_run_1 = gh.wait_for_workflow_completion(
             workflow_name="claudestep.yml",
             timeout=900  # 15 minutes - increased to accommodate AI inference and GitHub operations
@@ -220,7 +223,7 @@ def test_reviewer_capacity_limits(
             inputs={"project_name": project_name},
             ref="e2e-test"
         )
-        time.sleep(5)
+        gh.wait_for_workflow_to_start(workflow_name="claudestep.yml", timeout=30, branch="e2e-test")
         workflow_run_2 = gh.wait_for_workflow_completion(
             workflow_name="claudestep.yml",
             timeout=900  # 15 minutes - increased to accommodate AI inference and GitHub operations
@@ -241,7 +244,7 @@ def test_reviewer_capacity_limits(
             inputs={"project_name": project_name},
             ref="e2e-test"
         )
-        time.sleep(5)
+        gh.wait_for_workflow_to_start(workflow_name="claudestep.yml", timeout=30, branch="e2e-test")
         workflow_run_3 = gh.wait_for_workflow_completion(
             workflow_name="claudestep.yml",
             timeout=900  # 15 minutes - increased to accommodate AI inference and GitHub operations
@@ -351,8 +354,10 @@ def test_workflow_handles_empty_spec(
             ref="e2e-test"
         )
 
+        # Wait for workflow to start (smart polling replaces fixed sleep)
+        gh.wait_for_workflow_to_start(workflow_name="claudestep.yml", timeout=30, branch="e2e-test")
+
         # Wait for workflow completion
-        time.sleep(5)
         workflow_run = gh.wait_for_workflow_completion(
             workflow_name="claudestep.yml",
             timeout=900  # 15 minutes - increased to accommodate AI inference and GitHub operations

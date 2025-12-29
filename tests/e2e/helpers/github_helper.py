@@ -8,7 +8,7 @@ import subprocess
 import time
 import json
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Callable
 
 # Configure logger for E2E test diagnostics
 logger = logging.getLogger(__name__)
@@ -29,6 +29,99 @@ class GitHubHelper:
             repo: Repository in format "owner/name". Defaults to claude-step repo.
         """
         self.repo = repo
+
+    def wait_for_condition(
+        self,
+        check_fn: Callable[[], bool],
+        timeout: int = 30,
+        poll_interval: float = 1.0,
+        condition_name: str = "condition"
+    ) -> None:
+        """Wait for a condition to become true.
+
+        Args:
+            check_fn: Function that returns True when condition is met
+            timeout: Maximum time to wait in seconds
+            poll_interval: Time between checks in seconds
+            condition_name: Description of condition for logging
+
+        Raises:
+            TimeoutError: If condition not met within timeout
+        """
+        logger.debug(f"Waiting for {condition_name} (timeout={timeout}s, interval={poll_interval}s)")
+        start_time = time.time()
+        poll_count = 0
+
+        while time.time() - start_time < timeout:
+            poll_count += 1
+            elapsed = time.time() - start_time
+
+            if check_fn():
+                logger.debug(f"Condition '{condition_name}' met after {elapsed:.1f}s ({poll_count} polls)")
+                return
+
+            logger.debug(f"[Poll {poll_count}, {elapsed:.1f}s] Condition '{condition_name}' not yet met")
+            time.sleep(poll_interval)
+
+        elapsed = time.time() - start_time
+        logger.error(f"Condition '{condition_name}' not met after {elapsed:.1f}s ({poll_count} polls)")
+        raise TimeoutError(f"Condition '{condition_name}' not met within {timeout} seconds")
+
+    def wait_for_workflow_to_start(
+        self,
+        workflow_name: str,
+        timeout: int = 30,
+        poll_interval: float = 2.0,
+        branch: str = "e2e-test"
+    ) -> Dict[str, Any]:
+        """Wait for a workflow run to appear after triggering.
+
+        This replaces fixed sleeps after workflow triggers with smart polling
+        that waits for the workflow run to actually appear in the API.
+
+        Args:
+            workflow_name: Name of the workflow file
+            timeout: Maximum time to wait in seconds
+            poll_interval: Time between checks in seconds
+            branch: Branch to filter runs by
+
+        Returns:
+            The workflow run that was found
+
+        Raises:
+            TimeoutError: If workflow doesn't appear within timeout
+        """
+        logger.info(f"Waiting for workflow '{workflow_name}' to start on branch '{branch}'")
+        start_time = time.time()
+        initial_run_id = None
+        poll_count = 0
+
+        # Get current latest run ID to detect new runs
+        existing_run = self.get_latest_workflow_run(workflow_name, branch=branch)
+        if existing_run:
+            initial_run_id = existing_run.get("databaseId")
+            logger.debug(f"Current latest run ID: {initial_run_id}")
+
+        while time.time() - start_time < timeout:
+            poll_count += 1
+            elapsed = time.time() - start_time
+
+            run = self.get_latest_workflow_run(workflow_name, branch=branch)
+            if run:
+                run_id = run.get("databaseId")
+                # If we have a new run (different from initial), workflow has started
+                if initial_run_id is None or run_id != initial_run_id:
+                    run_url = run.get("url", f"https://github.com/{self.repo}/actions/runs/{run_id}")
+                    logger.info(f"Workflow started after {elapsed:.1f}s - Run ID: {run_id}")
+                    logger.info(f"Workflow URL: {run_url}")
+                    return run
+
+            logger.debug(f"[Poll {poll_count}, {elapsed:.1f}s] Workflow not started yet")
+            time.sleep(poll_interval)
+
+        elapsed = time.time() - start_time
+        logger.error(f"Workflow '{workflow_name}' did not start within {timeout}s")
+        raise TimeoutError(f"Workflow '{workflow_name}' did not start within {timeout} seconds")
 
     def trigger_workflow(
         self,
@@ -267,3 +360,92 @@ class GitHubHelper:
             logger.info(f"Successfully deleted branch '{branch}'")
         else:
             logger.warning(f"Failed to delete branch '{branch}': {result.stderr}")
+
+    def cleanup_test_branches(self, pattern_prefix: str = "claude-step-test-") -> None:
+        """Clean up test branches from previous failed runs.
+
+        This is idempotent and can be run before tests to ensure clean state.
+
+        Args:
+            pattern_prefix: Prefix of branch names to clean up
+        """
+        logger.info(f"Cleaning up test branches with prefix '{pattern_prefix}'")
+
+        # List all branches
+        cmd = ["gh", "api", f"repos/{self.repo}/git/refs/heads", "--paginate"]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            logger.warning(f"Failed to list branches: {result.stderr}")
+            return
+
+        try:
+            refs = json.loads(result.stdout)
+            cleanup_count = 0
+
+            for ref in refs:
+                ref_name = ref.get("ref", "")
+                # Extract branch name from refs/heads/branch-name
+                if ref_name.startswith("refs/heads/"):
+                    branch_name = ref_name[len("refs/heads/"):]
+                    if branch_name.startswith(pattern_prefix):
+                        try:
+                            self.delete_branch(branch_name)
+                            cleanup_count += 1
+                        except Exception as e:
+                            logger.warning(f"Failed to delete branch '{branch_name}': {e}")
+
+            if cleanup_count > 0:
+                logger.info(f"Cleaned up {cleanup_count} test branch(es)")
+            else:
+                logger.debug("No test branches to clean up")
+
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse branch list: {e}")
+
+    def cleanup_test_prs(self, title_prefix: str = "ClaudeStep") -> None:
+        """Clean up open test PRs from previous failed runs.
+
+        This is idempotent and can be run before tests to ensure clean state.
+
+        Args:
+            title_prefix: Prefix of PR titles to clean up
+        """
+        logger.info(f"Cleaning up test PRs with title prefix '{title_prefix}'")
+
+        cmd = [
+            "gh", "pr", "list",
+            "--repo", self.repo,
+            "--state", "open",
+            "--json", "number,title",
+            "--limit", "100"
+        ]
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.warning(f"Failed to list PRs: {result.stderr}")
+            return
+
+        try:
+            prs = json.loads(result.stdout)
+            cleanup_count = 0
+
+            for pr in prs:
+                pr_number = pr.get("number")
+                pr_title = pr.get("title", "")
+
+                # Only clean up PRs that look like test PRs
+                if pr_title.startswith(title_prefix) and "test-project-" in pr_title.lower():
+                    try:
+                        self.close_pull_request(pr_number)
+                        cleanup_count += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to close PR #{pr_number}: {e}")
+
+            if cleanup_count > 0:
+                logger.info(f"Cleaned up {cleanup_count} test PR(s)")
+            else:
+                logger.debug("No test PRs to clean up")
+
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse PR list: {e}")

@@ -119,3 +119,26 @@ def test_branch():
     # Could add validation here to ensure branch exists
     yield
     # Cleanup handled by workflow
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_previous_test_runs():
+    """Clean up resources from previous failed test runs.
+
+    This fixture runs once before all tests to ensure a clean state,
+    making tests more reliable by cleaning up leftover branches and PRs
+    from previous failed runs.
+
+    Yields:
+        None - Just ensures cleanup happens before tests
+    """
+    gh = GitHubHelper(repo="gestrich/claude-step")
+
+    # Clean up test branches from previous failed runs
+    gh.cleanup_test_branches(pattern_prefix="claude-step-test-")
+
+    # Clean up test PRs from previous failed runs
+    gh.cleanup_test_prs(title_prefix="ClaudeStep")
+
+    yield
+    # Post-test cleanup handled by individual test fixtures
