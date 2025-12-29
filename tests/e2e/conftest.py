@@ -45,34 +45,20 @@ def project_manager() -> TestProjectManager:
 
 
 @pytest.fixture
-def test_project(
-    project_manager: TestProjectManager,
-    project_id: str
-) -> Generator[str, None, None]:
-    """Create and cleanup a test project.
+def test_project() -> str:
+    """Provide the permanent E2E test project name.
 
-    This fixture:
-    1. Creates a test project before the test
-    2. Yields the project name to the test
-    3. Cleans up the project after the test (even on failure)
+    This fixture returns the name of the permanent test project that exists
+    in the main branch at claude-step/e2e-test-project/.
 
-    Args:
-        project_manager: TestProjectManager fixture
-        project_id: Unique project ID fixture
+    With the new spec-file-source-of-truth design, test projects must exist
+    in the main branch. Instead of creating temporary projects, E2E tests now
+    use a permanent test project with 300+ tasks.
 
-    Yields:
-        Project name (e.g., "test-project-abc123")
+    Returns:
+        Project name: "e2e-test-project"
     """
-    project_name = project_manager.create_test_project(project_id=project_id)
-
-    try:
-        yield project_name
-    finally:
-        # Cleanup: delete project from filesystem
-        try:
-            project_manager.delete_test_project(project_name)
-        except Exception as e:
-            print(f"Warning: Failed to cleanup test project {project_name}: {e}")
+    return "e2e-test-project"
 
 
 @pytest.fixture
