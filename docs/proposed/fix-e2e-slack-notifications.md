@@ -66,7 +66,7 @@ Update documentation to clarify that the `slack_webhook_url` input is required f
 - The example workflow at line 109 already shows the commented-out `slack_webhook_url` input, making it easy for users to enable
 - Build passes: 493 tests passed, 84.78% coverage maintained
 
-- [ ] Phase 3: Validation
+- [x] Phase 3: Validation
 
 Verify that Slack notifications work correctly in e2e tests.
 
@@ -89,3 +89,18 @@ Verify that Slack notifications work correctly in e2e tests.
 
 **Manual check:**
 - Visually inspect the Slack message in the channel to ensure formatting is correct
+
+**Technical notes:**
+- Triggered e2e-test workflow (run ID: 20561962063) on 2025-12-29
+- E2E test created PRs successfully (#67, #68, #69 on e2e-test branch)
+- Examined ClaudeStep workflow run logs (run ID: 20561986562) for PR #67
+- Confirmed Slack webhook URL was configured and passed to the action
+- Verified "✓ Slack webhook URL is configured - notification will be posted" message in logs
+- Confirmed slackapi/slack-github-action@v2 executed with proper payload containing:
+  - PR number and link
+  - Project name
+  - Task description
+  - Cost breakdown (main task + PR summary)
+  - Properly formatted markdown blocks
+- No errors in Slack notification step - action completed successfully
+- The fix is working as expected: slack_webhook_url input parameter now flows through from workflow → action → Slack API
