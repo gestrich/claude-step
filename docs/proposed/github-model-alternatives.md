@@ -373,7 +373,7 @@ Alternative models should explore:
 - Backward compatibility handled via field name aliasing
 - All datetime fields use ISO 8601 format in JSON
 
-## Phase 2: Alternative Model 1 - Separate Spec and Execution
+## Phase 2: Alternative Model 1 - Separate Spec and Execution ✅
 
 **Concept:**
 ```
@@ -393,21 +393,486 @@ Project
 - **Execution**: One attempt to implement a task (may fail, may be refined)
 - **AIOperation**: Individual AI work (replaces AITask)
 
-**Tasks:**
+### Detailed Structure Diagram
 
-- Create detailed diagram showing this structure
-- Show example JSON for a project with 5 tasks (2 completed, 1 in progress, 2 pending)
-- Document how this handles:
-  - Not-yet-started tasks (just in spec, no executions)
-  - Multiple attempts at same task (multiple executions with same task_index)
-  - Refinements (additional operations in same execution)
-- List pros and cons vs current model
+```
+Project
+├── schema_version: str                   # Metadata format version (e.g., "1.0")
+├── project: str                          # Project name/identifier
+├── last_updated: datetime                # Last modification timestamp
+├── spec: ProjectSpec                     # IMMUTABLE: Definition from spec.md
+│   └── tasks: List[TaskDefinition]       # All tasks defined in spec.md
+│       └── TaskDefinition
+│           ├── index: int                # Position in spec.md (1-based)
+│           └── description: str          # Task description from spec.md
+└── executions: List[Execution]           # MUTABLE: PR execution history
+    └── Execution
+        ├── execution_id: str             # Unique identifier for this execution attempt
+        ├── task_index: int               # References TaskDefinition.index
+        ├── pr_number: int                # GitHub PR number
+        ├── branch_name: str              # Git branch for this execution
+        ├── reviewer: str                 # Assigned reviewer username
+        ├── pr_state: str                 # "open", "merged", "closed"
+        ├── created_at: datetime          # When execution started
+        └── ai_operations: List[AIOperation]  # All AI work for this execution
+            └── AIOperation
+                ├── operation_id: str         # Unique identifier for this operation
+                ├── type: str                 # "PRCreation", "PRRefinement", "PRSummary"
+                ├── model: str                # AI model used (e.g., "claude-sonnet-4")
+                ├── cost_usd: float           # Cost for this operation
+                ├── created_at: datetime      # When this operation was executed
+                ├── workflow_run_id: int      # GitHub Actions run that executed this
+                ├── tokens_input: int         # Input tokens (default: 0)
+                ├── tokens_output: int        # Output tokens (default: 0)
+                └── duration_seconds: float   # Execution time (default: 0.0)
+```
 
-**Expected Outcome:**
+### Key Relationships
 
-- Visual diagram of separated spec/execution model
-- Example JSON demonstrating the structure
-- Analysis of whether this feels more natural
+1. **Spec → Execution**: One-to-many relationship via `task_index`
+   - One `TaskDefinition` can have zero or more `Execution` records
+   - Zero executions = task not yet started
+   - One execution = normal case (single PR attempt)
+   - Multiple executions = task was attempted multiple times (e.g., PR closed and retried)
+
+2. **Execution → AIOperation**: One-to-many relationship
+   - Each `Execution` has one or more `AIOperation` records
+   - First operation is typically "PRCreation"
+   - Additional operations are "PRRefinement" or other modifications
+   - All operations belong to the same PR/execution
+
+3. **Task Identification**: Tasks are identified by `index` (permanent) rather than PR state
+   - Spec defines what needs to be done (static)
+   - Executions track what was done (dynamic)
+
+### Example JSON: Auth Refactor Project
+
+This example shows a project with 5 tasks:
+- Task 1: Merged (one execution with one operation)
+- Task 2: In progress (one execution with one operation)
+- Task 3: Not started (no executions)
+- Task 4: Not started (no executions)
+- Task 5: Not started (no executions)
+
+```json
+{
+  "schema_version": "1.0",
+  "project": "auth-refactor",
+  "last_updated": "2025-12-29T10:30:00Z",
+  "spec": {
+    "tasks": [
+      {
+        "index": 1,
+        "description": "Set up authentication middleware"
+      },
+      {
+        "index": 2,
+        "description": "Implement OAuth2 authentication flow"
+      },
+      {
+        "index": 3,
+        "description": "Add email validation to user registration form"
+      },
+      {
+        "index": 4,
+        "description": "Implement password reset functionality"
+      },
+      {
+        "index": 5,
+        "description": "Add two-factor authentication support"
+      }
+    ]
+  },
+  "executions": [
+    {
+      "execution_id": "exec-001-task-1",
+      "task_index": 1,
+      "pr_number": 41,
+      "branch_name": "claudestep/auth-refactor/step-1",
+      "reviewer": "bob",
+      "pr_state": "merged",
+      "created_at": "2025-12-28T14:20:00Z",
+      "ai_operations": [
+        {
+          "operation_id": "op-001",
+          "type": "PRCreation",
+          "model": "claude-sonnet-4",
+          "cost_usd": 0.12,
+          "created_at": "2025-12-28T14:20:00Z",
+          "workflow_run_id": 123450,
+          "tokens_input": 4500,
+          "tokens_output": 1800,
+          "duration_seconds": 42.1
+        }
+      ]
+    },
+    {
+      "execution_id": "exec-002-task-2",
+      "task_index": 2,
+      "pr_number": 42,
+      "branch_name": "claudestep/auth-refactor/step-2",
+      "reviewer": "alice",
+      "pr_state": "open",
+      "created_at": "2025-12-29T10:30:00Z",
+      "ai_operations": [
+        {
+          "operation_id": "op-002",
+          "type": "PRCreation",
+          "model": "claude-sonnet-4",
+          "cost_usd": 0.15,
+          "created_at": "2025-12-29T10:30:00Z",
+          "workflow_run_id": 123456,
+          "tokens_input": 5000,
+          "tokens_output": 2000,
+          "duration_seconds": 45.2
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Example: Task with Multiple Executions (Failed Then Succeeded)
+
+This shows Task 1 with two execution attempts: first was closed without merging, second succeeded.
+
+```json
+{
+  "schema_version": "1.0",
+  "project": "auth-refactor",
+  "last_updated": "2025-12-29T16:00:00Z",
+  "spec": {
+    "tasks": [
+      {
+        "index": 1,
+        "description": "Set up authentication middleware"
+      }
+    ]
+  },
+  "executions": [
+    {
+      "execution_id": "exec-001-task-1-attempt-1",
+      "task_index": 1,
+      "pr_number": 40,
+      "branch_name": "claudestep/auth-refactor/step-1-attempt-1",
+      "reviewer": "bob",
+      "pr_state": "closed",
+      "created_at": "2025-12-27T09:00:00Z",
+      "ai_operations": [
+        {
+          "operation_id": "op-001",
+          "type": "PRCreation",
+          "model": "claude-sonnet-4",
+          "cost_usd": 0.12,
+          "created_at": "2025-12-27T09:00:00Z",
+          "workflow_run_id": 123440,
+          "tokens_input": 4500,
+          "tokens_output": 1800,
+          "duration_seconds": 42.1
+        }
+      ]
+    },
+    {
+      "execution_id": "exec-001-task-1-attempt-2",
+      "task_index": 1,
+      "pr_number": 41,
+      "branch_name": "claudestep/auth-refactor/step-1",
+      "reviewer": "bob",
+      "pr_state": "merged",
+      "created_at": "2025-12-28T14:20:00Z",
+      "ai_operations": [
+        {
+          "operation_id": "op-005",
+          "type": "PRCreation",
+          "model": "claude-sonnet-4",
+          "cost_usd": 0.12,
+          "created_at": "2025-12-28T14:20:00Z",
+          "workflow_run_id": 123450,
+          "tokens_input": 4500,
+          "tokens_output": 1800,
+          "duration_seconds": 42.1
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Example: Execution with Multiple AI Operations (Refinements)
+
+This shows an execution with initial creation plus two refinement operations.
+
+```json
+{
+  "execution_id": "exec-001-task-1",
+  "task_index": 1,
+  "pr_number": 41,
+  "branch_name": "claudestep/auth-refactor/step-1",
+  "reviewer": "bob",
+  "pr_state": "merged",
+  "created_at": "2025-12-28T14:20:00Z",
+  "ai_operations": [
+    {
+      "operation_id": "op-001",
+      "type": "PRCreation",
+      "model": "claude-sonnet-4",
+      "cost_usd": 0.12,
+      "created_at": "2025-12-28T14:20:00Z",
+      "workflow_run_id": 123450,
+      "tokens_input": 4500,
+      "tokens_output": 1800,
+      "duration_seconds": 42.1
+    },
+    {
+      "operation_id": "op-002",
+      "type": "PRRefinement",
+      "model": "claude-sonnet-4",
+      "cost_usd": 0.08,
+      "created_at": "2025-12-28T16:45:00Z",
+      "workflow_run_id": 123451,
+      "tokens_input": 3000,
+      "tokens_output": 1200,
+      "duration_seconds": 28.5
+    },
+    {
+      "operation_id": "op-003",
+      "type": "PRRefinement",
+      "model": "claude-sonnet-4",
+      "cost_usd": 0.06,
+      "created_at": "2025-12-28T18:15:00Z",
+      "workflow_run_id": 123452,
+      "tokens_input": 2500,
+      "tokens_output": 1000,
+      "duration_seconds": 22.3
+    }
+  ]
+}
+```
+
+### How This Model Handles Different Scenarios
+
+#### 1. Not-Yet-Started Tasks
+
+**Current Model:**
+```json
+{
+  "step_index": 3,
+  "step_description": "Add email validation"
+}
+```
+
+**Alternative Model 1:**
+```json
+// Task appears only in spec
+{
+  "spec": {
+    "tasks": [
+      {"index": 3, "description": "Add email validation"}
+    ]
+  },
+  "executions": []  // No executions yet
+}
+```
+
+**Key Difference:**
+- Current: Minimal Step object with optional fields
+- Alternative 1: Task definition exists in spec, absence from executions indicates "not started"
+- **Benefit:** No special case handling - a task either has executions or it doesn't
+
+#### 2. Multiple Attempts at Same Task
+
+**Current Model:**
+Not directly supported. Would need to either:
+- Overwrite the Step record (losing history)
+- Add array of attempts (major schema change)
+
+**Alternative Model 1:**
+```json
+{
+  "spec": {
+    "tasks": [{"index": 1, "description": "Set up auth middleware"}]
+  },
+  "executions": [
+    {
+      "execution_id": "exec-001-attempt-1",
+      "task_index": 1,
+      "pr_number": 40,
+      "pr_state": "closed",
+      "created_at": "2025-12-27T09:00:00Z",
+      "ai_operations": [...]
+    },
+    {
+      "execution_id": "exec-001-attempt-2",
+      "task_index": 1,
+      "pr_number": 41,
+      "pr_state": "merged",
+      "created_at": "2025-12-28T14:20:00Z",
+      "ai_operations": [...]
+    }
+  ]
+}
+```
+
+**Benefit:** Multiple executions with same `task_index` naturally represent retry attempts. Complete history preserved.
+
+#### 3. PR Refinements
+
+**Current Model:**
+```json
+{
+  "step_index": 1,
+  "step_description": "Set up auth middleware",
+  "pr_number": 41,
+  "ai_tasks": [
+    {"type": "PRCreation", "cost_usd": 0.12, ...},
+    {"type": "PRRefinement", "cost_usd": 0.08, ...}
+  ]
+}
+```
+
+**Alternative Model 1:**
+```json
+{
+  "executions": [
+    {
+      "execution_id": "exec-001",
+      "task_index": 1,
+      "pr_number": 41,
+      "ai_operations": [
+        {"type": "PRCreation", "cost_usd": 0.12, ...},
+        {"type": "PRRefinement", "cost_usd": 0.08, ...}
+      ]
+    }
+  ]
+}
+```
+
+**Similarity:** Both models handle this similarly with an array of operations/tasks
+**Difference:** Alternative 1 makes the execution boundary more explicit
+
+### Pros and Cons vs Current Model
+
+#### Pros ✅
+
+1. **Clear Separation of Concerns**
+   - Spec defines "what needs to be done" (immutable)
+   - Executions track "what was done" (mutable)
+   - No confusion about whether a field represents plan vs execution
+
+2. **Explicit Entity Boundaries**
+   - `TaskDefinition` is always lightweight (just index + description)
+   - `Execution` is always fully-formed (never has optional PR fields)
+   - No "two modes" of the same entity type
+
+3. **Natural Support for Retries**
+   - Multiple executions for same `task_index` naturally represent retry attempts
+   - Complete history of all attempts preserved
+   - Current model would require major restructuring to support this
+
+4. **Reduced Optional Fields**
+   - `TaskDefinition` has no optional fields
+   - `Execution` has no optional fields (every execution is a PR)
+   - Easier to reason about: "Does this task have executions? If yes, check their states"
+
+5. **Better Mental Model Alignment**
+   - Users think: "Here's my plan (spec.md)" + "Here's what happened (PRs)"
+   - Model directly reflects this mental model
+   - Current model conflates these concepts into "Step"
+
+6. **Clearer Queries**
+   ```python
+   # Find not-yet-started tasks
+   started_indices = {e.task_index for e in project.executions}
+   not_started = [t for t in project.spec.tasks if t.index not in started_indices]
+
+   # Find task with multiple attempts
+   from collections import Counter
+   attempts = Counter(e.task_index for e in project.executions)
+   retried_tasks = [idx for idx, count in attempts.items() if count > 1]
+   ```
+
+7. **Spec.md as Source of Truth**
+   - Spec explicitly stored, making it clear that task descriptions come from spec.md
+   - If spec.md changes, we can compare against stored spec to detect drift
+   - Current model's implicit spec makes this harder to reason about
+
+#### Cons ❌
+
+1. **More Complex Structure**
+   - Three-level hierarchy (Project → Spec/Executions → Tasks/Operations) vs two-level
+   - Requires understanding the Spec vs Execution distinction
+   - More conceptual overhead for developers
+
+2. **Increased JSON Verbosity**
+   - Task descriptions duplicated in both spec and execution references
+   - Not-yet-started tasks still appear in spec (current model is minimal)
+   - Actually, this is debatable - current model also stores all tasks
+
+3. **More Complex Queries for Common Cases**
+   ```python
+   # Current: Get task status
+   if step.pr_state == "merged": ...
+
+   # Alternative 1: Get task status (requires joining spec + executions)
+   task_executions = [e for e in project.executions if e.task_index == task.index]
+   if task_executions:
+       latest = max(task_executions, key=lambda e: e.created_at)
+       if latest.pr_state == "merged": ...
+   ```
+
+4. **Data Consistency Risks**
+   - Must ensure `task_index` in executions always references valid spec task
+   - Must ensure execution IDs are unique
+   - More relationships to validate
+
+5. **Migration Effort**
+   - Existing metadata needs transformation from Step → Spec + Execution
+   - All code that reads/writes metadata needs updates
+   - Testing burden to ensure migration correctness
+
+6. **Not Addressing All Current Pain Points**
+   - Still has denormalized data (task descriptions in spec)
+   - Still needs to check PR state for status
+   - Doesn't add explicit status enum (pending/in_progress/completed)
+
+#### Neutral Observations 🤔
+
+1. **Spec Mutability**
+   - Spec is labeled "immutable" but must be updated when spec.md changes
+   - Question: Should spec be regenerated from spec.md on every run? Or cached?
+   - If regenerated, storing it seems redundant
+   - If cached, what happens when spec.md changes?
+
+2. **Execution ID Purpose**
+   - What's the use case for `execution_id`?
+   - PRs already have unique `pr_number`
+   - Seems like over-engineering unless we need to support PRs outside GitHub
+
+3. **Task Index Fragility**
+   - Both models use task index as permanent identifier
+   - Both break if tasks are reordered in spec.md
+   - This isn't a Pro/Con difference, just a shared limitation
+
+### Analysis Summary
+
+**Does this feel more natural?**
+
+**Yes, conceptually:** The separation of "plan" (spec) and "execution" (PRs) matches how users think about ClaudeStep. It's intellectually cleaner.
+
+**No, pragmatically:** For the current ClaudeStep use case (single execution per task, no retries), the added complexity doesn't provide much benefit. The current model's main pain point (optional fields) could be addressed with simpler changes (like adding explicit status enums).
+
+**Sweet spot:** This model would be valuable if ClaudeStep plans to support:
+- Retry logic (PR closed, try again)
+- Multiple implementation strategies (try approach A, if it fails try approach B)
+- Execution history tracking (show all attempts over time)
+
+**Recommendation for ClaudeStep:** Unless retry/multi-attempt support is planned, this model may be over-engineered. Alternative 3 (Hybrid) might offer a better balance.
+
+**Technical Notes:**
+- Implementation would require new dataclasses: `ProjectSpec`, `TaskDefinition`, `Execution`, `AIOperation`
+- Migration script needed to transform existing `Step` records into `spec.tasks` + `executions`
+- Query patterns would need adjustment to join spec and executions
+- Backward compatibility would be challenging due to structural differences
 
 ## Phase 3: Alternative Model 2 - PR-Centric
 
