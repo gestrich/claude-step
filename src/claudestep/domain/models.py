@@ -1,5 +1,7 @@
 """Data models for ClaudeStep operations"""
 
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 from claudestep.application.formatters.table_formatter import TableFormatter
 
@@ -495,3 +497,289 @@ class StatisticsReport:
             }
 
         return json.dumps(data, indent=2)
+
+
+@dataclass
+class AITask:
+    """Metadata for a single AI operation within a PR
+
+    Represents one AI task (e.g., code generation, PR summary, refinement)
+    that contributes to a pull request.
+    """
+
+    type: str  # Task type: "PRCreation", "PRRefinement", "PRSummary", etc.
+    model: str  # AI model used (e.g., "claude-sonnet-4", "claude-opus-4")
+    cost_usd: float  # Cost for this specific AI operation
+    created_at: datetime  # When this AI task was executed
+    tokens_input: int = 0  # Input tokens used
+    tokens_output: int = 0  # Output tokens generated
+    duration_seconds: float = 0.0  # Time taken for this operation
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "AITask":
+        """Parse from JSON dictionary
+
+        Args:
+            data: Dictionary containing AI task data
+
+        Returns:
+            AITask instance
+        """
+        created_at = data["created_at"]
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+
+        return cls(
+            type=data["type"],
+            model=data["model"],
+            cost_usd=data["cost_usd"],
+            created_at=created_at,
+            tokens_input=data.get("tokens_input", 0),
+            tokens_output=data.get("tokens_output", 0),
+            duration_seconds=data.get("duration_seconds", 0.0),
+        )
+
+    def to_dict(self) -> dict:
+        """Serialize to JSON dictionary
+
+        Returns:
+            Dictionary representation suitable for JSON serialization
+        """
+        return {
+            "type": self.type,
+            "model": self.model,
+            "cost_usd": self.cost_usd,
+            "created_at": self.created_at.isoformat(),
+            "tokens_input": self.tokens_input,
+            "tokens_output": self.tokens_output,
+            "duration_seconds": self.duration_seconds,
+        }
+
+
+@dataclass
+class TaskMetadata:
+    """Metadata for a single task/PR in ClaudeStep
+
+    This model represents the metadata stored for each pull request created by ClaudeStep.
+    It is used by both the artifact-based (legacy) and branch-based metadata storage systems.
+    """
+
+    task_index: int
+    task_description: str
+    project: str
+    branch_name: str
+    reviewer: str
+    created_at: datetime
+    workflow_run_id: int
+    pr_number: int
+    pr_state: str = "open"  # "open", "merged", or "closed"
+
+    # New: List of AI tasks that contributed to this PR
+    ai_tasks: List["AITask"] = None  # type: ignore
+
+    # Deprecated: Legacy flat cost fields (maintained for backward compatibility)
+    # These are auto-calculated from ai_tasks if not provided
+    model: str = "claude-sonnet-4"  # Deprecated: Use ai_tasks instead
+    main_task_cost_usd: float = 0.0  # Deprecated: Use ai_tasks instead
+    pr_summary_cost_usd: float = 0.0  # Deprecated: Use ai_tasks instead
+    total_cost_usd: float = 0.0  # Deprecated: Use ai_tasks instead
+
+    def __post_init__(self):
+        """Initialize ai_tasks list if not provided"""
+        if self.ai_tasks is None:
+            self.ai_tasks = []
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "TaskMetadata":
+        """Parse from JSON dictionary
+
+        Args:
+            data: Dictionary containing task metadata
+
+        Returns:
+            TaskMetadata instance
+        """
+        # Handle datetime parsing
+        created_at = data["created_at"]
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+
+        # Parse AI tasks if present (new format)
+        ai_tasks = []
+        if "ai_tasks" in data:
+            ai_tasks = [AITask.from_dict(task_data) for task_data in data["ai_tasks"]]
+
+        return cls(
+            task_index=data["task_index"],
+            task_description=data["task_description"],
+            project=data["project"],
+            branch_name=data["branch_name"],
+            reviewer=data["reviewer"],
+            created_at=created_at,
+            workflow_run_id=data["workflow_run_id"],
+            pr_number=data["pr_number"],
+            pr_state=data.get("pr_state", "open"),
+            ai_tasks=ai_tasks,
+            # Legacy fields for backward compatibility
+            model=data.get("model", "claude-sonnet-4"),
+            main_task_cost_usd=data.get("main_task_cost_usd", 0.0),
+            pr_summary_cost_usd=data.get("pr_summary_cost_usd", 0.0),
+            total_cost_usd=data.get("total_cost_usd", 0.0),
+        )
+
+    def to_dict(self) -> dict:
+        """Serialize to JSON dictionary
+
+        Returns:
+            Dictionary representation suitable for JSON serialization
+        """
+        result = {
+            "task_index": self.task_index,
+            "task_description": self.task_description,
+            "project": self.project,
+            "branch_name": self.branch_name,
+            "reviewer": self.reviewer,
+            "created_at": self.created_at.isoformat(),
+            "workflow_run_id": self.workflow_run_id,
+            "pr_number": self.pr_number,
+            "pr_state": self.pr_state,
+        }
+
+        # Include AI tasks array (new format)
+        if self.ai_tasks:
+            result["ai_tasks"] = [task.to_dict() for task in self.ai_tasks]
+
+        # Include legacy fields for backward compatibility
+        # Auto-calculate from ai_tasks if available
+        if self.ai_tasks:
+            result["total_cost_usd"] = sum(task.cost_usd for task in self.ai_tasks)
+            # Find primary model (most common or first)
+            if self.ai_tasks:
+                result["model"] = self.ai_tasks[0].model
+        else:
+            result["model"] = self.model
+            result["main_task_cost_usd"] = self.main_task_cost_usd
+            result["pr_summary_cost_usd"] = self.pr_summary_cost_usd
+            result["total_cost_usd"] = self.total_cost_usd
+
+        return result
+
+    def add_ai_task(
+        self,
+        task_type: str,
+        model: str,
+        cost_usd: float,
+        tokens_input: int = 0,
+        tokens_output: int = 0,
+        duration_seconds: float = 0.0,
+    ) -> None:
+        """Add an AI task to this PR metadata
+
+        Args:
+            task_type: Type of AI task (e.g., "PRCreation", "PRRefinement")
+            model: AI model used (e.g., "claude-sonnet-4")
+            cost_usd: Cost in USD for this operation
+            tokens_input: Input tokens used
+            tokens_output: Output tokens generated
+            duration_seconds: Time taken for this operation
+        """
+        ai_task = AITask(
+            type=task_type,
+            model=model,
+            cost_usd=cost_usd,
+            created_at=datetime.now(),
+            tokens_input=tokens_input,
+            tokens_output=tokens_output,
+            duration_seconds=duration_seconds,
+        )
+        self.ai_tasks.append(ai_task)
+
+    def get_total_cost(self) -> float:
+        """Calculate total cost from all AI tasks
+
+        Returns:
+            Total cost in USD
+        """
+        if self.ai_tasks:
+            return sum(task.cost_usd for task in self.ai_tasks)
+        return self.total_cost_usd
+
+    def get_primary_model(self) -> str:
+        """Get the primary AI model used for this PR
+
+        Returns:
+            Model name (first AI task's model, or legacy model field)
+        """
+        if self.ai_tasks:
+            return self.ai_tasks[0].model
+        return self.model
+
+
+@dataclass
+class ProjectMetadata:
+    """Metadata for all tasks in a ClaudeStep project
+
+    This model represents the structure of project JSON files stored in the
+    claudestep-metadata branch. Each project has its own JSON file containing
+    all task metadata for that project.
+    """
+
+    schema_version: str
+    project: str
+    last_updated: datetime
+    tasks: List[TaskMetadata]
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ProjectMetadata":
+        """Parse from JSON dictionary
+
+        Args:
+            data: Dictionary containing project metadata
+
+        Returns:
+            ProjectMetadata instance
+        """
+        # Handle datetime parsing
+        last_updated = data["last_updated"]
+        if isinstance(last_updated, str):
+            last_updated = datetime.fromisoformat(last_updated.replace("Z", "+00:00"))
+
+        # Parse tasks
+        tasks = [TaskMetadata.from_dict(task_data) for task_data in data.get("tasks", [])]
+
+        return cls(
+            schema_version=data.get("schema_version", "1.0"),
+            project=data["project"],
+            last_updated=last_updated,
+            tasks=tasks,
+        )
+
+    def to_dict(self) -> dict:
+        """Serialize to JSON dictionary
+
+        Returns:
+            Dictionary representation suitable for JSON serialization
+        """
+        return {
+            "schema_version": self.schema_version,
+            "project": self.project,
+            "last_updated": self.last_updated.isoformat(),
+            "tasks": [task.to_dict() for task in self.tasks],
+        }
+
+    @classmethod
+    def create_empty(cls, project: str) -> "ProjectMetadata":
+        """Create an empty project metadata instance
+
+        Args:
+            project: Project name
+
+        Returns:
+            Empty ProjectMetadata instance with current timestamp
+        """
+        return cls(
+            schema_version="1.0",
+            project=project,
+            last_updated=datetime.now(),
+            tasks=[],
+        )

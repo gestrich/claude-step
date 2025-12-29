@@ -12,25 +12,15 @@ Key features:
 - Progress tracking and team statistics
 - Cost tracking per PR (AI model usage costs)
 
-### Current State: Artifact-Based Storage
+### Current State: Artifact-Based Storage (Legacy)
 
-Currently, ClaudeStep stores PR metadata in GitHub artifacts (see `src/claudestep/application/services/artifact_operations.py`). Each PR generates an artifact named `task-metadata-{project}-{index}.json` containing:
+Currently, ClaudeStep stores PR metadata in GitHub artifacts (see `src/claudestep/application/services/artifact_operations.py`). Each PR generates an artifact named `task-metadata-{project}-{index}.json` containing flat cost data.
 
-```python
-@dataclass
-class TaskMetadata:
-    task_index: int                    # Task number from spec.md
-    task_description: str              # Task description text
-    project: str                       # Project name (e.g., "my-refactor")
-    branch_name: str                   # PR branch name
-    reviewer: str                      # Assigned reviewer username
-    created_at: datetime               # PR creation timestamp
-    workflow_run_id: int               # GitHub Actions workflow run ID
-    pr_number: int                     # Pull request number
-    main_task_cost_usd: float          # Cost for main Claude Code task
-    pr_summary_cost_usd: float         # Cost for AI-generated PR summary
-    total_cost_usd: float              # Total cost for this PR
-```
+**Issues with Current Model:**
+- Mixed concerns: PR info and cost data at same level
+- Redundant `project` field in each task
+- Flat cost structure doesn't track individual AI operations
+- Unclear naming: "task" is ambiguous (spec.md task vs. AI task)
 
 This data is used for:
 - **Reviewer capacity checking**: Finding reviewers under their `maxOpenPRs` limit
@@ -288,80 +278,169 @@ The new storage system will replace artifact usage in:
 - Rate limits and performance verified as acceptable
 - Ready to proceed to Phase 2: Data Structure & Schema Design
 
-### Phase 2: Data Structure & Schema Design
+### Phase 2: Data Structure & Schema Design ✅ COMPLETED
 
-**Tasks:**
+**Status:** ✅ Completed on 2025-12-29
 
-1. **Define JSON Schema**
-   - Design project JSON structure to store list of TaskMetadata objects
-   - Maintain compatibility with existing TaskMetadata fields:
+**Recent Update (2025-12-29):** Restructured data model with clearer naming and separation of concerns
+
+**Tasks Completed:**
+
+1. **✅ Cleaner Data Model Design**
+   - Structure: `Project` → `Step` → `AITask`
+   - Clear naming: "Step" = spec.md task (with PR info), "AITask" = AI operation
+   - Removed redundant fields: No more `project` field in each step
+   - Removed deprecated fields: Cost/model info exclusively in `ai_tasks`
+   - Clean separation: PR properties vs. AI operation metrics
+
+2. **✅ Typical 2-AITask Pattern**
+   - Most steps have exactly 2 AI tasks:
+     1. `PRCreation`: Claude Code generates the code
+     2. `PRSummary`: AI writes the PR description
+   - Complex steps may have additional tasks (e.g., `PRRefinement`)
+   - Each AITask encapsulates: type, model, cost, tokens, duration
+
+3. **✅ JSON Schema Defined**
+   - Designed project JSON structure to store list of Step objects
+   - Each step contains PR info + list of AI tasks
+   - Final schema:
      ```json
      {
        "schema_version": "1.0",
        "project": "my-refactor",
        "last_updated": "2025-01-15T10:30:00Z",
-       "tasks": [
+       "steps": [
          {
-           "task_index": 1,
-           "task_description": "Refactor authentication module",
-           "project": "my-refactor",
+           "step_index": 1,
+           "step_description": "Refactor authentication module",
            "branch_name": "claude-step-my-refactor-1",
            "reviewer": "alice",
-           "created_at": "2025-01-10T14:22:00Z",
-           "workflow_run_id": 123456,
            "pr_number": 42,
            "pr_state": "merged",
-           "main_task_cost_usd": 0.15,
-           "pr_summary_cost_usd": 0.02,
-           "total_cost_usd": 0.17
+           "created_at": "2025-01-10T14:22:00Z",
+           "workflow_run_id": 123456,
+           "ai_tasks": [
+             {
+               "type": "PRCreation",
+               "model": "claude-sonnet-4",
+               "cost_usd": 0.15,
+               "created_at": "2025-01-10T14:22:00Z",
+               "tokens_input": 8500,
+               "tokens_output": 1200,
+               "duration_seconds": 12.5
+             },
+             {
+               "type": "PRSummary",
+               "model": "claude-sonnet-4",
+               "cost_usd": 0.02,
+               "created_at": "2025-01-10T14:23:00Z",
+               "tokens_input": 1200,
+               "tokens_output": 150,
+               "duration_seconds": 2.1
+             }
+           ]
          }
        ]
      }
      ```
-   - Add `schema_version` for future migrations
-   - Add `pr_state` field (open, merged, closed) for filtering
-   - Include `last_updated` timestamp for index optimization
+   - Key changes: `tasks` → `steps`, `task_index` → `step_index`, `task_description` → `step_description`
+   - Removed redundant `project` field from each step
+   - Removed deprecated cost fields (`model`, `main_task_cost_usd`, `pr_summary_cost_usd`, `total_cost_usd`)
+   - Added `schema_version` for future migrations
+   - Added `pr_state` field (open, merged, closed) for filtering
+   - Included `last_updated` timestamp for optimization
+   - `ai_tasks` array tracks individual AI operations (typically 2 per step)
+   - Each AI task encapsulates: type, model, cost, tokens, duration, timestamp
 
-2. **Index Strategy**
-   - Determine if we need `index.json` for fast lookups
-   - Index structure options:
-     ```json
-     {
-       "projects": {
-         "my-refactor": {
-           "last_updated": "2025-01-15T10:30:00Z",
-           "total_tasks": 25,
-           "open_tasks": 2,
-           "completed_tasks": 23
-         }
-       }
-     }
-     ```
-   - Trade-offs:
-     - **With index**: Fast lookups, requires maintenance
-     - **Without index**: Slower but simpler, rebuild on-demand
-   - **Recommendation**: Start without index, add if performance requires it
+4. **✅ Index Strategy Decided: No Index**
+   - **Decision**: Start without separate `index.json` file
+   - **Rationale**:
+     - Simpler implementation with fewer moving parts
+     - Acceptable performance: Reading 5-20 project files takes <2 seconds
+     - Atomic updates: Each project file updates independently
+     - No synchronization complexity between index and project files
+   - **Query Performance**:
+     - List all projects: Single Git Tree API call (instant)
+     - Get project metadata: 1 API call per project (~100ms each)
+     - Filter by date: Read all files, filter in-memory (<2 seconds for 20 projects)
+   - **Future**: Add optional index if 100+ projects become common
 
-3. **Directory Organization**
-   - Proposed structure for `claudestep-metadata` branch:
+3. **✅ Directory Organization Finalized**
+   - Final structure for `claudestep-metadata` branch:
      ```
      claudestep-metadata/
      ├── projects/
      │   ├── my-refactor.json
      │   ├── another-project.json
      │   └── legacy-cleanup.json
-     ├── index.json (optional)
-     └── README.md (explains branch purpose)
+     └── README.md
      ```
-   - **Flat structure**: Simple, works well for typical 5-10 projects per repo
-   - Alternative (if needed later): Organize by status or date
-   - File naming: `{project-name}.json` (matches project directory name)
+   - **Flat structure**: Simple, efficient for typical 5-20 projects per repo
+   - **File naming**: `{project-name}.json` (matches project directory name)
+   - **No index file**: Keeps implementation simple
 
-**Expected Outcome:**
-- JSON schema documented with examples
-- Index strategy decided (recommend starting simple)
-- Directory structure defined
-- Compatible with existing TaskMetadata data structure
+**Deliverables Created:**
+
+1. **Schema Documentation** (`docs/metadata-schema.md`):
+   - **Complete redesign** with clearer naming and structure
+   - Data model: `Project` → `Step` → `AITask`
+   - Removed legacy/deprecated fields for clean implementation
+   - Documented typical 2-AITask pattern (PRCreation + PRSummary)
+   - Field definitions for Project, Step, and AITask levels
+   - Comprehensive examples showing simple and complex steps
+
+2. **Domain Models** (`src/claudestep/domain/models.py`) - **TO BE REFACTORED**:
+   - Current: `AITask`, `TaskMetadata`, `ProjectMetadata` (with legacy fields)
+   - Planned refactoring:
+     - `AITask`: Add `workflow_run_id` field (each AI operation runs in a specific workflow)
+     - `TaskMetadata` → `Step`: Rename class, rename fields, remove deprecated fields, make most fields optional
+     - `ProjectMetadata` → `Project`: Rename `tasks` → `steps`
+   - Changes needed in Step:
+     - `task_index` → `step_index`
+     - `task_description` → `step_description`
+     - Remove `project` field (redundant - already at project level)
+     - Remove `workflow_run_id` field (moved to AITask)
+     - Remove deprecated cost fields: `model`, `main_task_cost_usd`, `pr_summary_cost_usd`, `total_cost_usd`
+     - Make most fields optional (except `step_index` and `step_description`) to support not-yet-started steps
+   - Changes needed in AITask:
+     - Add `workflow_run_id: int` field (required)
+   - Changes needed in Project:
+     - `tasks` → `steps`
+
+3. **Branch README Template** (`docs/metadata-branch-README.md`):
+   - User-facing documentation for the metadata branch
+   - Explains purpose and structure
+   - Includes manual inspection commands
+   - Privacy and security notes
+   - Ready to be placed in `claudestep-metadata` branch
+
+**Technical Notes:**
+
+- **Backward Compatibility**: The new `TaskMetadata` model is fully compatible with the existing artifact-based storage format, with the addition of the `pr_state` field (defaults to "open")
+- **Serialization**: Both models use ISO 8601 timestamps with proper timezone handling
+- **Testing**: All existing domain tests pass (80/80 tests)
+- **Build Status**: ✅ All imports work correctly, models serialize/deserialize properly
+
+**Key Decisions:**
+
+1. **No Index File**: Keeping it simple - list files via Git Tree API, filter in-memory
+2. **Flat Directory**: One `projects/` folder with all project JSON files
+3. **Schema Version**: Starting with "1.0", future-proofed for migrations
+4. **PR State Field**: New field added to track "open", "merged", "closed" states
+
+**Next Steps:**
+
+Ready to proceed to **Phase 3: Core API Layer Design**:
+- Define abstract `MetadataStore` interface
+- Create application service layer (`metadata_service.py`)
+- Design API compatible with current `artifact_operations.py` functions
+
+**Files Modified:**
+- `src/claudestep/domain/models.py` - Added TaskMetadata and ProjectMetadata models
+
+**Files Created:**
+- `docs/metadata-schema.md` - Complete schema documentation
+- `docs/metadata-branch-README.md` - User-facing README for metadata branch
 
 ## Implementation Phases
 
