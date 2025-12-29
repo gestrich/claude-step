@@ -6,12 +6,11 @@ import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
-from claudestep.application.services.artifact_operations import find_project_artifacts
 from claudestep.domain.config import load_config
 from claudestep.domain.exceptions import FileNotFoundError as ClaudeStepFileNotFoundError
-from claudestep.infrastructure.github.operations import run_gh_command
+from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
+from claudestep.application.services.metadata_service import MetadataService
 from claudestep.domain.models import ProjectStats, StatisticsReport, TeamMemberStats
-from claudestep.application.services.task_management import get_in_progress_task_indices
 
 
 def extract_cost_from_comment(comment_body: str) -> Optional[float]:
@@ -37,79 +36,39 @@ def extract_cost_from_comment(comment_body: str) -> Optional[float]:
 def collect_project_costs(
     project_name: str, repo: str, label: str = "claudestep"
 ) -> float:
-    """Collect total costs for a project from artifact metadata with fallback to PR comments
+    """Collect total costs for a project from metadata storage
 
     Args:
         project_name: Name of the project to collect costs for
         repo: GitHub repository (owner/name)
-        label: GitHub label to filter PRs
+        label: GitHub label to filter PRs (unused, kept for compatibility)
 
     Returns:
         Total cost in USD across all merged PRs for this project
     """
-    print(f"  Collecting costs from artifact metadata and PR comments...")
-    total_cost = 0.0
-    prs_with_metadata_cost = 0
-    prs_with_comment_cost = 0
+    print(f"  Collecting costs from metadata storage...")
 
     try:
-        # Get all merged PR artifacts for this project
-        artifacts = find_project_artifacts(
-            repo=repo,
-            project=project_name,
-            label=label,
-            pr_state="merged",
-            download_metadata=True  # Need metadata for costs and PR numbers
-        )
+        metadata_store = GitHubMetadataStore(repo)
+        metadata_service = MetadataService(metadata_store)
+        project_metadata = metadata_service.get_project(project_name)
 
-        # Build a map of PR number to artifact metadata for quick lookup
-        pr_to_artifact = {}
-        for a in artifacts:
-            if a.metadata and a.metadata.pr_number:
-                pr_to_artifact[a.metadata.pr_number] = a.metadata
-
-        pr_numbers = set(pr_to_artifact.keys())
-        print(f"  Found {len(pr_numbers)} merged PR(s) for {project_name}")
-
-        # For each PR, try to get cost from metadata, fall back to comments
-        for pr_number in pr_numbers:
-            metadata = pr_to_artifact[pr_number]
-
-            # Try to get cost from artifact metadata first
-            if hasattr(metadata, 'total_cost_usd') and metadata.total_cost_usd > 0:
-                total_cost += metadata.total_cost_usd
-                prs_with_metadata_cost += 1
-                print(f"    PR #{pr_number}: ${metadata.total_cost_usd:.6f} (from metadata)")
-                continue
-
-            # Fall back to parsing PR comments
-            comments_output = run_gh_command([
-                "pr", "view", str(pr_number),
-                "--repo", repo,
-                "--json", "comments",
-                "--jq", ".comments[] | .body"
-            ])
-
-            # Parse comments for cost breakdown
-            for comment_body in comments_output.split('\n\n'):
-                if "💰 Cost Breakdown" in comment_body or "Cost Breakdown" in comment_body:
-                    cost = extract_cost_from_comment(comment_body)
-                    if cost is not None:
-                        total_cost += cost
-                        prs_with_comment_cost += 1
-                        print(f"    PR #{pr_number}: ${cost:.6f} (from comment)")
-                        break  # Found cost for this PR, move to next
-
-        total_prs_with_cost = prs_with_metadata_cost + prs_with_comment_cost
-        if total_prs_with_cost > 0:
-            print(f"  Total cost: ${total_cost:.6f} ({prs_with_metadata_cost} from metadata, {prs_with_comment_cost} from comments)")
+        if project_metadata:
+            # Use the hybrid model to get total cost from merged PRs
+            merged_prs = [pr for pr in project_metadata.pull_requests if pr.pr_state == "merged"]
+            if merged_prs:
+                total_cost = sum(pr.get_total_cost() for pr in merged_prs)
+                print(f"  Found {len(merged_prs)} merged PR(s)")
+                print(f"  Total cost: ${total_cost:.6f}")
+                return total_cost
+            else:
+                print(f"  No merged PRs found")
+                return 0.0
         else:
-            print(f"  No cost data found")
-
-        return total_cost
-
+            print(f"  Project not found in metadata storage")
+            return 0.0
     except Exception as e:
-        print(f"  Warning: Failed to collect costs: {e}")
+        print(f"  Error: Failed to read from metadata storage: {e}")
         return 0.0
 
 
@@ -297,13 +256,15 @@ def collect_project_stats(
         print(f"  Warning: {e}")
         return stats
 
-    # Get in-progress tasks
+    # Get in-progress tasks from metadata storage
     try:
-        in_progress_indices = get_in_progress_task_indices(repo, label, project_name)
+        metadata_store = GitHubMetadataStore(repo)
+        metadata_service = MetadataService(metadata_store)
+        in_progress_indices = metadata_service.find_in_progress_tasks(project_name)
         stats.in_progress_tasks = len(in_progress_indices)
         print(f"  In-progress: {stats.in_progress_tasks}")
     except Exception as e:
-        print(f"  Warning: Failed to get in-progress tasks: {e}")
+        print(f"  Error: Failed to get in-progress tasks: {e}")
         stats.in_progress_tasks = 0
 
     # Calculate pending tasks

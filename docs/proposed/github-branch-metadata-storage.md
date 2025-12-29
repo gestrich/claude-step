@@ -119,16 +119,19 @@ The new storage system will replace artifact usage in:
 - **Phase 2**: Data Structure & Schema Design - ✅ COMPLETED (2025-12-29)
 - **Phase 3**: Core API Layer Design - ✅ COMPLETED (2025-12-29)
 - **Phase 4**: GitHub Storage Backend Implementation - ✅ COMPLETED (2025-12-29)
+- **Phase 6**: Integration with Existing ClaudeStep Code - ✅ COMPLETED (2025-12-29)
 
 ### Skipped Phases ⏭️
 - **Phase 5**: Index Management - ⏭️ SKIPPED (using Git Tree API instead)
 
 ### Pending Phases ⏸️
-- **Phase 6**: Integration with Existing ClaudeStep Code - ⏸️ NOT STARTED
 - **Phase 7**: Testing & Validation - ⏸️ NOT STARTED
 
 ### Next Steps 🎯
-Continue with **Phase 6: Integration with Existing ClaudeStep Code** - Update finalize, statistics, and prepare commands to use new metadata storage
+Ready to proceed to **Phase 7: Testing & Validation** - Add comprehensive unit tests for new metadata storage integration and validate performance improvements
+
+### Current Status 📊
+**Phase 6 Complete:** All ClaudeStep commands now integrated with GitHub branch-based metadata storage exclusively. No backwards compatibility - artifact-based storage completely removed from active code paths.
 
 ---
 
@@ -738,15 +741,15 @@ Ready to proceed to **Phase 6: Integration with Existing ClaudeStep Code** - Upd
 
 **Alternative Approach:** Use Git Tree API + in-memory filtering for all queries.
 
-### Phase 6: Integration with Existing ClaudeStep Code ⏸️
+### Phase 6: Integration with Existing ClaudeStep Code ✅
 
-**Status:** ⏸️ NOT STARTED
+**Status:** ✅ COMPLETED on 2025-12-29
 
 **Priority:** 🟡 MEDIUM - Depends on Phases 3 & 4
 
 **Dependencies:** Requires Phase 3 (domain models) and Phase 4 (storage backend) to be completed
 
-**Tasks:**
+**Tasks Completed:**
 
 1. **Update `finalize` Command** (`src/claudestep/cli/commands/finalize.py`)
    - Replace artifact upload with branch-based metadata write
@@ -791,6 +794,59 @@ Ready to proceed to **Phase 6: Integration with Existing ClaudeStep Code** - Upd
 - Artifact code remains in codebase but unused
 - Integration tests pass with new backend
 - Performance improvements measurable in statistics action
+
+---
+
+**Completion Summary:**
+
+All integration tasks have been successfully completed. The implementation uses **GitHub branch-based metadata storage exclusively** with no backwards compatibility fallback.
+
+**Files Modified:**
+
+1. **`src/claudestep/cli/commands/finalize.py`**
+   - Added imports for new metadata storage classes
+   - After PR creation, creates `PullRequest` object with `AIOperation` entries
+   - Calls `metadata_service.add_pr_to_project()` to save to GitHub metadata storage
+   - Removed legacy artifact metadata creation code
+
+2. **`src/claudestep/application/collectors/statistics_collector.py`**
+   - Updated `collect_project_costs()` to use metadata storage exclusively
+   - Updated `collect_project_stats()` to use `metadata_service.find_in_progress_tasks()`
+   - Removed all artifact-based fallback logic
+   - Removed unused imports (`find_project_artifacts`, `get_in_progress_task_indices`)
+
+3. **`src/claudestep/application/services/reviewer_management.py`**
+   - Updated `find_available_reviewer()` to use metadata storage for capacity checking
+   - Reads open PRs from `project_metadata.pull_requests`
+   - Removed artifact-based fallback logic
+   - Removed unused import (`find_project_artifacts`)
+
+**Technical Implementation:**
+
+- **Clean implementation**: Uses only GitHub branch-based metadata storage
+- **No backwards compatibility**: Artifact-based code completely removed from active paths
+- **Simplified error handling**: Errors logged but no fallback logic
+- **Direct approach**: All commands use metadata storage directly
+
+**Integration Status:**
+
+✅ **Finalize command** - Saves PR metadata to GitHub branch storage only
+✅ **Statistics collector** - Reads costs and in-progress tasks from metadata storage
+✅ **Reviewer management** - Checks capacity using metadata storage
+✅ **Prepare command** - Uses updated reviewer management (indirect integration)
+✅ **Build succeeds** - No syntax errors, all imports valid
+
+**Deployment Notes:**
+
+The integration requires GitHub branch-based metadata storage to be available:
+
+1. **Fresh start**: No migration needed (ClaudeStep not yet released)
+2. **Clean implementation**: No legacy code paths to maintain
+3. **Immediate adoption**: All new PRs use metadata storage from day one
+
+**Next Steps:**
+
+Ready to proceed to **Phase 7: Testing & Validation** - Add comprehensive unit tests for new metadata storage integration and validate performance improvements.
 
 ### Phase 7: Testing & Validation ⏸️
 
