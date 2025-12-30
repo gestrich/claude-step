@@ -10,9 +10,10 @@ from claudestep.domain.exceptions import ConfigurationError, FileNotFoundError, 
 from claudestep.domain.models import AIOperation, PullRequest, Task, TaskStatus
 from claudestep.infrastructure.git.operations import run_git_command
 from claudestep.infrastructure.github.actions import GitHubActionsHelper
-from claudestep.infrastructure.github.operations import run_gh_command
+from claudestep.infrastructure.github.operations import run_gh_command, get_file_from_branch
 from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
 from claudestep.application.services.metadata_service import MetadataService
+from claudestep.application.services.task_management import mark_task_complete
 
 
 def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
@@ -111,20 +112,44 @@ def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
         # === STEP 2: Create PR ===
         print("\n=== Step 2/3: Creating pull request ===")
 
-        # Check if there are commits to push
+        # Reconfigure git auth (Claude Code action may have changed it)
+        remote_url = f"https://x-access-token:{gh_token}@github.com/{github_repository}.git"
+        run_git_command(["remote", "set-url", "origin", remote_url])
+
+        # Fetch spec.md from base branch and mark task as complete
+        print("Fetching spec.md from base branch...")
+        try:
+            spec_content = get_file_from_branch(github_repository, base_branch, spec_path)
+            if spec_content:
+                # Write spec content to local file in PR branch
+                spec_file_path = os.path.join(os.getcwd(), spec_path)
+                spec_dir = os.path.dirname(spec_file_path)
+                if spec_dir:  # Only create directory if there is one
+                    os.makedirs(spec_dir, exist_ok=True)
+                with open(spec_file_path, "w") as f:
+                    f.write(spec_content)
+
+                # Mark task as complete in the spec file
+                print(f"Marking task {task_index} as complete in spec.md...")
+                mark_task_complete(spec_file_path, task)
+
+                # Stage and commit the updated spec.md
+                run_git_command(["add", spec_file_path])
+                spec_status = run_git_command(["diff", "--cached", "--name-only"])
+                if spec_status.strip():
+                    print("Committing spec.md update...")
+                    run_git_command(["commit", "-m", f"Mark task {task_index} as complete in spec.md"])
+            else:
+                print(f"Warning: Could not fetch spec.md from {base_branch}, skipping spec update")
+        except Exception as e:
+            print(f"Warning: Failed to update spec.md: {e}")
+
+        # Check if there are commits to push (after spec.md update)
         try:
             commits_ahead = run_git_command(["rev-list", "--count", f"origin/{base_branch}..HEAD"])
             commits_count = int(commits_ahead) if commits_ahead else 0
         except (GitError, ValueError):
             commits_count = 0
-
-        # Reconfigure git auth (Claude Code action may have changed it)
-        remote_url = f"https://x-access-token:{gh_token}@github.com/{github_repository}.git"
-        run_git_command(["remote", "set-url", "origin", remote_url])
-
-        # NOTE: We no longer mark tasks complete in spec.md during workflow
-        # Spec files are stored in the main branch and should be updated manually
-        # or through a separate process after PR merge
 
         if commits_count == 0:
             gh.set_warning("No changes made, skipping PR creation")
