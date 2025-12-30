@@ -10,6 +10,7 @@ from typing import Optional
 
 from claudestep.infrastructure.github.actions import GitHubActionsHelper
 from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
+from claudestep.infrastructure.repositories.project_repository import ProjectRepository
 from claudestep.services.metadata_service import MetadataService
 from claudestep.services.statistics_service import StatisticsService
 
@@ -54,7 +55,8 @@ def cmd_statistics(
         # Initialize services
         metadata_store = GitHubMetadataStore(repo)
         metadata_service = MetadataService(metadata_store)
-        statistics_service = StatisticsService(repo, metadata_service, base_branch)
+        project_repository = ProjectRepository(repo)
+        statistics_service = StatisticsService(repo, metadata_service, base_branch, project_repository)
 
         # Collect all statistics
         report = statistics_service.collect_all_statistics(

@@ -369,9 +369,22 @@ class ProjectRepository:
 - Repository pattern provides high-level API
 - Easy to mock for testing
 
-- [ ] Phase 5: Refactor StatisticsService to use domain models
+- [x] Phase 5: Refactor StatisticsService to use domain models
 
 Update `StatisticsService` to use the new domain models and repository instead of string parsing.
+
+**Completed**: 2025-12-30
+
+**Technical Notes**:
+- Successfully refactored `StatisticsService` to use `ProjectRepository` for loading project data
+- Updated `_load_project_config()` to return `ProjectConfiguration` domain model instead of list of reviewer usernames
+- Modified `collect_all_statistics()` to use `Project.from_config_path()` and `ProjectConfiguration.get_reviewer_usernames()`
+- Refactored `collect_project_stats()` to use `SpecContent` domain model for task counting
+- Removed `count_tasks()` static method - logic now encapsulated in `SpecContent` domain model
+- Updated CLI `statistics.py` command to instantiate and pass `ProjectRepository` to service
+- Updated unit tests to mock `ProjectRepository` instead of low-level file operations
+- All StatisticsService-specific unit tests passing
+- Build succeeds with new architecture
 
 **Files to modify:**
 - `src/claudestep/services/statistics_service.py`

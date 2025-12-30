@@ -13,8 +13,11 @@ from typing import Dict, List, Optional, Tuple
 from claudestep.domain.config import load_config_from_string
 from claudestep.domain.constants import DEFAULT_PR_LABEL
 from claudestep.domain.exceptions import FileNotFoundError as ClaudeStepFileNotFoundError
+from claudestep.domain.project import Project
+from claudestep.domain.project_configuration import ProjectConfiguration
 from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
 from claudestep.infrastructure.github.operations import get_file_from_branch, run_gh_command
+from claudestep.infrastructure.repositories.project_repository import ProjectRepository
 from claudestep.services.metadata_service import MetadataService
 from claudestep.domain.models import ProjectStats, StatisticsReport, TeamMemberStats
 
@@ -27,46 +30,42 @@ class StatisticsService:
     ClaudeStep's statistics and reporting workflows.
     """
 
-    def __init__(self, repo: str, metadata_service: MetadataService, base_branch: str = "main"):
+    def __init__(
+        self,
+        repo: str,
+        metadata_service: MetadataService,
+        base_branch: str = "main",
+        project_repository: Optional[ProjectRepository] = None
+    ):
         """Initialize the statistics service
 
         Args:
             repo: GitHub repository (owner/name)
             metadata_service: MetadataService instance for accessing metadata
             base_branch: Base branch to fetch specs from (default: "main")
+            project_repository: Optional ProjectRepository instance (defaults to new instance)
         """
         self.repo = repo
         self.metadata_service = metadata_service
         self.base_branch = base_branch
+        self.project_repository = project_repository or ProjectRepository(repo)
 
     # Public API methods
 
     def _load_project_config(
         self, project_name: str, base_branch: str
-    ) -> Optional[List[str]]:
-        """Load project configuration and extract reviewer usernames
+    ) -> Optional[ProjectConfiguration]:
+        """Load project configuration using repository
 
         Args:
             project_name: Name of the project
             base_branch: Base branch to fetch config from
 
         Returns:
-            List of reviewer usernames, or None if config couldn't be loaded
+            ProjectConfiguration domain model, or None if config couldn't be loaded
         """
-        config_file_path = f"claude-step/{project_name}/configuration.yml"
-
-        try:
-            config_content = get_file_from_branch(self.repo, base_branch, config_file_path)
-            if not config_content:
-                return None
-
-            config = load_config_from_string(config_content, config_file_path)
-            reviewers_config = config.get("reviewers", [])
-            reviewers = [r.get("username") for r in reviewers_config if "username" in r]
-
-            return reviewers
-        except Exception:
-            raise
+        project = Project(project_name)
+        return self.project_repository.load_configuration(project, base_branch)
 
     def collect_all_statistics(
         self, config_path: Optional[str] = None, days_back: int = 30, label: str = DEFAULT_PR_LABEL
@@ -98,16 +97,16 @@ class StatisticsService:
             print(f"Single project mode: {config_path}")
 
             try:
-                # Extract project name from path
-                # Path format: claude-step/{project}/configuration.yml
-                project_name = os.path.basename(os.path.dirname(config_path))
+                # Extract project name from path using Project domain model
+                project = Project.from_config_path(config_path)
 
-                reviewers = self._load_project_config(project_name, base_branch)
-                if reviewers is None:
+                config = self._load_project_config(project.name, base_branch)
+                if config is None:
                     print(f"Error: Configuration file not found in branch '{base_branch}'")
                     return report
 
-                projects_data.append((project_name, reviewers))
+                reviewers = config.get_reviewer_usernames()
+                projects_data.append((project.name, reviewers))
                 all_reviewers.update(reviewers)
 
             except Exception as e:
@@ -130,11 +129,12 @@ class StatisticsService:
 
             for project_name in project_names:
                 try:
-                    reviewers = self._load_project_config(project_name, base_branch)
-                    if reviewers is None:
+                    config = self._load_project_config(project_name, base_branch)
+                    if config is None:
                         print(f"Warning: Configuration file not found for project {project_name} in branch '{base_branch}', skipping")
                         continue
 
+                    reviewers = config.get_reviewer_usernames()
                     projects_data.append((project_name, reviewers))
                     all_reviewers.update(reviewers)
 
@@ -182,20 +182,19 @@ class StatisticsService:
         """
         print(f"Collecting statistics for project: {project_name}")
 
-        spec_file_path = f"claude-step/{project_name}/spec.md"
-        stats = ProjectStats(project_name, spec_file_path)
+        project = Project(project_name)
+        stats = ProjectStats(project_name, project.spec_path)
 
-        # Fetch spec.md from GitHub API
+        # Fetch and parse spec.md using repository
         try:
-            spec_content = get_file_from_branch(self.repo, base_branch, spec_file_path)
-            if not spec_content:
+            spec = self.project_repository.load_spec(project, base_branch)
+            if not spec:
                 print(f"  Warning: Spec file not found in branch '{base_branch}', skipping project")
                 return None
 
-            total, completed = self.count_tasks(spec_content)
-            stats.total_tasks = total
-            stats.completed_tasks = completed
-            print(f"  Tasks: {completed}/{total} completed")
+            stats.total_tasks = spec.total_tasks
+            stats.completed_tasks = spec.completed_tasks
+            print(f"  Tasks: {stats.completed_tasks}/{stats.total_tasks} completed")
         except Exception as e:
             print(f"  Warning: Failed to fetch spec file: {e}")
             return None
@@ -385,42 +384,6 @@ class StatisticsService:
             return 0.0
 
     # Static utility methods
-
-    @staticmethod
-    def count_tasks(spec_input: str) -> Tuple[int, int]:
-        """Returns (total, completed) task counts from spec.md
-
-        Args:
-            spec_input: Either spec.md content as string OR path to spec.md file
-
-        Returns:
-            Tuple of (total_tasks, completed_tasks)
-
-        Raises:
-            ClaudeStepFileNotFoundError: If spec_input is a file path that doesn't exist
-        """
-        # Determine if input is a file path or content string
-        # If it looks like a file path (contains / or \) and exists, read it
-        if ('/' in spec_input or '\\' in spec_input) and os.path.exists(spec_input):
-            # It's a file path
-            with open(spec_input, "r") as f:
-                content = f.read()
-        elif ('/' in spec_input or '\\' in spec_input):
-            # Looks like a file path but doesn't exist
-            raise ClaudeStepFileNotFoundError(f"Spec file not found: {spec_input}")
-        else:
-            # It's content string
-            content = spec_input
-
-        # Count total tasks (both checked and unchecked)
-        # Pattern matches: - [ ], - [x], - [X]
-        total = len(re.findall(r"^\s*- \[[xX \]]", content, re.MULTILINE))
-
-        # Count completed tasks
-        # Pattern matches: - [x], - [X]
-        completed = len(re.findall(r"^\s*- \[[xX]\]", content, re.MULTILINE))
-
-        return total, completed
 
     @staticmethod
     def extract_cost_from_comment(comment_body: str) -> Optional[float]:

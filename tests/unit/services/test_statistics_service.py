@@ -6,6 +6,8 @@ from datetime import datetime
 from unittest.mock import Mock, patch
 
 from claudestep.domain.models import TeamMemberStats, ProjectStats, StatisticsReport
+from claudestep.domain.project import Project
+from claudestep.domain.spec_content import SpecContent
 from claudestep.services.statistics_service import StatisticsService
 
 from tests.builders import SpecFileBuilder
@@ -62,7 +64,7 @@ class TestProgressBar:
 
 
 class TestTaskCounting:
-    """Test task counting from spec.md files"""
+    """Test task counting from spec.md files using SpecContent domain model"""
 
     def test_count_tasks_all_pending(self, tmp_path):
         """Test counting with all tasks pending"""
@@ -72,9 +74,11 @@ class TestTaskCounting:
                      .add_tasks("Task 1", "Task 2", "Task 3")
                      .write_to(tmp_path))
 
-        total, completed = StatisticsService.count_tasks(str(spec_path))
-        assert total == 3
-        assert completed == 0
+        content = spec_path.read_text()
+        project = Project("test-project")
+        spec = SpecContent(project, content)
+        assert spec.total_tasks == 3
+        assert spec.completed_tasks == 0
 
     def test_count_tasks_mixed(self, tmp_path):
         """Test counting with mixed completion status"""
@@ -87,35 +91,41 @@ class TestTaskCounting:
                      .add_task("Task 4 (pending)")
                      .write_to(tmp_path))
 
-        total, completed = StatisticsService.count_tasks(str(spec_path))
-        assert total == 4
-        assert completed == 2
+        content = spec_path.read_text()
+        project = Project("test-project")
+        spec = SpecContent(project, content)
+        assert spec.total_tasks == 4
+        assert spec.completed_tasks == 2
 
     def test_count_tasks_case_insensitive(self, tmp_path):
         """Test counting with uppercase X for completed tasks"""
-        spec = tmp_path / "spec.md"
-        spec.write_text("""
+        spec_file = tmp_path / "spec.md"
+        spec_file.write_text("""
 - [X] Task 1 (uppercase)
 - [x] Task 2 (lowercase)
 - [ ] Task 3 (pending)
         """)
-        total, completed = StatisticsService.count_tasks(str(spec))
-        assert total == 3
-        assert completed == 2
+        content = spec_file.read_text()
+        project = Project("test-project")
+        spec = SpecContent(project, content)
+        assert spec.total_tasks == 3
+        assert spec.completed_tasks == 2
 
     def test_count_tasks_with_indentation(self, tmp_path):
         """Test counting with indented tasks"""
-        spec = tmp_path / "spec.md"
-        spec.write_text("""
+        spec_file = tmp_path / "spec.md"
+        spec_file.write_text("""
 ## Main Tasks
   - [x] Indented completed task
   - [ ] Indented pending task
 - [x] Non-indented completed
 - [ ] Non-indented pending
         """)
-        total, completed = StatisticsService.count_tasks(str(spec))
-        assert total == 4
-        assert completed == 2
+        content = spec_file.read_text()
+        project = Project("test-project")
+        spec = SpecContent(project, content)
+        assert spec.total_tasks == 4
+        assert spec.completed_tasks == 2
 
     def test_count_tasks_empty_file(self, tmp_path):
         """Test counting with no tasks"""
@@ -124,9 +134,11 @@ class TestTaskCounting:
                      .add_section("No tasks yet!")
                      .write_to(tmp_path))
 
-        total, completed = StatisticsService.count_tasks(str(spec_path))
-        assert total == 0
-        assert completed == 0
+        content = spec_path.read_text()
+        project = Project("test-project")
+        spec = SpecContent(project, content)
+        assert spec.total_tasks == 0
+        assert spec.completed_tasks == 0
 
 
 class TestTeamMemberStats:
@@ -772,8 +784,7 @@ class TestCollectTeamMemberStats:
 class TestCollectProjectStats:
     """Test project statistics collection"""
 
-    @patch("claudestep.services.statistics_service.get_file_from_branch")
-    def test_collect_stats_success(self, mock_get_file):
+    def test_collect_stats_success(self):
         """Test successful project stats collection"""
         spec_content = """
 - [x] Task 1
@@ -781,9 +792,6 @@ class TestCollectProjectStats:
 - [ ] Task 3
 - [ ] Task 4
         """
-
-        # Mock get_file_from_branch
-        mock_get_file.return_value = spec_content
 
         # Mock metadata service
         mock_metadata_service = Mock()
@@ -798,8 +806,16 @@ class TestCollectProjectStats:
         project_metadata.pull_requests = [pr1]
         mock_metadata_service.get_project.return_value = project_metadata
 
+        # Mock ProjectRepository
+        mock_repo = Mock()
+        from claudestep.domain.project import Project
+        from claudestep.domain.spec_content import SpecContent
+
+        project = Project("test-project")
+        mock_repo.load_spec.return_value = SpecContent(project, spec_content)
+
         # Create service and test
-        service = StatisticsService("owner/repo", mock_metadata_service, base_branch="main")
+        service = StatisticsService("owner/repo", mock_metadata_service, base_branch="main", project_repository=mock_repo)
         stats = service.collect_project_stats("test-project", "main", "claudestep")
 
         assert stats.project_name == "test-project"
@@ -809,54 +825,63 @@ class TestCollectProjectStats:
         assert stats.pending_tasks == 1
         assert stats.total_cost_usd == 1.5
 
-    @patch("claudestep.services.statistics_service.get_file_from_branch")
-    def test_collect_stats_missing_spec(self, mock_get_file):
+    def test_collect_stats_missing_spec(self):
         """Test stats collection with missing spec file"""
-        # Mock get_file_from_branch to return None
-        mock_get_file.return_value = None
-
         # Create service and test
         mock_metadata_service = Mock()
-        service = StatisticsService("owner/repo", mock_metadata_service, base_branch="main")
+
+        # Mock ProjectRepository to return None
+        mock_repo = Mock()
+        mock_repo.load_spec.return_value = None
+
+        service = StatisticsService("owner/repo", mock_metadata_service, base_branch="main", project_repository=mock_repo)
         stats = service.collect_project_stats("test-project", "main", "claudestep")
 
         assert stats is None
 
-    @patch("claudestep.services.statistics_service.get_file_from_branch")
-    def test_collect_stats_in_progress_error(self, mock_get_file):
+    def test_collect_stats_in_progress_error(self):
         """Test stats collection when in-progress task detection fails"""
         spec_content = "- [ ] Task 1\n- [x] Task 2"
-
-        # Mock get_file_from_branch
-        mock_get_file.return_value = spec_content
 
         # Mock metadata service
         mock_metadata_service = Mock()
         mock_metadata_service.find_in_progress_tasks.side_effect = Exception("API error")
         mock_metadata_service.get_project.return_value = None
 
+        # Mock ProjectRepository
+        mock_repo = Mock()
+        from claudestep.domain.project import Project
+        from claudestep.domain.spec_content import SpecContent
+
+        project = Project("test-project")
+        mock_repo.load_spec.return_value = SpecContent(project, spec_content)
+
         # Create service and test
-        service = StatisticsService("owner/repo", mock_metadata_service, base_branch="main")
+        service = StatisticsService("owner/repo", mock_metadata_service, base_branch="main", project_repository=mock_repo)
         stats = service.collect_project_stats("test-project", "main", "claudestep")
 
         assert stats.in_progress_tasks == 0
         assert stats.pending_tasks == 1
 
-    @patch("claudestep.services.statistics_service.get_file_from_branch")
-    def test_collect_stats_custom_base_branch(self, mock_get_file):
+    def test_collect_stats_custom_base_branch(self):
         """Test that custom base_branch value is used correctly"""
         spec_content = "- [x] Task 1\n- [ ] Task 2"
-
-        # Mock get_file_from_branch
-        mock_get_file.return_value = spec_content
 
         # Mock metadata service
         mock_metadata_service = Mock()
         mock_metadata_service.find_in_progress_tasks.return_value = []
         mock_metadata_service.get_project.return_value = None
 
+        # Mock ProjectRepository
+        mock_repo = Mock()
+        from claudestep.domain.project import Project
+        from claudestep.domain.spec_content import SpecContent
+
+        project = Project("test-project")
+        mock_repo.load_spec.return_value = SpecContent(project, spec_content)
+
         # Create service with custom base_branch
-        service = StatisticsService("owner/repo", mock_metadata_service, base_branch="develop")
+        service = StatisticsService("owner/repo", mock_metadata_service, base_branch="develop", project_repository=mock_repo)
         stats = service.collect_project_stats("test-project", "develop", "claudestep")
 
         # Verify the service uses the custom base_branch
@@ -864,35 +889,24 @@ class TestCollectProjectStats:
         assert stats.total_tasks == 2
         assert stats.completed_tasks == 1
 
-        # Verify get_file_from_branch was called with the custom branch
-        mock_get_file.assert_called_with("owner/repo", "develop", "claude-step/test-project/spec.md")
+        # Verify repository was called with the custom branch
+        mock_repo.load_spec.assert_called_with(project, "develop")
 
 
 class TestCollectAllStatistics:
     """Test full statistics collection"""
 
     @patch("claudestep.services.statistics_service.run_gh_command")
-    @patch("claudestep.services.statistics_service.get_file_from_branch")
-    def test_collect_all_single_project(self, mock_get_file, mock_run_gh):
+    def test_collect_all_single_project(self, mock_run_gh):
         """Test collecting stats for a single project"""
         config_content = """
 reviewers:
   - username: alice
-    max_prs: 2
+    maxOpenPRs: 2
   - username: bob
-    max_prs: 1
+    maxOpenPRs: 1
         """
         spec_content = "- [x] Task 1\n- [ ] Task 2"
-
-        # Mock get_file_from_branch for config and spec
-        def get_file_side_effect(repo, branch, path):
-            if "configuration.yml" in path:
-                return config_content
-            elif "spec.md" in path:
-                return spec_content
-            return None
-
-        mock_get_file.side_effect = get_file_side_effect
 
         # Mock run_gh_command for team member stats
         mock_run_gh.return_value = json.dumps([])
@@ -902,8 +916,18 @@ reviewers:
         mock_metadata_service.find_in_progress_tasks.return_value = []
         mock_metadata_service.get_project.return_value = None
 
+        # Mock ProjectRepository
+        mock_repo = Mock()
+        from claudestep.domain.project import Project
+        from claudestep.domain.project_configuration import ProjectConfiguration
+        from claudestep.domain.spec_content import SpecContent
+
+        project = Project("project1")
+        mock_repo.load_configuration.return_value = ProjectConfiguration.from_yaml_string(project, config_content)
+        mock_repo.load_spec.return_value = SpecContent(project, spec_content)
+
         # Create service and test
-        service = StatisticsService("owner/repo", mock_metadata_service, base_branch="main")
+        service = StatisticsService("owner/repo", mock_metadata_service, base_branch="main", project_repository=mock_repo)
         report = service.collect_all_statistics("claude-step/project1/configuration.yml")
 
         assert len(report.project_stats) == 1
