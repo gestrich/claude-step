@@ -6,7 +6,7 @@ from datetime import datetime
 
 from claudestep.domain.exceptions import ConfigurationError
 from claudestep.infrastructure.github.actions import GitHubActionsHelper
-from claudestep.application.collectors.statistics_collector import collect_all_statistics
+from claudestep.application.services.statistics_service import collect_all_statistics
 
 
 def cmd_statistics(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:

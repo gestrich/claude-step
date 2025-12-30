@@ -5,7 +5,7 @@ import pytest
 from datetime import datetime
 
 from claudestep.domain.models import TeamMemberStats, ProjectStats, StatisticsReport
-from claudestep.application.collectors.statistics_collector import count_tasks
+from claudestep.application.services.statistics_service import count_tasks
 
 from tests.builders import SpecFileBuilder
 
@@ -544,7 +544,7 @@ class TestCostExtraction:
 
     def test_extract_cost_from_valid_comment(self):
         """Test extracting cost from a valid cost breakdown comment"""
-        from claudestep.application.collectors.statistics_collector import extract_cost_from_comment
+        from claudestep.application.services.statistics_service import extract_cost_from_comment
 
         comment = """## 💰 Cost Breakdown
 
@@ -564,7 +564,7 @@ This PR was generated using Claude Code with the following costs:
 
     def test_extract_cost_no_cost_comment(self):
         """Test extracting cost from comment without cost breakdown"""
-        from claudestep.application.collectors.statistics_collector import extract_cost_from_comment
+        from claudestep.application.services.statistics_service import extract_cost_from_comment
 
         comment = "This is a regular comment without cost information."
         cost = extract_cost_from_comment(comment)
@@ -572,7 +572,7 @@ This PR was generated using Claude Code with the following costs:
 
     def test_extract_cost_malformed_comment(self):
         """Test extracting cost from malformed cost comment"""
-        from claudestep.application.collectors.statistics_collector import extract_cost_from_comment
+        from claudestep.application.services.statistics_service import extract_cost_from_comment
 
         comment = """## 💰 Cost Breakdown
 
@@ -631,7 +631,7 @@ class TestCollectProjectCosts:
 
     def test_collect_costs_with_metadata(self, mocker):
         """Test collecting costs from artifact metadata"""
-        from claudestep.application.collectors.statistics_collector import collect_project_costs
+        from claudestep.application.services.statistics_service import collect_project_costs
         from claudestep.application.services.artifact_operations import ProjectArtifact, TaskMetadata
         from datetime import datetime
 
@@ -656,7 +656,7 @@ class TestCollectProjectCosts:
 
         # Mock find_project_artifacts
         mock_find = mocker.patch(
-            "claudestep.application.collectors.statistics_collector.find_project_artifacts",
+            "claudestep.application.services.statistics_service.find_project_artifacts",
             return_value=[artifact]
         )
 
@@ -673,7 +673,7 @@ class TestCollectProjectCosts:
 
     def test_collect_costs_from_comments(self, mocker):
         """Test collecting costs from PR comments when metadata unavailable"""
-        from claudestep.application.collectors.statistics_collector import collect_project_costs
+        from claudestep.application.services.statistics_service import collect_project_costs
         from claudestep.application.services.artifact_operations import ProjectArtifact, TaskMetadata
         from datetime import datetime
 
@@ -697,7 +697,7 @@ class TestCollectProjectCosts:
         )
 
         mocker.patch(
-            "claudestep.application.collectors.statistics_collector.find_project_artifacts",
+            "claudestep.application.services.statistics_service.find_project_artifacts",
             return_value=[artifact]
         )
 
@@ -706,7 +706,7 @@ class TestCollectProjectCosts:
 | **Total** | **$0.123456** |
 """
         mocker.patch(
-            "claudestep.application.collectors.statistics_collector.run_gh_command",
+            "claudestep.application.services.statistics_service.run_gh_command",
             return_value=comment
         )
 
@@ -716,10 +716,10 @@ class TestCollectProjectCosts:
 
     def test_collect_costs_no_artifacts(self, mocker):
         """Test collecting costs when no artifacts found"""
-        from claudestep.application.collectors.statistics_collector import collect_project_costs
+        from claudestep.application.services.statistics_service import collect_project_costs
 
         mocker.patch(
-            "claudestep.application.collectors.statistics_collector.find_project_artifacts",
+            "claudestep.application.services.statistics_service.find_project_artifacts",
             return_value=[]
         )
 
@@ -729,10 +729,10 @@ class TestCollectProjectCosts:
 
     def test_collect_costs_exception_handling(self, mocker):
         """Test that exceptions are handled gracefully"""
-        from claudestep.application.collectors.statistics_collector import collect_project_costs
+        from claudestep.application.services.statistics_service import collect_project_costs
 
         mocker.patch(
-            "claudestep.application.collectors.statistics_collector.find_project_artifacts",
+            "claudestep.application.services.statistics_service.find_project_artifacts",
             side_effect=Exception("API error")
         )
 
@@ -746,7 +746,7 @@ class TestCollectTeamMemberStats:
 
     def test_collect_stats_basic(self, mocker):
         """Test basic team member stats collection"""
-        from claudestep.application.collectors.statistics_collector import collect_team_member_stats
+        from claudestep.application.services.statistics_service import collect_team_member_stats
 
         merged_prs = [
             {
@@ -774,7 +774,7 @@ class TestCollectTeamMemberStats:
 
         # Mock gh commands
         mocker.patch(
-            "claudestep.application.collectors.statistics_collector.run_gh_command",
+            "claudestep.application.services.statistics_service.run_gh_command",
             side_effect=[json.dumps(merged_prs), json.dumps(open_prs)]
         )
 
@@ -788,10 +788,10 @@ class TestCollectTeamMemberStats:
 
     def test_collect_stats_empty_prs(self, mocker):
         """Test stats collection with no PRs"""
-        from claudestep.application.collectors.statistics_collector import collect_team_member_stats
+        from claudestep.application.services.statistics_service import collect_team_member_stats
 
         mocker.patch(
-            "claudestep.application.collectors.statistics_collector.run_gh_command",
+            "claudestep.application.services.statistics_service.run_gh_command",
             return_value=json.dumps([])
         )
 
@@ -803,10 +803,10 @@ class TestCollectTeamMemberStats:
 
     def test_collect_stats_exception_handling(self, mocker):
         """Test that exceptions during collection are handled"""
-        from claudestep.application.collectors.statistics_collector import collect_team_member_stats
+        from claudestep.application.services.statistics_service import collect_team_member_stats
 
         mocker.patch(
-            "claudestep.application.collectors.statistics_collector.run_gh_command",
+            "claudestep.application.services.statistics_service.run_gh_command",
             side_effect=Exception("API error")
         )
 
@@ -822,7 +822,7 @@ class TestCollectProjectStats:
 
     def test_collect_stats_success(self, tmp_path, mocker):
         """Test successful project stats collection"""
-        from claudestep.application.collectors.statistics_collector import collect_project_stats
+        from claudestep.application.services.statistics_service import collect_project_stats
 
         # Create spec file
         spec = tmp_path / "spec.md"
@@ -835,13 +835,13 @@ class TestCollectProjectStats:
 
         # Mock in-progress tasks
         mocker.patch(
-            "claudestep.application.collectors.statistics_collector.get_in_progress_task_indices",
+            "claudestep.application.services.statistics_service.get_in_progress_task_indices",
             return_value=[2]
         )
 
         # Mock cost collection
         mocker.patch(
-            "claudestep.application.collectors.statistics_collector.collect_project_costs",
+            "claudestep.application.services.statistics_service.collect_project_costs",
             return_value=1.5
         )
 
@@ -856,7 +856,7 @@ class TestCollectProjectStats:
 
     def test_collect_stats_missing_spec(self, mocker):
         """Test stats collection with missing spec file"""
-        from claudestep.application.collectors.statistics_collector import collect_project_stats
+        from claudestep.application.services.statistics_service import collect_project_stats
 
         stats = collect_project_stats("test-project", "/nonexistent/spec.md", "owner/repo")
 
@@ -866,18 +866,18 @@ class TestCollectProjectStats:
 
     def test_collect_stats_in_progress_error(self, tmp_path, mocker):
         """Test stats collection when in-progress task detection fails"""
-        from claudestep.application.collectors.statistics_collector import collect_project_stats
+        from claudestep.application.services.statistics_service import collect_project_stats
 
         spec = tmp_path / "spec.md"
         spec.write_text("- [ ] Task 1\n- [x] Task 2")
 
         mocker.patch(
-            "claudestep.application.collectors.statistics_collector.get_in_progress_task_indices",
+            "claudestep.application.services.statistics_service.get_in_progress_task_indices",
             side_effect=Exception("API error")
         )
 
         mocker.patch(
-            "claudestep.application.collectors.statistics_collector.collect_project_costs",
+            "claudestep.application.services.statistics_service.collect_project_costs",
             return_value=0.0
         )
 
@@ -892,7 +892,7 @@ class TestCollectAllStatistics:
 
     def test_collect_all_single_project(self, tmp_path, mocker):
         """Test collecting stats for a single project"""
-        from claudestep.application.collectors.statistics_collector import collect_all_statistics
+        from claudestep.application.services.statistics_service import collect_all_statistics
 
         # Set up environment
         mocker.patch.dict("os.environ", {"GITHUB_REPOSITORY": "owner/repo"})
@@ -914,15 +914,15 @@ reviewers:
 
         # Mock dependencies
         mocker.patch(
-            "claudestep.application.collectors.statistics_collector.get_in_progress_task_indices",
+            "claudestep.application.services.statistics_service.get_in_progress_task_indices",
             return_value=[]
         )
         mocker.patch(
-            "claudestep.application.collectors.statistics_collector.collect_project_costs",
+            "claudestep.application.services.statistics_service.collect_project_costs",
             return_value=0.5
         )
         mocker.patch(
-            "claudestep.application.collectors.statistics_collector.run_gh_command",
+            "claudestep.application.services.statistics_service.run_gh_command",
             return_value=json.dumps([])
         )
 
@@ -936,7 +936,7 @@ reviewers:
 
     def test_collect_all_no_repository(self, mocker):
         """Test that missing GITHUB_REPOSITORY returns empty report"""
-        from claudestep.application.collectors.statistics_collector import collect_all_statistics
+        from claudestep.application.services.statistics_service import collect_all_statistics
 
         mocker.patch.dict("os.environ", {}, clear=True)
 
@@ -947,7 +947,7 @@ reviewers:
 
     def test_collect_all_config_error(self, mocker):
         """Test handling of config loading errors"""
-        from claudestep.application.collectors.statistics_collector import collect_all_statistics
+        from claudestep.application.services.statistics_service import collect_all_statistics
 
         mocker.patch.dict("os.environ", {"GITHUB_REPOSITORY": "owner/repo"})
 

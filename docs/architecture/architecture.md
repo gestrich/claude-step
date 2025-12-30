@@ -643,9 +643,9 @@ src/claudestep/
 │   │   ├── task_management.py
 │   │   ├── project_detection.py
 │   │   ├── pr_operations.py
-│   │   └── artifact_operations.py
-│   ├── collectors/
-│   │   └── statistics_collector.py
+│   │   ├── artifact_operations.py
+│   │   ├── metadata_service.py
+│   │   └── statistics_service.py
 │   └── formatters/
 │       └── table_formatter.py
 │
@@ -681,11 +681,11 @@ src/claudestep/
 - Properties and computed values
 - No external dependencies (GitHub API, file I/O)
 
-**Collectors** (`*_collector.py`, `*_management.py`):
-- Gather data from external sources
-- GitHub API calls
-- File parsing
-- Artifact processing
+**Services** (`*_service.py`, `*_management.py`):
+- Orchestrate business logic across multiple infrastructure components
+- Gather and aggregate data from external sources (GitHub API, metadata storage)
+- Implement use cases required by CLI commands
+- Process and transform data using domain models
 - Return model instances
 
 **Operations** (`*_operations.py`):

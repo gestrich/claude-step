@@ -61,8 +61,6 @@ tests/
 │   │   └── filesystem/
 │   │       └── test_operations.py
 │   └── application/                      # Application layer tests
-│       ├── collectors/
-│       │   └── test_statistics.py
 │       ├── formatters/
 │       │   └── test_table_formatter.py
 │       └── services/
@@ -70,7 +68,9 @@ tests/
 │           ├── test_task_management.py
 │           ├── test_reviewer_management.py
 │           ├── test_project_detection.py
-│           └── test_artifact_operations.py
+│           ├── test_artifact_operations.py
+│           ├── test_metadata_service.py
+│           └── test_statistics_service.py
 ├── integration/                          # Integration tests
 │   └── cli/                              # CLI command integration tests
 │       └── commands/

@@ -247,8 +247,6 @@ tests/
 │   │   └── filesystem/
 │   │       └── test_operations.py       # File I/O operations
 │   └── application/                      # Application layer tests
-│       ├── collectors/
-│       │   └── test_statistics.py       # Statistics collection
 │       ├── formatters/
 │       │   └── test_table_formatter.py  # Table formatting
 │       └── services/
@@ -256,7 +254,9 @@ tests/
 │           ├── test_task_management.py         # Task finding/completion
 │           ├── test_reviewer_management.py     # Reviewer assignment
 │           ├── test_project_detection.py       # Project detection
-│           └── test_artifact_operations.py     # Artifact management
+│           ├── test_artifact_operations.py     # Artifact management
+│           ├── test_metadata_service.py        # Metadata operations
+│           └── test_statistics_service.py      # Statistics collection
 ├── integration/                          # Integration tests
 │   └── cli/                              # CLI command integration tests
 │       └── commands/
