@@ -102,7 +102,7 @@ Changes needed:
 - Verified the module compiles and can be imported successfully
 - Function is now a pure function with explicit dependencies visible in the signature
 
-- [ ] Phase 3: Update __main__.py adapter for statistics command
+- [x] Phase 3: Update __main__.py adapter for statistics command
 
 Update `src/claudestep/__main__.py` to add the adapter logic for statistics:
 
@@ -125,6 +125,22 @@ Add `os` import to `__main__.py` if not already present.
 - GitHub Actions usage works unchanged (reads env vars)
 - CLI usage works: `python -m claudestep statistics --repo owner/repo --days-back 90`
 - Hybrid usage works: `GITHUB_REPOSITORY=owner/repo python -m claudestep statistics --days-back 90`
+
+**Status: ✅ Completed**
+- Added `import os` to the imports in `src/claudestep/__main__.py:9`
+- Updated the statistics command handler in `src/claudestep/__main__.py:55-64` to use the adapter pattern
+- All seven parameters are now passed explicitly to `cmd_statistics`:
+  - `gh`: Passed directly (no env var fallback needed)
+  - `repo`: Falls back to `GITHUB_REPOSITORY` env var
+  - `base_branch`: Falls back to `BASE_BRANCH` env var (default: "main")
+  - `config_path`: Falls back to `CONFIG_PATH` env var
+  - `days_back`: Falls back to `STATS_DAYS_BACK` env var (default: 30)
+  - `format_type`: Falls back to `STATS_FORMAT` env var (default: "slack")
+  - `slack_webhook_url`: Reads from `SLACK_WEBHOOK_URL` env var (default: "")
+- CLI arguments take precedence over environment variables using the `or` pattern
+- Verified syntax with `python3 -m py_compile` - no errors
+- Verified module imports successfully
+- This completes the adapter layer pattern: env vars are only read in `__main__.py`, not in the command function
 
 - [ ] Phase 4: Refactor StatisticsService to use explicit parameters
 

@@ -7,7 +7,7 @@ for collecting and aggregating project statistics from GitHub API and spec.md fi
 import json
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
 from claudestep.domain.config import load_config_from_string
@@ -51,7 +51,7 @@ class StatisticsService:
             Complete StatisticsReport
         """
         report = StatisticsReport()
-        report.generated_at = datetime.utcnow()
+        report.generated_at = datetime.now(timezone.utc)
 
         if not self.repo:
             print("Warning: GITHUB_REPOSITORY not set")
@@ -231,7 +231,7 @@ class StatisticsService:
         print(f"Collecting team member statistics for {len(reviewers)} reviewer(s)...")
 
         # Calculate cutoff date for merged PRs
-        cutoff_date = datetime.utcnow() - timedelta(days=days_back)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
         cutoff_iso = cutoff_date.strftime("%Y-%m-%d")
 
         # Collect merged PRs

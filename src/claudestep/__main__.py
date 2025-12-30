@@ -6,6 +6,7 @@ Entry point for the ClaudeStep automation tool.
 Run with: python3 -m claudestep <command>
 """
 
+import os
 import sys
 
 from claudestep.cli.commands.add_cost_comment import cmd_add_cost_comment
@@ -52,7 +53,15 @@ def main():
     elif args.command == "notify-pr":
         return cmd_notify_pr(args, gh)
     elif args.command == "statistics":
-        return cmd_statistics(args, gh)
+        return cmd_statistics(
+            gh=gh,
+            repo=args.repo or os.environ.get("GITHUB_REPOSITORY", ""),
+            base_branch=args.base_branch or os.environ.get("BASE_BRANCH", "main"),
+            config_path=args.config_path or os.environ.get("CONFIG_PATH"),
+            days_back=args.days_back or int(os.environ.get("STATS_DAYS_BACK", "30")),
+            format_type=args.format or os.environ.get("STATS_FORMAT", "slack"),
+            slack_webhook_url=os.environ.get("SLACK_WEBHOOK_URL", ""),
+        )
     else:
         gh.set_error(f"Unknown command: {args.command}")
         return 1
