@@ -6,14 +6,15 @@ on:
       project_name:
         description: 'Project name in claude-step directory'
         required: true
+        default: 'e2e-test-project'
       base_branch:
         description: 'Base branch for pull requests'
         required: false
-        default: 'e2e-test'
+        default: 'main'
       checkout_ref:
-        description: 'Branch/ref to checkout (defaults to e2e-test)'
+        description: 'Branch/ref to checkout (defaults to main)'
         required: false
-        default: 'e2e-test'
+        default: 'main'
 
   pull_request:
     types: [closed]
