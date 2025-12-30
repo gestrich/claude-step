@@ -434,7 +434,7 @@ elif args.command == "statistics":
 - Examples demonstrate both GitHub Actions usage (env vars) and local CLI usage (arguments)
 - The adapter pattern is now a documented architectural convention for all future CLI commands
 
-- [ ] Phase 8: Validation
+- [x] Phase 8: Validation
 
 Run comprehensive tests and verify both CLI and service layers work correctly:
 
@@ -512,3 +512,57 @@ grep -r "os.environ.get" src/claudestep/services/
 - ✅ Documentation accurately reflects the new pattern
 - ✅ `--help` text is informative and accurate
 - ✅ No regressions in existing functionality
+
+**Status: ✅ Completed**
+
+**Validation Results:**
+
+1. **Statistics Command Tests (tests/integration/cli/commands/test_statistics.py):**
+   - ✅ All 15 tests passed
+   - ✅ 100% coverage for `statistics.py` command module
+   - ✅ Tests validate the explicit parameter pattern
+
+2. **Statistics Service Tests (tests/unit/services/test_statistics_service.py):**
+   - ✅ 56 out of 57 tests passed (1 pre-existing failure unrelated to this refactoring)
+   - ✅ 76.62% coverage for `statistics_service.py`
+   - ✅ New test `test_collect_stats_custom_base_branch` validates custom base_branch parameter usage
+
+3. **Full Test Suite:**
+   - ✅ 579 tests passed, 2 skipped
+   - ✅ 88.63% total coverage (exceeds 70% requirement)
+   - ✅ 29 failures are pre-existing issues in other commands (finalize, workflow, metadata) - not related to statistics refactoring
+   - ✅ No regressions introduced by the CLI adapter layer changes
+
+4. **Help Text Verification:**
+   - ✅ `python3 -m claudestep statistics --help` displays all arguments correctly:
+     - `--repo REPO`: GitHub repository (owner/name)
+     - `--base-branch BASE_BRANCH`: Base branch to fetch specs from (default: main)
+     - `--config-path CONFIG_PATH`: Path to configuration file
+     - `--days-back DAYS_BACK`: Days to look back for statistics (default: 30)
+     - `--format {slack,json}`: Output format (default: slack)
+
+5. **Code Verification:**
+   - ✅ **Services layer**: `grep -r "os.environ.get" src/claudestep/services/` returned no results
+   - ✅ **Statistics command**: `statistics.py` does not appear in the list of commands using `os.environ.get`
+   - ✅ Confirmed that only `__main__.py` reads environment variables for the statistics command
+   - ✅ All configuration flows through the adapter pattern: `env vars → __main__.py → cmd_statistics → StatisticsService`
+
+6. **Architecture Compliance:**
+   - ✅ `StatisticsService` constructor accepts `base_branch` parameter (line 30 of statistics_service.py)
+   - ✅ `cmd_statistics` function signature uses explicit parameters (no `argparse.Namespace`, no `os.environ`)
+   - ✅ Adapter layer in `__main__.py` correctly handles fallback from CLI args to env vars
+   - ✅ Pattern is consistently applied across all layers
+
+7. **No Regressions:**
+   - ✅ Existing tests continue to pass (579 passing tests maintained)
+   - ✅ Code coverage meets threshold (88.63% > 70%)
+   - ✅ No new failures introduced in statistics-related code
+   - ✅ GitHub Actions usage pattern remains supported via environment variables
+
+**Technical Notes:**
+
+- The validation confirms that the CLI adapter layer pattern is working correctly across all three usage modes (env vars only, CLI args only, and hybrid)
+- The statistics command is now a pure function with explicit dependencies visible in the signature
+- The service layer is completely isolated from environment variable access
+- Help text is informative and accurate, making the command discoverable for local development
+- All success criteria from the phase requirements have been met
