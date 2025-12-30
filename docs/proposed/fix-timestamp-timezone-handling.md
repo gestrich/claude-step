@@ -59,31 +59,30 @@ Test results:
 
 Expected outcome: ✅ Domain models always produce timezone-aware datetimes regardless of input format
 
-- [ ] Phase 2: Update metadata writing to always include timezone
+- [x] Phase 2: Update metadata writing to always include timezone ✅ **COMPLETED**
 
 Fix all code that creates timestamps to use ISO 8601 with timezone:
 
-Files to modify:
-- `src/claudestep/infrastructure/metadata/github_metadata_store.py` - Update `save_project()` method
-- `src/claudestep/cli/commands/finalize.py` - Update PR metadata creation
-- Any other locations that generate `created_at`, `merged_at`, `last_updated` timestamps
+Files modified:
+- `src/claudestep/infrastructure/metadata/github_metadata_store.py` - Updated `save_project()` method (line 368)
+- `src/claudestep/cli/commands/finalize.py` - Updated PR metadata creation (lines 246, 259, 276)
+- `src/claudestep/services/metadata_service.py` - Updated `save_project()` method (line 70)
+- `src/claudestep/domain/models.py` - Updated `create_empty()` methods (lines 787, 880, 1218)
+- `src/claudestep/cli/commands/statistics.py` - Updated report generation timestamp (line 89)
 
-Technical considerations:
-- Always use `datetime.now(timezone.utc)` instead of `datetime.now()`
-- Use `.isoformat()` to serialize (produces `+00:00` format automatically)
-- Ensure all timestamp generation is consistent
-- Grep for `datetime.now()` without timezone argument to find issues
+Technical implementation:
+- Added `timezone` to imports in all affected files
+- Replaced all `datetime.now()` with `datetime.now(timezone.utc)`
+- Replaced `datetime.utcnow()` with `datetime.now(timezone.utc)`
+- All timestamp fields now serialize with `+00:00` timezone suffix via `.isoformat()`
+- Consistent timezone-aware timestamp generation across the codebase
 
-Example fix:
-```python
-# BAD - produces naive datetime
-"created_at": datetime.now().isoformat()  # "2025-12-29T23:47:49.299060"
+Test results:
+- ✅ All 32 domain model tests passed (`tests/unit/domain/test_hybrid_metadata_models.py`)
+- ✅ All 57 statistics service tests passed (`tests/unit/services/test_statistics_service.py`)
+- ✅ Manual verification: `HybridProjectMetadata.create_empty('test').last_updated.isoformat()` produces `"2025-12-30T21:09:49.002316+00:00"`
 
-# GOOD - produces timezone-aware datetime
-"created_at": datetime.now(timezone.utc).isoformat()  # "2025-12-29T23:47:49.299060+00:00"
-```
-
-Expected outcome: All new metadata written with proper timezone information
+Expected outcome: ✅ All new metadata written with proper timezone information (`+00:00` format)
 
 - [ ] Phase 3: Update tests to use timezone-aware datetimes
 

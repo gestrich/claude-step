@@ -15,7 +15,7 @@ import base64
 import json
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from claudestep.domain.exceptions import GitHubAPIError
@@ -365,7 +365,7 @@ It does NOT contain:
         self._ensure_branch_exists()
 
         # Update last_updated timestamp
-        project.last_updated = datetime.utcnow()
+        project.last_updated = datetime.now(timezone.utc)
 
         # Get current file SHA (for optimistic locking)
         file_path = self._get_file_path(project.project)

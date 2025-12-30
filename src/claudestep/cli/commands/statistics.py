@@ -5,7 +5,7 @@ This command instantiates services and coordinates their operations but
 does not implement business logic directly.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from claudestep.infrastructure.github.actions import GitHubActionsHelper
@@ -86,7 +86,7 @@ def cmd_statistics(
         # Write GitHub Step Summary
         gh.write_step_summary("# ClaudeStep Statistics Report")
         gh.write_step_summary("")
-        gh.write_step_summary(f"*Generated: {datetime.now().isoformat()}*")
+        gh.write_step_summary(f"*Generated: {datetime.now(timezone.utc).isoformat()}*")
         gh.write_step_summary("")
 
         # Add leaderboard to step summary (show first - most engaging!)

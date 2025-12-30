@@ -784,7 +784,7 @@ class TaskMetadata:
             type=task_type,
             model=model,
             cost_usd=cost_usd,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
             tokens_input=tokens_input,
             tokens_output=tokens_output,
             duration_seconds=duration_seconds,
@@ -877,7 +877,7 @@ class ProjectMetadata:
         return cls(
             schema_version="1.0",
             project=project,
-            last_updated=datetime.now(),
+            last_updated=datetime.now(timezone.utc),
             tasks=[],
         )
 
@@ -1215,7 +1215,7 @@ class HybridProjectMetadata:
         return cls(
             schema_version="2.0",
             project=project,
-            last_updated=datetime.now(),
+            last_updated=datetime.now(timezone.utc),
             tasks=[],
             pull_requests=[],
         )

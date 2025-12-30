@@ -12,7 +12,7 @@ and provides operations needed by:
 - prepare command: Check reviewer capacity and select next task
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Set
 
 from claudestep.domain.models import (
@@ -67,7 +67,7 @@ class MetadataService:
         Args:
             project: HybridProjectMetadata instance to save
         """
-        project.last_updated = datetime.now()
+        project.last_updated = datetime.now(timezone.utc)
         project.sync_task_statuses()
         self.store.save_project(project)
 

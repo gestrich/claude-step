@@ -8,7 +8,7 @@ does not implement business logic directly.
 import argparse
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from claudestep.domain.config import substitute_template
 from claudestep.domain.exceptions import ConfigurationError, FileNotFoundError, GitError, GitHubAPIError
@@ -243,7 +243,7 @@ def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
                 type="PRCreation",
                 model=claude_model,
                 cost_usd=main_cost,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
                 workflow_run_id=int(github_run_id) if github_run_id else 0,
                 tokens_input=0,  # TODO: Extract from Claude Code output
                 tokens_output=0,
@@ -256,7 +256,7 @@ def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
                 type="PRSummary",
                 model=claude_model,
                 cost_usd=summary_cost,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
                 workflow_run_id=int(github_run_id) if github_run_id else 0,
                 tokens_input=0,
                 tokens_output=0,
@@ -273,7 +273,7 @@ def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             branch_name=branch_name,
             reviewer=reviewer,
             pr_state="open",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             title=pr_title,
             ai_operations=ai_operations
         )
