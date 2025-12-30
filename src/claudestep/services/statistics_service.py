@@ -4,17 +4,13 @@ Follows Service Layer pattern (Fowler, PoEAA) - encapsulates business logic
 for collecting and aggregating project statistics from metadata storage and spec.md files.
 """
 
-import os
 import re
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
-from claudestep.domain.config import load_config_from_string
 from claudestep.domain.constants import DEFAULT_PR_LABEL
-from claudestep.domain.exceptions import FileNotFoundError as ClaudeStepFileNotFoundError
 from claudestep.domain.project import Project
 from claudestep.domain.project_configuration import ProjectConfiguration
-from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
 from claudestep.infrastructure.repositories.project_repository import ProjectRepository
 from claudestep.services.metadata_service import MetadataService
 from claudestep.domain.models import HybridProjectMetadata, ProjectStats, StatisticsReport, TeamMemberStats
@@ -23,9 +19,9 @@ from claudestep.domain.models import HybridProjectMetadata, ProjectStats, Statis
 class StatisticsService:
     """Service Layer class for statistics operations.
 
-    Coordinates statistics collection by orchestrating metadata queries, GitHub
-    API interactions, and spec.md parsing. Implements business logic for
-    ClaudeStep's statistics and reporting workflows.
+    Coordinates statistics collection by orchestrating metadata queries and
+    spec.md parsing. Implements business logic for ClaudeStep's statistics
+    and reporting workflows.
     """
 
     def __init__(

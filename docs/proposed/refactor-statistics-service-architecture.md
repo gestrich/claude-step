@@ -425,27 +425,49 @@ Verified and enhanced the `PRReference.from_metadata_pr()` factory method to cor
 - No need for defensive `hasattr()` check - simplified code is cleaner and more Pythonic
 - Statistics now display actual PR titles when available in metadata (populated by finalize command)
 
-- [ ] Phase 7: Remove GitHub API Dependencies from StatisticsService
+- [x] Phase 7: Remove GitHub API Dependencies from StatisticsService ✅
 
-Clean up the service by removing all direct GitHub API usage:
+**Implementation completed:**
 
-**Remove:**
-- All `run_gh_command()` calls (lines 271-286, 329-344)
-- All `json.loads()` calls (lines 287, 345)
-- All JSON dictionary navigation (lines 292-321, 349-361)
+Cleaned up the service by removing all direct GitHub API usage and unused imports.
 
-**Verify:**
-- No imports from `claudestep.infrastructure.github.operations` except `get_file_from_branch` (used by ProjectRepository)
-- No `json` module imports in the service
-- No raw string command construction
-- All data comes from `metadata_service` or `project_repository`
+**Changes made:**
 
-**Files to modify:**
-- `src/claudestep/services/statistics_service.py`
+1. **Removed unused imports:**
+   - Removed `import os` (unused)
+   - Removed `from claudestep.domain.config import load_config_from_string` (unused)
+   - Removed `from claudestep.domain.exceptions import FileNotFoundError as ClaudeStepFileNotFoundError` (unused)
+   - Removed `from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore` (unused, accessed via metadata_service)
+   - Removed `Tuple` from typing imports (unused)
 
-**Tests to verify:**
-- `tests/unit/services/test_statistics_service.py` - All tests should pass without mocking `run_gh_command`
-- Tests should only mock `metadata_service` and `project_repository`
+2. **Updated class docstring:**
+   - Changed from: "orchestrating metadata queries, GitHub API interactions, and spec.md parsing"
+   - Changed to: "orchestrating metadata queries and spec.md parsing"
+   - Removed reference to GitHub API interactions
+
+**Verification completed:**
+
+✅ No `run_gh_command()` calls (already removed in Phase 3)
+✅ No `json.loads()` calls (already removed in Phase 3)
+✅ No JSON dictionary navigation (already removed in Phase 3)
+✅ No imports from `claudestep.infrastructure.github.operations`
+✅ No `json` module import
+✅ No raw string command construction
+✅ All data comes from `metadata_service` or `project_repository`
+
+**Files modified:**
+- `src/claudestep/services/statistics_service.py` - Cleaned up imports and docstring
+
+**Tests verified:**
+- ✅ All 57 tests in `tests/unit/services/test_statistics_service.py` passing
+- ✅ Tests only mock `metadata_service` and `project_repository`
+- ✅ No GitHub API mocking required
+
+**Technical notes:**
+- Phase 3 had already completed the core refactoring work (removed GitHub API calls, JSON parsing)
+- Phase 7 completed the cleanup by removing leftover imports and documentation references
+- StatisticsService is now architecturally clean: service layer uses domain models, infrastructure layer hidden behind repository/service abstractions
+- All architectural violations documented in the Background section have been resolved
 
 - [ ] Phase 8: Document GitHub PR Operations for Future Use
 
