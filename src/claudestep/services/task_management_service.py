@@ -4,7 +4,7 @@ import os
 import re
 from typing import Optional
 
-from claudestep.application.services.metadata_service import MetadataService
+from claudestep.services.metadata_service import MetadataService
 from claudestep.domain.exceptions import FileNotFoundError
 
 

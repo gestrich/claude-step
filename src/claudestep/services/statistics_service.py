@@ -10,7 +10,7 @@ from claudestep.domain.config import load_config_from_string
 from claudestep.domain.exceptions import FileNotFoundError as ClaudeStepFileNotFoundError
 from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
 from claudestep.infrastructure.github.operations import get_file_from_branch, run_gh_command
-from claudestep.application.services.metadata_service import MetadataService
+from claudestep.services.metadata_service import MetadataService
 from claudestep.domain.models import ProjectStats, StatisticsReport, TeamMemberStats
 
 

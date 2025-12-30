@@ -6,7 +6,7 @@ from datetime import datetime
 from unittest.mock import Mock, patch
 
 from claudestep.domain.models import TeamMemberStats, ProjectStats, StatisticsReport
-from claudestep.application.services.statistics_service import StatisticsService
+from claudestep.services.statistics_service import StatisticsService
 
 from tests.builders import SpecFileBuilder
 
@@ -699,7 +699,7 @@ class TestCollectProjectCosts:
 class TestCollectTeamMemberStats:
     """Test team member statistics collection"""
 
-    @patch("claudestep.application.services.statistics_service.run_gh_command")
+    @patch("claudestep.services.statistics_service.run_gh_command")
     def test_collect_stats_basic(self, mock_run_gh):
         """Test basic team member stats collection"""
         merged_prs = [
@@ -740,7 +740,7 @@ class TestCollectTeamMemberStats:
         assert stats["alice"].open_count >= 1
         assert stats["bob"].merged_count >= 1
 
-    @patch("claudestep.application.services.statistics_service.run_gh_command")
+    @patch("claudestep.services.statistics_service.run_gh_command")
     def test_collect_stats_empty_prs(self, mock_run_gh):
         """Test stats collection with no PRs"""
         mock_run_gh.return_value = json.dumps([])
@@ -754,7 +754,7 @@ class TestCollectTeamMemberStats:
         assert stats["alice"].merged_count == 0
         assert stats["alice"].open_count == 0
 
-    @patch("claudestep.application.services.statistics_service.run_gh_command")
+    @patch("claudestep.services.statistics_service.run_gh_command")
     def test_collect_stats_exception_handling(self, mock_run_gh):
         """Test that exceptions during collection are handled"""
         mock_run_gh.side_effect = Exception("API error")
@@ -772,7 +772,7 @@ class TestCollectTeamMemberStats:
 class TestCollectProjectStats:
     """Test project statistics collection"""
 
-    @patch("claudestep.application.services.statistics_service.get_file_from_branch")
+    @patch("claudestep.services.statistics_service.get_file_from_branch")
     def test_collect_stats_success(self, mock_get_file):
         """Test successful project stats collection"""
         spec_content = """
@@ -809,7 +809,7 @@ class TestCollectProjectStats:
         assert stats.pending_tasks == 1
         assert stats.total_cost_usd == 1.5
 
-    @patch("claudestep.application.services.statistics_service.get_file_from_branch")
+    @patch("claudestep.services.statistics_service.get_file_from_branch")
     def test_collect_stats_missing_spec(self, mock_get_file):
         """Test stats collection with missing spec file"""
         # Mock get_file_from_branch to return None
@@ -822,7 +822,7 @@ class TestCollectProjectStats:
 
         assert stats is None
 
-    @patch("claudestep.application.services.statistics_service.get_file_from_branch")
+    @patch("claudestep.services.statistics_service.get_file_from_branch")
     def test_collect_stats_in_progress_error(self, mock_get_file):
         """Test stats collection when in-progress task detection fails"""
         spec_content = "- [ ] Task 1\n- [x] Task 2"
@@ -846,8 +846,8 @@ class TestCollectProjectStats:
 class TestCollectAllStatistics:
     """Test full statistics collection"""
 
-    @patch("claudestep.application.services.statistics_service.run_gh_command")
-    @patch("claudestep.application.services.statistics_service.get_file_from_branch")
+    @patch("claudestep.services.statistics_service.run_gh_command")
+    @patch("claudestep.services.statistics_service.get_file_from_branch")
     def test_collect_all_single_project(self, mock_get_file, mock_run_gh):
         """Test collecting stats for a single project"""
         config_content = """
@@ -897,7 +897,7 @@ reviewers:
         assert len(report.project_stats) == 0
         assert len(report.team_stats) == 0
 
-    @patch("claudestep.application.services.statistics_service.get_file_from_branch")
+    @patch("claudestep.services.statistics_service.get_file_from_branch")
     def test_collect_all_config_error(self, mock_get_file):
         """Test handling of config loading errors"""
         # Mock get_file_from_branch to return None (config not found)

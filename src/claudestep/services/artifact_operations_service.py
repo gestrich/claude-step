@@ -111,7 +111,7 @@ def find_project_artifacts(
         4. Filter artifacts by project name
         5. Optionally download and parse metadata JSON
     """
-    from claudestep.application.services.pr_operations_service import PROperationsService
+    from claudestep.services.pr_operations_service import PROperationsService
 
     result_artifacts = []
     seen_artifact_ids = set()

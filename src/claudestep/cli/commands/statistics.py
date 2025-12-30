@@ -7,8 +7,8 @@ from datetime import datetime
 from claudestep.domain.exceptions import ConfigurationError
 from claudestep.infrastructure.github.actions import GitHubActionsHelper
 from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
-from claudestep.application.services.metadata_service import MetadataService
-from claudestep.application.services.statistics_service import StatisticsService
+from claudestep.services.metadata_service import MetadataService
+from claudestep.services.statistics_service import StatisticsService
 
 
 def cmd_statistics(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:

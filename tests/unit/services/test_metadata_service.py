@@ -1,7 +1,7 @@
 """Unit tests for MetadataService
 
 Tests the application service layer for metadata operations
-from src/claudestep/application/services/metadata_service.py
+from src/claudestep/services/metadata_service.py
 """
 
 import pytest
@@ -15,7 +15,7 @@ from claudestep.domain.models import (
     AIOperation,
     HybridProjectMetadata,
 )
-from claudestep.application.services.metadata_service import MetadataService
+from claudestep.services.metadata_service import MetadataService
 
 
 class TestMetadataService:
@@ -106,7 +106,7 @@ class TestMetadataService:
         assert result is None
         mock_store.get_project.assert_called_once_with("nonexistent")
 
-    @patch('claudestep.application.services.metadata_service.datetime')
+    @patch('claudestep.services.metadata_service.datetime')
     def test_save_project_updates_timestamp_and_syncs(self, mock_datetime, service, mock_store, sample_project):
         """Should update timestamp and sync statuses before saving"""
         # Arrange
@@ -133,7 +133,7 @@ class TestMetadataService:
         assert result == projects
         mock_store.get_all_projects.assert_called_once()
 
-    @patch('claudestep.application.services.metadata_service.datetime')
+    @patch('claudestep.services.metadata_service.datetime')
     def test_get_or_create_project_existing(self, mock_datetime, service, mock_store, sample_project):
         """Should return existing project when it exists"""
         # Arrange
@@ -147,7 +147,7 @@ class TestMetadataService:
         mock_store.get_project.assert_called_once_with("test-project")
         mock_store.save_project.assert_not_called()
 
-    @patch('claudestep.application.services.metadata_service.datetime')
+    @patch('claudestep.services.metadata_service.datetime')
     def test_get_or_create_project_new(self, mock_datetime, service, mock_store):
         """Should create and save new project when it doesn't exist"""
         # Arrange
@@ -165,7 +165,7 @@ class TestMetadataService:
         assert len(result.pull_requests) == 0
         mock_store.save_project.assert_called_once()
 
-    @patch('claudestep.application.services.metadata_service.datetime')
+    @patch('claudestep.services.metadata_service.datetime')
     def test_get_or_create_project_with_tasks(self, mock_datetime, service, mock_store):
         """Should initialize new project with provided tasks"""
         # Arrange
@@ -273,7 +273,7 @@ class TestMetadataService:
             "alice": [50]
         }
 
-    @patch('claudestep.application.services.metadata_service.datetime')
+    @patch('claudestep.services.metadata_service.datetime')
     def test_add_pr_to_project(self, mock_datetime, service, mock_store, sample_project):
         """Should add new PR and sync task statuses"""
         # Arrange

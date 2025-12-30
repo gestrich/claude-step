@@ -6,11 +6,11 @@ import os
 from claudestep.cli.commands.discover import find_all_projects
 from claudestep.domain.config import load_config, validate_spec_format
 from claudestep.infrastructure.github.actions import GitHubActionsHelper
-from claudestep.application.services.project_detection_service import ProjectDetectionService
-from claudestep.application.services.reviewer_management_service import ReviewerManagementService
+from claudestep.services.project_detection_service import ProjectDetectionService
+from claudestep.services.reviewer_management_service import ReviewerManagementService
 from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
-from claudestep.application.services.metadata_service import MetadataService
-from claudestep.application.services.task_management_service import TaskManagementService
+from claudestep.services.metadata_service import MetadataService
+from claudestep.services.task_management_service import TaskManagementService
 
 
 def check_project_ready(project_name: str, repo: str) -> bool:

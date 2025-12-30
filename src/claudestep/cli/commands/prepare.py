@@ -10,11 +10,11 @@ from claudestep.infrastructure.git.operations import run_git_command
 from claudestep.infrastructure.github.actions import GitHubActionsHelper
 from claudestep.infrastructure.github.operations import ensure_label_exists, file_exists_in_branch, get_file_from_branch
 from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
-from claudestep.application.services.metadata_service import MetadataService
-from claudestep.application.services.pr_operations_service import PROperationsService
-from claudestep.application.services.project_detection_service import ProjectDetectionService
-from claudestep.application.services.reviewer_management_service import ReviewerManagementService
-from claudestep.application.services.task_management_service import TaskManagementService
+from claudestep.services.metadata_service import MetadataService
+from claudestep.services.pr_operations_service import PROperationsService
+from claudestep.services.project_detection_service import ProjectDetectionService
+from claudestep.services.reviewer_management_service import ReviewerManagementService
+from claudestep.services.task_management_service import TaskManagementService
 
 
 def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:

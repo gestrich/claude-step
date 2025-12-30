@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from claudestep.domain.exceptions import FileNotFoundError
-from claudestep.application.services.task_management_service import TaskManagementService
+from claudestep.services.task_management_service import TaskManagementService
 
 from tests.builders import SpecFileBuilder
 

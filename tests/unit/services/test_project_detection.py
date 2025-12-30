@@ -4,7 +4,7 @@ import json
 import pytest
 from unittest.mock import Mock, patch
 
-from claudestep.application.services.project_detection_service import ProjectDetectionService
+from claudestep.services.project_detection_service import ProjectDetectionService
 from claudestep.domain.exceptions import GitHubAPIError
 
 
@@ -14,7 +14,7 @@ class TestDetectProjectFromPR:
     @pytest.fixture
     def mock_run_gh_command(self):
         """Fixture providing mocked run_gh_command"""
-        with patch('claudestep.application.services.project_detection_service.run_gh_command') as mock:
+        with patch('claudestep.services.project_detection_service.run_gh_command') as mock:
             yield mock
 
     def test_detect_project_from_pr_success(self, mock_run_gh_command):

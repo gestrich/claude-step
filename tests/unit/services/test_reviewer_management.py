@@ -8,8 +8,8 @@ import os
 import pytest
 from unittest.mock import Mock, patch
 
-from claudestep.application.services.reviewer_management_service import ReviewerManagementService
-from claudestep.application.services.artifact_operations_service import ProjectArtifact, TaskMetadata
+from claudestep.services.reviewer_management_service import ReviewerManagementService
+from claudestep.services.artifact_operations_service import ProjectArtifact, TaskMetadata
 from claudestep.domain.models import ReviewerCapacityResult
 from datetime import datetime
 
@@ -42,7 +42,7 @@ class TestFindAvailableReviewer:
     @pytest.fixture
     def reviewer_service(self, mock_env):
         """Fixture providing ReviewerManagementService instance"""
-        from claudestep.application.services.metadata_service import MetadataService
+        from claudestep.services.metadata_service import MetadataService
         from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
         metadata_store = GitHubMetadataStore("owner/repo")
         metadata_service = MetadataService(metadata_store)
@@ -77,7 +77,7 @@ class TestFindAvailableReviewer:
     ):
         """Should return first reviewer when all reviewers have capacity"""
         # Arrange
-        with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+        with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
             mock_find.return_value = []  # No open PRs
 
             # Act
@@ -106,7 +106,7 @@ class TestFindAvailableReviewer:
             self._create_artifact_with_metadata(2, 2, 102, "alice"),  # alice at capacity (2/2)
         ]
 
-        with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+        with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
             mock_find.return_value = artifacts
 
             # Act
@@ -147,7 +147,7 @@ class TestFindAvailableReviewer:
             self._create_artifact_with_metadata(6, 6, 106, "charlie"),
         ]
 
-        with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+        with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
             mock_find.return_value = artifacts
 
             # Act
@@ -176,7 +176,7 @@ class TestFindAvailableReviewer:
             self._create_artifact_with_metadata(3, 3, 103, "alice"),
         ]
 
-        with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+        with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
             mock_find.return_value = artifacts
 
             # Act
@@ -200,7 +200,7 @@ class TestFindAvailableReviewer:
             {"username": "bob", "maxOpenPRs": 2}
         ]
 
-        with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+        with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
             mock_find.return_value = []
 
             # Act
@@ -224,7 +224,7 @@ class TestFindAvailableReviewer:
             self._create_artifact_with_metadata(3, 3, 103, "another-unknown"),
         ]
 
-        with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+        with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
             mock_find.return_value = artifacts
 
             # Act
@@ -251,7 +251,7 @@ class TestFindAvailableReviewer:
             self._create_artifact_with_metadata(1, 5, 201, "alice"),
         ]
 
-        with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+        with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
             mock_find.return_value = artifacts
 
             # Act
@@ -272,7 +272,7 @@ class TestFindAvailableReviewer:
         # Arrange
         reviewers = []
 
-        with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+        with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
             mock_find.return_value = []
 
             # Act
@@ -291,7 +291,7 @@ class TestFindAvailableReviewer:
     ):
         """Should call find_project_artifacts with correct parameters"""
         # Arrange
-        with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+        with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
             mock_find.return_value = []
 
             # Act
@@ -310,11 +310,11 @@ class TestFindAvailableReviewer:
         """Should use GITHUB_REPOSITORY environment variable"""
         # Arrange
         with patch.dict(os.environ, {"GITHUB_REPOSITORY": "test-owner/test-repo"}):
-            with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+            with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
                 mock_find.return_value = []
 
                 # Create service with test repo
-                from claudestep.application.services.metadata_service import MetadataService
+                from claudestep.services.metadata_service import MetadataService
                 from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
                 metadata_store = GitHubMetadataStore("test-owner/test-repo")
                 metadata_service = MetadataService(metadata_store)
@@ -340,7 +340,7 @@ class TestFindAvailableReviewer:
             metadata=None  # No metadata
         )
 
-        with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+        with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
             mock_find.return_value = [artifact_without_metadata]
 
             # Act
@@ -363,7 +363,7 @@ class TestFindAvailableReviewer:
             self._create_artifact_with_metadata(2, 2, 102, "alice"),
         ]
 
-        with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+        with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
             mock_find.return_value = artifacts
 
             # Act
@@ -387,7 +387,7 @@ class TestFindAvailableReviewer:
             self._create_artifact_with_metadata(1, 1, 101, "alice"),
         ]
 
-        with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+        with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
             mock_find.return_value = artifacts
 
             # Act
@@ -409,7 +409,7 @@ class TestFindAvailableReviewer:
         # Arrange - alice and bob both have capacity
         artifacts = []
 
-        with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+        with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
             mock_find.return_value = artifacts
 
             # Act
@@ -448,7 +448,7 @@ class TestFindAvailableReviewer:
             self._create_artifact_with_metadata(5, 5, 105, "charlie"),
         ]
 
-        with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+        with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
             mock_find.return_value = artifacts
 
             # Act
@@ -477,11 +477,11 @@ class TestFindAvailableReviewer:
         """Should handle missing GITHUB_REPOSITORY environment variable"""
         # Arrange - no GITHUB_REPOSITORY env var
         with patch.dict(os.environ, {}, clear=True):
-            with patch('claudestep.application.services.reviewer_management_service.find_project_artifacts') as mock_find:
+            with patch('claudestep.services.reviewer_management_service.find_project_artifacts') as mock_find:
                 mock_find.return_value = []
 
                 # Create service with empty repo
-                from claudestep.application.services.metadata_service import MetadataService
+                from claudestep.services.metadata_service import MetadataService
                 from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
                 metadata_store = GitHubMetadataStore("")
                 metadata_service = MetadataService(metadata_store)

@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from claudestep.application.services.artifact_operations_service import (
+from claudestep.services.artifact_operations_service import (
     ProjectArtifact,
     TaskMetadata,
     find_in_progress_tasks,
@@ -205,8 +205,8 @@ class TestParseTaskIndexFromName:
 class TestFindProjectArtifacts:
     """Test suite for find_project_artifacts function"""
 
-    @patch("claudestep.application.services.artifact_operations_service.gh_api_call")
-    @patch("claudestep.application.services.pr_operations_service.PROperationsService")
+    @patch("claudestep.services.artifact_operations_service.gh_api_call")
+    @patch("claudestep.services.pr_operations_service.PROperationsService")
     def test_find_project_artifacts_with_open_prs(
         self, mock_pr_service_class, mock_gh_api_call
     ):
@@ -248,8 +248,8 @@ class TestFindProjectArtifacts:
         assert result[0].workflow_run_id == 100
         assert result[0].metadata is None
 
-    @patch("claudestep.application.services.artifact_operations_service.gh_api_call")
-    @patch("claudestep.application.services.pr_operations_service.PROperationsService")
+    @patch("claudestep.services.artifact_operations_service.gh_api_call")
+    @patch("claudestep.services.pr_operations_service.PROperationsService")
     def test_find_project_artifacts_filters_by_project_name(
         self, mock_pr_service_class, mock_gh_api_call
     ):
@@ -279,9 +279,9 @@ class TestFindProjectArtifacts:
         assert result[0].artifact_name == "task-metadata-test-1.json"
         assert result[1].artifact_name == "task-metadata-test-2.json"
 
-    @patch("claudestep.application.services.artifact_operations_service.download_artifact_json")
-    @patch("claudestep.application.services.artifact_operations_service.gh_api_call")
-    @patch("claudestep.application.services.pr_operations_service.PROperationsService")
+    @patch("claudestep.services.artifact_operations_service.download_artifact_json")
+    @patch("claudestep.services.artifact_operations_service.gh_api_call")
+    @patch("claudestep.services.pr_operations_service.PROperationsService")
     def test_find_project_artifacts_downloads_metadata_when_requested(
         self, mock_pr_service_class, mock_gh_api_call, mock_download
     ):
@@ -319,8 +319,8 @@ class TestFindProjectArtifacts:
         assert result[0].metadata.reviewer == "alice"
         mock_download.assert_called_once_with("owner/repo", 1)
 
-    @patch("claudestep.application.services.artifact_operations_service.gh_api_call")
-    @patch("claudestep.application.services.pr_operations_service.PROperationsService")
+    @patch("claudestep.services.artifact_operations_service.gh_api_call")
+    @patch("claudestep.services.pr_operations_service.PROperationsService")
     def test_find_project_artifacts_skips_failed_runs(
         self, mock_pr_service_class, mock_gh_api_call
     ):
@@ -347,12 +347,12 @@ class TestFindProjectArtifacts:
         assert mock_gh_api_call.call_count == 2
 
     @patch(
-        "claudestep.application.services.artifact_operations_service._get_artifacts_for_run"
+        "claudestep.services.artifact_operations_service._get_artifacts_for_run"
     )
     @patch(
-        "claudestep.application.services.artifact_operations_service.gh_api_call"
+        "claudestep.services.artifact_operations_service.gh_api_call"
     )
-    @patch("claudestep.application.services.pr_operations_service.PROperationsService")
+    @patch("claudestep.services.pr_operations_service.PROperationsService")
     def test_find_project_artifacts_deduplicates_artifacts(
         self, mock_pr_service_class, mock_gh_api_call, mock_get_artifacts
     ):
@@ -385,9 +385,9 @@ class TestFindProjectArtifacts:
         assert mock_gh_api_call.call_count == 1  # Called once for workflow runs
         assert mock_get_artifacts.call_count == 2  # Called for each successful run
 
-    @patch("claudestep.application.services.artifact_operations_service.download_artifact_json")
-    @patch("claudestep.application.services.artifact_operations_service.gh_api_call")
-    @patch("claudestep.application.services.pr_operations_service.PROperationsService")
+    @patch("claudestep.services.artifact_operations_service.download_artifact_json")
+    @patch("claudestep.services.artifact_operations_service.gh_api_call")
+    @patch("claudestep.services.pr_operations_service.PROperationsService")
     def test_find_project_artifacts_handles_metadata_parsing_errors(
         self, mock_pr_service_class, mock_gh_api_call, mock_download, capsys
     ):
@@ -415,8 +415,8 @@ class TestFindProjectArtifacts:
         captured = capsys.readouterr()
         assert "Warning: Failed to parse metadata" in captured.out
 
-    @patch("claudestep.application.services.artifact_operations_service.gh_api_call")
-    @patch("claudestep.application.services.pr_operations_service.PROperationsService")
+    @patch("claudestep.services.artifact_operations_service.gh_api_call")
+    @patch("claudestep.services.pr_operations_service.PROperationsService")
     def test_find_project_artifacts_handles_api_errors(
         self, mock_pr_service_class, mock_gh_api_call, capsys
     ):
@@ -440,7 +440,7 @@ class TestFindProjectArtifacts:
 class TestGetArtifactMetadata:
     """Test suite for get_artifact_metadata function"""
 
-    @patch("claudestep.application.services.artifact_operations_service.download_artifact_json")
+    @patch("claudestep.services.artifact_operations_service.download_artifact_json")
     def test_get_artifact_metadata_returns_parsed_metadata(self, mock_download):
         """Should download artifact and parse metadata"""
         # Arrange
@@ -464,7 +464,7 @@ class TestGetArtifactMetadata:
         assert result.reviewer == "bob"
         mock_download.assert_called_once_with("owner/repo", 42)
 
-    @patch("claudestep.application.services.artifact_operations_service.download_artifact_json")
+    @patch("claudestep.services.artifact_operations_service.download_artifact_json")
     def test_get_artifact_metadata_returns_none_when_download_fails(
         self, mock_download
     ):
@@ -478,7 +478,7 @@ class TestGetArtifactMetadata:
         # Assert
         assert result is None
 
-    @patch("claudestep.application.services.artifact_operations_service.download_artifact_json")
+    @patch("claudestep.services.artifact_operations_service.download_artifact_json")
     def test_get_artifact_metadata_returns_none_when_parsing_fails(
         self, mock_download, capsys
     ):
@@ -498,7 +498,7 @@ class TestGetArtifactMetadata:
 class TestFindInProgressTasks:
     """Test suite for find_in_progress_tasks convenience function"""
 
-    @patch("claudestep.application.services.artifact_operations_service.find_project_artifacts")
+    @patch("claudestep.services.artifact_operations_service.find_project_artifacts")
     def test_find_in_progress_tasks_returns_task_indices(self, mock_find_artifacts):
         """Should return set of task indices from open PR artifacts"""
         # Arrange
@@ -533,7 +533,7 @@ class TestFindInProgressTasks:
             download_metadata=False,
         )
 
-    @patch("claudestep.application.services.artifact_operations_service.find_project_artifacts")
+    @patch("claudestep.services.artifact_operations_service.find_project_artifacts")
     def test_find_in_progress_tasks_filters_none_indices(self, mock_find_artifacts):
         """Should exclude artifacts with unparseable task indices"""
         # Arrange
@@ -556,7 +556,7 @@ class TestFindInProgressTasks:
         # Assert
         assert result == {1}  # Only valid index
 
-    @patch("claudestep.application.services.artifact_operations_service.find_project_artifacts")
+    @patch("claudestep.services.artifact_operations_service.find_project_artifacts")
     def test_find_in_progress_tasks_returns_empty_set_when_no_artifacts(
         self, mock_find_artifacts
     ):
@@ -574,7 +574,7 @@ class TestFindInProgressTasks:
 class TestGetReviewerAssignments:
     """Test suite for get_reviewer_assignments convenience function"""
 
-    @patch("claudestep.application.services.artifact_operations_service.find_project_artifacts")
+    @patch("claudestep.services.artifact_operations_service.find_project_artifacts")
     def test_get_reviewer_assignments_returns_pr_to_reviewer_mapping(
         self, mock_find_artifacts
     ):
@@ -626,7 +626,7 @@ class TestGetReviewerAssignments:
             download_metadata=True,
         )
 
-    @patch("claudestep.application.services.artifact_operations_service.find_project_artifacts")
+    @patch("claudestep.services.artifact_operations_service.find_project_artifacts")
     def test_get_reviewer_assignments_filters_artifacts_without_metadata(
         self, mock_find_artifacts
     ):
@@ -662,7 +662,7 @@ class TestGetReviewerAssignments:
         # Assert
         assert result == {10: "alice"}  # Only artifact with metadata
 
-    @patch("claudestep.application.services.artifact_operations_service.find_project_artifacts")
+    @patch("claudestep.services.artifact_operations_service.find_project_artifacts")
     def test_get_reviewer_assignments_returns_empty_dict_when_no_artifacts(
         self, mock_find_artifacts
     ):

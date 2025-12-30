@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from claudestep.application.formatters.table_formatter import TableFormatter
+from claudestep.services.formatters.table_formatter import TableFormatter
 
 
 class MarkdownFormatter:
