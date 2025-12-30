@@ -60,17 +60,16 @@ tests/
 │   │   │   └── test_actions.py
 │   │   └── filesystem/
 │   │       └── test_operations.py
-│   └── application/                      # Application layer tests
+│   └── services/                         # Service Layer tests
 │       ├── formatters/
 │       │   └── test_table_formatter.py
-│       └── services/
-│           ├── test_pr_operations.py
-│           ├── test_task_management.py
-│           ├── test_reviewer_management.py
-│           ├── test_project_detection.py
-│           ├── test_artifact_operations.py
-│           ├── test_metadata_service.py
-│           └── test_statistics_service.py
+│       ├── test_pr_operations.py
+│       ├── test_task_management.py
+│       ├── test_reviewer_management.py
+│       ├── test_project_detection.py
+│       ├── test_artifact_operations.py
+│       ├── test_metadata_service.py
+│       └── test_statistics_service.py
 ├── integration/                          # Integration tests
 │   └── cli/                              # CLI command integration tests
 │       └── commands/
@@ -91,8 +90,8 @@ tests/
 
 1. **Domain Tests** (`tests/unit/domain/`) - Test models, configuration, exceptions
 2. **Infrastructure Tests** (`tests/unit/infrastructure/`) - Test external integrations (git, GitHub, filesystem)
-3. **Application Tests** (`tests/unit/application/`) - Test business logic and services
-4. **CLI Integration Tests** (`tests/integration/cli/`) - Test command orchestration across multiple components
+3. **Service Layer Tests** (`tests/unit/services/`) - Test business logic in service classes
+4. **CLI Integration Tests** (`tests/integration/cli/`) - Test command orchestration of service classes
 5. **E2E Tests** (`tests/e2e/`) - Test complete workflows with real GitHub API
 
 ## Test Style Guide
@@ -184,15 +183,15 @@ def test_find_available_reviewer_calls_check_capacity_for_each(mock_check):
 
 ### 2. Mock at System Boundaries
 
-**✅ GOOD - Mock external services and inject dependencies:**
+**✅ GOOD - Mock service dependencies and external services:**
 ```python
 def test_reviewer_service_finds_available_reviewer():
     """Should find reviewer with capacity using mocked dependencies"""
-    # Arrange - Mock the metadata service dependency
+    # Arrange - Mock the metadata service dependency (Service Layer pattern)
     mock_metadata_service = Mock()
     mock_metadata_service.get_project.return_value = project_with_prs
 
-    # Instantiate service with mocked dependency
+    # Instantiate service with mocked dependency (dependency injection)
     service = ReviewerManagementService(
         repo="owner/repo",
         metadata_service=mock_metadata_service
@@ -203,10 +202,10 @@ def test_reviewer_service_finds_available_reviewer():
         ReviewerConfig(username="bob", maxOpenPRs=2)
     ]
 
-    # Act
+    # Act - Test service business logic
     result = service.find_available_reviewer(reviewers, "project")
 
-    # Assert
+    # Assert - Verify service behavior
     assert result.username == "bob"
     mock_metadata_service.get_project.assert_called()
 ```
@@ -448,12 +447,12 @@ Tests run automatically on:
 
 ## Example Tests
 
-### Testing a Command with Service Classes
+### Testing a Command with Service Classes (Service Layer Pattern)
 
 ```python
 # tests/integration/cli/commands/test_prepare.py
 class TestCmdPrepare:
-    """Tests for the prepare command"""
+    """Tests for the prepare command - demonstrates Service Layer testing"""
 
     def test_successful_preparation_with_services(
         self,
@@ -462,8 +461,8 @@ class TestCmdPrepare:
         sample_spec_file,
         mock_github_actions_helper
     ):
-        """Should execute complete preparation workflow using service classes"""
-        # Arrange - Mock service classes at the boundary
+        """Should orchestrate services to execute complete preparation workflow"""
+        # Arrange - Mock Service Layer classes (following Service Layer pattern)
         with patch('claudestep.cli.commands.prepare.ProjectDetectionService') as MockProjectService:
             with patch('claudestep.cli.commands.prepare.TaskManagementService') as MockTaskService:
                 with patch('claudestep.cli.commands.prepare.ReviewerManagementService') as MockReviewerService:
@@ -472,35 +471,35 @@ class TestCmdPrepare:
                     mock_task_service = MockTaskService.return_value
                     mock_reviewer_service = MockReviewerService.return_value
 
-                    # Configure mock behavior
+                    # Configure mock service behavior
                     mock_project_service.detect_project_from_pr.return_value = "test-project"
                     mock_task_service.find_next_available_task.return_value = task_metadata
                     mock_reviewer_service.find_available_reviewer.return_value = reviewer_config
 
-                    # Act
+                    # Act - Test command orchestration
                     result = cmd_prepare(args, mock_github_actions_helper)
 
-                    # Assert
+                    # Assert - Verify service orchestration
                     assert result == 0
-                    # Verify service instantiation
+                    # Verify services were instantiated with correct dependencies
                     MockProjectService.assert_called_once_with(repo="owner/repo")
                     MockTaskService.assert_called_once()
-                    # Verify service methods were called
+                    # Verify service methods were called in correct sequence
                     mock_project_service.detect_project_from_pr.assert_called_once()
                     mock_task_service.find_next_available_task.assert_called_once()
                     mock_github_actions_helper.write_output.assert_any_call('task_id', '2')
 ```
 
-### Testing a Service Class
+### Testing a Service Class (Service Layer Pattern)
 
 ```python
-# tests/unit/application/services/test_task_management.py
+# tests/unit/services/test_task_management.py
 class TestTaskManagementService:
-    """Tests for TaskManagementService class"""
+    """Tests for TaskManagementService - demonstrates Service Layer testing"""
 
     def test_find_next_available_task_returns_first_unchecked(self):
         """Should return the first unchecked task from spec content"""
-        # Arrange
+        # Arrange - Mock service dependencies (dependency injection)
         mock_metadata_service = Mock()
         service = TaskManagementService(
             repo="owner/repo",
@@ -512,16 +511,16 @@ class TestTaskManagementService:
         - [ ] Future task
         """
 
-        # Act
+        # Act - Test service business logic
         result = service.find_next_available_task(spec_content)
 
-        # Assert
+        # Assert - Verify service behavior
         assert result.description == "Next task to do"
         assert result.index == 2
 
     def test_static_method_can_be_called_without_instance(self):
         """Should call static methods directly on the class"""
-        # Act
+        # Act - Test static utility method
         task_id = TaskManagementService.generate_task_id("project", 42)
 
         # Assert

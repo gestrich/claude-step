@@ -246,17 +246,16 @@ tests/
 │   │   │   └── test_actions.py          # GitHub Actions helpers
 │   │   └── filesystem/
 │   │       └── test_operations.py       # File I/O operations
-│   └── application/                      # Application layer tests
+│   └── services/                         # Service Layer tests
 │       ├── formatters/
 │       │   └── test_table_formatter.py  # Table formatting
-│       └── services/
-│           ├── test_pr_operations.py           # PR management
-│           ├── test_task_management.py         # Task finding/completion
-│           ├── test_reviewer_management.py     # Reviewer assignment
-│           ├── test_project_detection.py       # Project detection
-│           ├── test_artifact_operations.py     # Artifact management
-│           ├── test_metadata_service.py        # Metadata operations
-│           └── test_statistics_service.py      # Statistics collection
+│       ├── test_pr_operations.py        # PR management service
+│       ├── test_task_management.py      # Task management service
+│       ├── test_reviewer_management.py  # Reviewer management service
+│       ├── test_project_detection.py    # Project detection service
+│       ├── test_artifact_operations.py  # Artifact operations service
+│       ├── test_metadata_service.py     # Metadata service
+│       └── test_statistics_service.py   # Statistics service
 ├── integration/                          # Integration tests
 │   └── cli/                              # CLI command integration tests
 │       └── commands/
@@ -277,7 +276,7 @@ ClaudeStep follows a **layered architecture**, and we test each layer differentl
 │          CLI Layer                      │  ← Test command orchestration
 │  (commands: prepare, finalize, etc.)    │     Mock everything below
 ├─────────────────────────────────────────┤
-│       Application Layer                 │  ← Test business logic
+│       Service Layer                     │  ← Test business logic
 │  (services: task mgmt, reviewer mgmt)   │     Mock infrastructure
 ├─────────────────────────────────────────┤
 │     Infrastructure Layer                │  ← Test external integrations
@@ -442,9 +441,9 @@ class TestGitOperations:
 
 **Key principle:** Infrastructure tests verify we call external systems correctly and handle their responses/errors.
 
-### Application Layer (95% average coverage)
+### Service Layer (95% average coverage)
 
-**Files:** `src/claudestep/application/services/`
+**Files:** `src/claudestep/services/`
 - `task_management.py` - Find tasks, mark complete, generate task IDs
 - `reviewer_management.py` - Find available reviewers, check capacity
 - `pr_operations.py` - Create PRs, manage PR lifecycle
@@ -454,53 +453,69 @@ class TestGitOperations:
 **Testing approach:**
 - ✅ **Mock infrastructure** - Mock git, GitHub API, filesystem
 - ✅ **Test business logic** - Reviewer selection, task finding algorithms
+- ✅ **Test service instantiation** - Verify services are created with correct dependencies
 - ✅ **Test edge cases** - No reviewers available, all tasks complete, etc.
 
-**What to mock:** Infrastructure layer (subprocess, GitHub API, file I/O)
+**What to mock:** Infrastructure layer (subprocess, GitHub API, file I/O) and service dependencies
 
 **Example:**
 ```python
-class TestFindAvailableReviewer:
-    """Tests for find_available_reviewer function"""
+class TestReviewerManagementService:
+    """Tests for ReviewerManagementService class"""
 
-    def test_returns_first_reviewer_under_capacity(self, mock_github_api):
+    def test_find_available_reviewer_returns_first_under_capacity(self):
         """Should return first reviewer with available PR capacity"""
-        # Arrange - Mock infrastructure
+        # Arrange - Mock service dependencies
+        mock_metadata_service = Mock()
+        service = ReviewerManagementService(
+            repo="owner/repo",
+            metadata_service=mock_metadata_service
+        )
+
         reviewers = [
             ReviewerConfig(username="alice", maxOpenPRs=2),
             ReviewerConfig(username="bob", maxOpenPRs=2)
         ]
-        mock_github_api.get_open_prs.side_effect = [
+
+        # Mock metadata service to return PR data
+        mock_metadata_service.get_open_prs_for_reviewer.side_effect = [
             [{"number": 1}, {"number": 2}],  # alice at capacity (2/2)
             [{"number": 3}]  # bob under capacity (1/2)
         ]
 
-        # Act - Test business logic
-        result = find_available_reviewer(reviewers, mock_github_api)
+        # Act - Test service business logic
+        result = service.find_available_reviewer(reviewers, "test-project")
 
         # Assert - Verify correct reviewer selected
         assert result.username == "bob"
 
-    def test_returns_none_when_all_at_capacity(self, mock_github_api):
+    def test_returns_none_when_all_reviewers_at_capacity(self):
         """Should return None when no reviewers have capacity"""
         # Arrange
+        mock_metadata_service = Mock()
+        service = ReviewerManagementService(
+            repo="owner/repo",
+            metadata_service=mock_metadata_service
+        )
+
         reviewers = [
             ReviewerConfig(username="alice", maxOpenPRs=1),
             ReviewerConfig(username="bob", maxOpenPRs=1)
         ]
-        mock_github_api.get_open_prs.side_effect = [
+
+        mock_metadata_service.get_open_prs_for_reviewer.side_effect = [
             [{"number": 1}],  # alice at capacity
             [{"number": 2}]   # bob at capacity
         ]
 
         # Act
-        result = find_available_reviewer(reviewers, mock_github_api)
+        result = service.find_available_reviewer(reviewers, "test-project")
 
         # Assert
         assert result is None
 ```
 
-**Key principle:** Application tests verify business logic while treating infrastructure as a black box.
+**Key principle:** Service Layer tests verify business logic while mocking infrastructure dependencies. Services are instantiated with mocked dependencies to ensure proper dependency injection.
 
 ### CLI Integration Tests (98% average coverage)
 
@@ -513,13 +528,15 @@ class TestFindAvailableReviewer:
 - `statistics.py` - Generate project statistics
 
 **Testing approach:**
-- ✅ **Mock everything below** - Mock application services, infrastructure
-- ✅ **Test command orchestration** - Verify correct sequence of operations
+- ✅ **Mock service layer** - Mock service classes and their methods
+- ✅ **Mock infrastructure** - Mock git, GitHub API, filesystem operations
+- ✅ **Test command orchestration** - Verify correct sequence of service calls
+- ✅ **Test service instantiation** - Verify services are created with correct dependencies
 - ✅ **Test output** - Verify GitHub Actions outputs are written correctly
 
-**What to mock:** Everything except the command logic itself
+**What to mock:** Service Layer classes and Infrastructure dependencies
 
-**Note:** These tests are in `tests/integration/` (not `tests/unit/`) because they test how multiple components work together, even though external dependencies are mocked.
+**Note:** These tests are in `tests/integration/` (not `tests/unit/`) because they test how commands orchestrate multiple service classes together, following the Service Layer pattern.
 
 **Example:**
 ```python
@@ -535,36 +552,42 @@ class TestCmdPrepare:
         sample_spec_file,
         mock_github_actions_helper
     ):
-        """Should execute complete preparation workflow successfully"""
-        # Arrange - Mock all dependencies
-        with patch('claudestep.cli.commands.prepare.detect_project_from_pr') as mock_detect:
-            with patch('claudestep.cli.commands.prepare.load_config') as mock_config:
-                with patch('claudestep.cli.commands.prepare.find_next_available_task') as mock_find:
-                    mock_detect.return_value = "test-project"
-                    mock_config.return_value = sample_config_dict
-                    mock_find.return_value = (2, "Implement feature X")
+        """Should execute complete preparation workflow using service classes"""
+        # Arrange - Mock service layer classes
+        with patch('claudestep.cli.commands.prepare.ProjectDetectionService') as MockProjectService:
+            with patch('claudestep.cli.commands.prepare.TaskManagementService') as MockTaskService:
+                with patch('claudestep.cli.commands.prepare.ReviewerManagementService') as MockReviewerService:
+                    # Set up mock service instances
+                    mock_project_service = MockProjectService.return_value
+                    mock_task_service = MockTaskService.return_value
+                    mock_reviewer_service = MockReviewerService.return_value
+
+                    # Configure mock service behavior
+                    mock_project_service.detect_project_from_pr.return_value = "test-project"
+                    mock_task_service.find_next_available_task.return_value = task_metadata
+                    mock_reviewer_service.find_available_reviewer.return_value = reviewer_config
 
                     # Act - Execute the command
-                    result = cmd_prepare(mock_github_actions_helper)
+                    result = cmd_prepare(args, mock_github_actions_helper)
 
-                    # Assert - Verify command succeeded and wrote outputs
+                    # Assert - Verify command succeeded and orchestrated services
                     assert result == 0
+                    MockProjectService.assert_called_once()
+                    mock_task_service.find_next_available_task.assert_called_once()
                     mock_github_actions_helper.write_output.assert_any_call('task_id', '2')
-                    mock_github_actions_helper.write_output.assert_any_call(
-                        'task_description', 'Implement feature X'
-                    )
 
     def test_exits_when_no_tasks_available(
         self,
         mock_github_actions_helper
     ):
         """Should exit gracefully when all tasks are complete"""
-        # Arrange
-        with patch('claudestep.cli.commands.prepare.find_next_available_task') as mock_find:
-            mock_find.return_value = None
+        # Arrange - Mock service layer
+        with patch('claudestep.cli.commands.prepare.TaskManagementService') as MockTaskService:
+            mock_task_service = MockTaskService.return_value
+            mock_task_service.find_next_available_task.return_value = None
 
             # Act
-            result = cmd_prepare(mock_github_actions_helper)
+            result = cmd_prepare(args, mock_github_actions_helper)
 
             # Assert
             assert result == 0
@@ -573,7 +596,7 @@ class TestCmdPrepare:
             )
 ```
 
-**Key principle:** CLI integration tests verify commands orchestrate lower layers correctly without re-testing those layers' logic.
+**Key principle:** CLI integration tests verify commands properly instantiate and orchestrate Service Layer classes without re-testing the service business logic.
 
 ## What to Test vs What Not to Test
 
@@ -895,7 +918,7 @@ class TestAsyncOperations:
 Real examples from the codebase:
 - **Domain tests:** `tests/unit/domain/test_models.py` - Testing domain models
 - **Infrastructure tests:** `tests/unit/infrastructure/git/test_operations.py` - Testing git operations
-- **Application tests:** `tests/unit/application/services/test_task_management.py` - Testing business logic
+- **Service Layer tests:** `tests/unit/services/test_task_management.py` - Testing service business logic
 - **CLI integration tests:** `tests/integration/cli/commands/test_prepare.py` - Testing command orchestration
 
 ### External Resources

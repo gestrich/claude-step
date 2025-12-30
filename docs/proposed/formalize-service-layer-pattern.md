@@ -167,7 +167,7 @@ src/claudestep/
 
 ---
 
-- [ ] Phase 3: Update Testing Documentation
+- [x] Phase 3: Update Testing Documentation ✅ **COMPLETED**
 
 **Purpose:** Ensure testing docs reflect Service Layer pattern terminology.
 
@@ -182,13 +182,31 @@ src/claudestep/
    - Show service instantiation in test examples
    - Document mocking service dependencies
 
-**Files to modify:**
+**Files modified:**
 - `docs/architecture/tests.md`
 - `docs/architecture/testing-guide.md`
 
-**Expected outcome:**
-- Testing docs use Service Layer terminology
-- Clear guidance on testing service classes
+**Outcome:**
+- ✅ Updated `docs/architecture/tests.md` to use "Service Layer" terminology throughout
+- ✅ Updated directory structure diagrams to show `services/` instead of `application/services/`
+- ✅ Updated layer-based testing strategy diagram to reference "Service Layer"
+- ✅ Updated "Service Layer (95% average coverage)" section with service class testing examples
+- ✅ Added guidance on testing service instantiation with dependency injection
+- ✅ Updated CLI integration tests section to explain orchestration of Service Layer classes
+- ✅ Updated code examples to show proper Service Layer testing patterns
+- ✅ Updated `docs/architecture/testing-guide.md` to use "Service Layer" terminology
+- ✅ Updated test layers list to reference "Service Layer Tests"
+- ✅ Updated testing examples to emphasize Service Layer pattern and dependency injection
+- ✅ Added comments in test examples explaining Service Layer concepts
+- ✅ All unit tests passing (411 passed) - documentation changes only
+- ✅ Pre-existing infrastructure test failures (13) remain unchanged - not related to this phase
+
+**Technical notes:**
+- Updated all references to "Application Layer" → "Service Layer" in testing documentation
+- Enhanced test examples to show service instantiation with mocked dependencies
+- Emphasized dependency injection pattern in Service Layer testing
+- Clarified that CLI integration tests verify service orchestration, not service business logic
+- All documentation now consistently uses Service Layer terminology aligned with Phase 1 and Phase 2
 
 ---
 
