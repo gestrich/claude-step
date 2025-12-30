@@ -306,7 +306,7 @@ The service layer is fully consistent with the explicit parameter pattern. The P
 - The new `test_collect_stats_custom_base_branch` test validates that the service correctly uses the base_branch parameter passed to its constructor, ensuring the refactoring in Phase 4 works as intended
 - Coverage for `statistics.py` command reached 100% with the integration tests
 
-- [ ] Phase 7: Update documentation
+- [x] Phase 7: Update documentation
 
 Update `docs/architecture/python-code-style.md` to add a new section on CLI command patterns:
 
@@ -398,6 +398,41 @@ elif args.command == "statistics":
 3. Ensure the Service Layer documentation reflects the environment variable handling pattern
 
 **Expected outcome:** All documentation is consistent with implementation
+
+**Status: ✅ Completed**
+
+**Documentation Updates:**
+
+1. **`docs/architecture/python-code-style.md`**:
+   - ✅ Added new section "CLI Command Pattern" after "Environment Variables and Configuration"
+   - ✅ Documented the adapter layer architecture: `GitHub Actions (env vars) → __main__.py (adapter) → commands (params) → services (params)`
+   - ✅ Provided anti-pattern example showing why commands shouldn't read environment variables
+   - ✅ Provided recommended pattern with complete code examples for:
+     - CLI argument definitions in `parser.py`
+     - Pure command function with explicit parameters in `commands/statistics.py`
+     - Adapter layer in `__main__.py` that reads env vars and CLI args
+   - ✅ Listed benefits: explicit dependencies, type safety, easy testing, works for both GitHub Actions and local development, discoverable via --help
+   - ✅ Updated existing "Environment Variables and Configuration" section example to reflect new adapter pattern
+   - ✅ Changed example from command reading env vars to adapter layer in `__main__.py` reading env vars
+
+2. **`docs/architecture/architecture.md`**:
+   - ✅ Updated `StatisticsService` constructor signature to include `base_branch: str = "main"` parameter (line 439)
+   - ✅ Updated example showing service using `self.base_branch` instead of hardcoded "main" (line 446)
+   - ✅ Updated "Commands Orchestrate Services" section to show new command signature with explicit parameters (lines 457-476)
+   - ✅ Updated command example to pass `base_branch` when instantiating `StatisticsService` (line 469)
+   - ✅ Updated "Available Services" section to document new constructor signature (line 1058)
+
+**Build Verification:**
+- ✅ All modified Python files compile successfully (`py_compile` passed)
+- ✅ Documentation is internally consistent
+- ✅ All examples reflect the implemented adapter layer pattern
+
+**Technical Notes:**
+- The documentation now clearly establishes the pattern that only `__main__.py` should read environment variables in the CLI layer
+- Command functions are documented as pure functions with explicit parameters
+- Service layer documentation shows the `base_branch` parameter flowing from adapter → command → service
+- Examples demonstrate both GitHub Actions usage (env vars) and local CLI usage (arguments)
+- The adapter pattern is now a documented architectural convention for all future CLI commands
 
 - [ ] Phase 8: Validation
 

@@ -159,26 +159,40 @@ class StatisticsService:
         # ... rest of implementation
 ```
 
-**CLI layer handles ALL environment variable reading:**
+**Adapter layer in `__main__.py` handles ALL environment variable reading:**
 
 ```python
-# In cli/commands/statistics.py
-def cmd_statistics(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
-    # ✅ CLI layer reads ALL environment variables
-    repo = os.environ.get("GITHUB_REPOSITORY", "")
-    base_branch = os.environ.get("BASE_BRANCH", "main")
-    label = os.environ.get("LABEL", "claudestep")
-    config_path = os.environ.get("CONFIG_PATH", "")
+# In __main__.py - Adapter layer reads environment variables and CLI args
+elif args.command == "statistics":
+    return cmd_statistics(
+        gh=gh,
+        repo=args.repo or os.environ.get("GITHUB_REPOSITORY", ""),
+        base_branch=args.base_branch or os.environ.get("BASE_BRANCH", "main"),
+        config_path=args.config_path or os.environ.get("CONFIG_PATH"),
+        days_back=args.days_back or int(os.environ.get("STATS_DAYS_BACK", "30")),
+        format_type=args.format or os.environ.get("STATS_FORMAT", "slack"),
+        slack_webhook_url=os.environ.get("SLACK_WEBHOOK_URL", "")
+    )
 
+# In cli/commands/statistics.py - Command receives explicit parameters
+def cmd_statistics(
+    gh: GitHubActionsHelper,
+    repo: str,
+    base_branch: str = "main",
+    config_path: Optional[str] = None,
+    days_back: int = 30,
+    format_type: str = "slack",
+    slack_webhook_url: str = ""
+) -> int:
+    """Orchestrate statistics workflow."""
     # ✅ Passes everything explicitly to service
     metadata_store = GitHubMetadataStore(repo)
     metadata_service = MetadataService(metadata_store)
     statistics_service = StatisticsService(repo, metadata_service, base_branch)
 
-    # ✅ Passes runtime parameters explicitly
+    # ✅ Uses parameters directly - no environment access
     report = statistics_service.collect_all_statistics(
-        config_path=config_path if config_path else None,
-        label=label
+        config_path=config_path if config_path else None
     )
 ```
 
@@ -226,6 +240,82 @@ class GitHubMetadataStore:
 ```
 
 Even here, prefer explicit parameters with environment variables as fallback defaults.
+
+## CLI Command Pattern
+
+### Principle: Commands Use Explicit Parameters, Not Environment Variables
+
+CLI command functions should receive explicit parameters and never read environment variables directly. The adapter layer in `__main__.py` is responsible for translating CLI arguments and environment variables into parameters.
+
+### Architecture Layers
+
+```
+GitHub Actions (env vars) → __main__.py (adapter) → commands (params) → services (params)
+```
+
+Only `__main__.py` reads environment variables in the CLI layer.
+
+### Anti-Pattern (❌ Avoid)
+
+```python
+# BAD: Command reads environment variables
+def cmd_statistics(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
+    repo = os.environ.get("GITHUB_REPOSITORY", "")  # Don't do this!
+    config_path = args.config_path  # Mixing args and env is confusing
+```
+
+**Problems:**
+- Hidden dependencies on environment variables
+- Awkward local usage (must set env vars)
+- Poor type safety with Namespace
+- Harder to test
+
+### Recommended Pattern (✅ Use This)
+
+```python
+# In cli/parser.py
+parser_statistics.add_argument("--repo", help="GitHub repository (owner/name)")
+parser_statistics.add_argument("--config-path", help="Path to configuration file")
+parser_statistics.add_argument("--days-back", type=int, default=30)
+
+# In cli/commands/statistics.py - Pure function with explicit parameters
+def cmd_statistics(
+    gh: GitHubActionsHelper,
+    repo: str,
+    config_path: Optional[str] = None,
+    days_back: int = 30
+) -> int:
+    """Orchestrate statistics workflow.
+
+    Args:
+        gh: GitHub Actions helper instance
+        repo: GitHub repository (owner/name)
+        config_path: Optional path to configuration file
+        days_back: Days to look back for statistics
+
+    Returns:
+        Exit code (0 for success, 1 for failure)
+    """
+    # Use parameters directly - no environment access!
+    metadata_store = GitHubMetadataStore(repo)
+    ...
+
+# In __main__.py - Adapter layer
+elif args.command == "statistics":
+    return cmd_statistics(
+        gh=gh,
+        repo=args.repo or os.environ.get("GITHUB_REPOSITORY", ""),
+        config_path=args.config_path or os.environ.get("CONFIG_PATH"),
+        days_back=args.days_back or int(os.environ.get("STATS_DAYS_BACK", "30"))
+    )
+```
+
+**Benefits:**
+- ✅ Explicit dependencies: Function signature shows exactly what's needed
+- ✅ Type safety: IDEs can autocomplete and type-check
+- ✅ Easy testing: Just pass parameters, no environment mocking
+- ✅ Works for both GitHub Actions and local development
+- ✅ Discoverable: `--help` shows all options
 
 ## Module-Level Code
 

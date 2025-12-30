@@ -436,13 +436,14 @@ class TaskManagementService:
 #### Services Can Depend on Other Services and Infrastructure
 ```python
 class StatisticsService:
-    def __init__(self, repo: str, metadata_service: MetadataService):
+    def __init__(self, repo: str, metadata_service: MetadataService, base_branch: str = "main"):
         self.repo = repo
         self.metadata_service = metadata_service  # Service dependency
+        self.base_branch = base_branch  # Configuration
 
     def collect_project_stats(self, project: str) -> ProjectStats:
-        # Uses infrastructure directly
-        spec_content = get_file_from_branch(self.repo, "main", f"claude-step/{project}/spec.md")
+        # Uses infrastructure directly with instance config
+        spec_content = get_file_from_branch(self.repo, self.base_branch, f"claude-step/{project}/spec.md")
 
         # Uses other services
         metadata = self.metadata_service.get_project(project)
@@ -453,13 +454,22 @@ class StatisticsService:
 
 #### Commands Orchestrate Services, Don't Implement Business Logic
 ```python
-# ✅ GOOD: Command orchestrates services
-def cmd_statistics(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
+# ✅ GOOD: Command orchestrates services with explicit parameters
+def cmd_statistics(
+    gh: GitHubActionsHelper,
+    repo: str,
+    base_branch: str = "main",
+    config_path: Optional[str] = None,
+    days_back: int = 30,
+    format_type: str = "slack",
+    slack_webhook_url: str = ""
+) -> int:
+    # Instantiate services with dependencies
     metadata_service = MetadataService(metadata_store)
-    stats_service = StatisticsService(repo, metadata_service)
+    stats_service = StatisticsService(repo, metadata_service, base_branch)
 
     # Delegate to service
-    report = stats_service.collect_all_statistics(days_back=30)
+    report = stats_service.collect_all_statistics(config_path=config_path)
 
     # Output results
     gh.write_output("slack_message", report.format_for_slack())
@@ -1045,7 +1055,7 @@ class ServiceName:
    - Static methods: `detect_project_paths()`
 
 5. **StatisticsService** - Statistics collection and aggregation
-   - Constructor: `__init__(self, repo: str, metadata_service: MetadataService)`
+   - Constructor: `__init__(self, repo: str, metadata_service: MetadataService, base_branch: str = "main")`
    - Instance methods: `collect_project_costs()`, `collect_team_member_stats()`, `collect_project_stats()`, `collect_all_statistics()`
    - Static methods: `extract_cost_from_comment()`, `count_tasks()`
 
