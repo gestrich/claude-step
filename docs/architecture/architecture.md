@@ -1375,12 +1375,68 @@ The infrastructure is **ready but dormant** - tested, documented, and available 
 4. **Type safety** - Services work with typed domain objects, not JSON dictionaries
 5. **Future-ready** - Infrastructure exists for synchronization without blocking current features
 
+### StatisticsService: Example of Metadata-First Architecture
+
+The `StatisticsService` exemplifies the metadata-first approach:
+
+**Before refactoring** (Phases 1-7 of refactor-statistics-service-architecture.md):
+```python
+# BAD: Direct GitHub API calls with JSON parsing in service layer
+def collect_team_member_stats(self, days_back: int, label: str):
+    # Raw GitHub CLI commands
+    merged_prs_json = run_gh_command(f"pr list --state merged --json ...")
+    open_prs_json = run_gh_command(f"pr list --state open --json ...")
+
+    # JSON parsing in service layer
+    merged_prs = json.loads(merged_prs_json)
+    for pr in merged_prs:
+        reviewer = pr["assignees"][0]["login"]  # String keys, no type safety
+```
+
+**After refactoring** (Current implementation):
+```python
+# GOOD: Metadata-based with type-safe domain models
+def collect_team_member_stats(self, days_back: int) -> Dict[str, TeamMemberStats]:
+    """Collect statistics from metadata configuration"""
+    stats_by_reviewer: Dict[str, TeamMemberStats] = {}
+
+    # Query metadata service (single source of truth)
+    projects = self.metadata_service.list_project_names()
+
+    for project in projects:
+        metadata = self.metadata_service.get_project(project)
+
+        # Type-safe access to pull requests
+        for pr in metadata.pull_requests:
+            reviewer = pr.reviewer  # Type-safe property
+            pr_ref = PRReference.from_metadata_pr(pr, project)  # Domain model
+
+            if pr.merged_at:
+                stats_by_reviewer[reviewer].add_merged_pr(pr_ref)
+            else:
+                stats_by_reviewer[reviewer].add_open_pr(pr_ref)
+
+    return stats_by_reviewer
+```
+
+**Key improvements:**
+- ✅ No `run_gh_command()` calls - uses metadata service
+- ✅ No `json.loads()` or dictionary navigation - uses domain models
+- ✅ Type-safe `pr.reviewer`, `pr.merged_at` properties
+- ✅ `PRReference` domain model encapsulates PR information
+- ✅ Single source of truth: metadata updated by merge triggers
+- ✅ Cross-project aggregation automatic (all projects in metadata)
+- ✅ No GitHub API rate limits for statistics queries
+
+For the complete refactoring process, see `docs/proposed/refactor-statistics-service-architecture.md`.
+
 ### Related Documentation
 
 - **GitHub domain models**: `src/claudestep/domain/github_models.py` - `GitHubUser`, `GitHubPullRequest`, `GitHubPullRequestList`
 - **GitHub operations**: `src/claudestep/infrastructure/github/operations.py` - `list_pull_requests()`, `list_merged_pull_requests()`, `list_open_pull_requests()`
 - **Metadata models**: `src/claudestep/domain/models.py` - `PullRequest`, `PRReference`, `HybridProjectMetadata`
 - **Statistics service**: `src/claudestep/application/services/statistics_service.py` - Uses metadata only, no GitHub API
+- **Refactoring documentation**: `docs/proposed/refactor-statistics-service-architecture.md` - Complete refactoring process (Phases 1-9)
 
 ---
 

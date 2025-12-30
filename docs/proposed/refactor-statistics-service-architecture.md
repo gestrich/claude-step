@@ -522,30 +522,48 @@ Documented GitHub PR operations for future synchronize command use cases.
 - All 510 core tests passing (domain, services, operations)
 - Metadata store integration tests failures expected (require actual GitHub API)
 
-- [ ] Phase 9: Update Architecture Documentation
+- [x] Phase 9: Update Architecture Documentation ✅
 
-Update all architecture documents to reflect the changes:
+**Implementation completed:**
 
-**Update `docs/architecture/architecture.md`:**
-- Document the single source of truth principle (metadata configuration)
-- Explain why GitHub API is not used for statistics
-- Show the data flow: merge triggers → metadata → statistics
+Updated all architecture documents to reflect the metadata-as-source-of-truth changes.
 
-**Update `docs/architecture/python-code-style.md`:**
-- Add StatisticsService as an example of proper layering
-- Show before/after of JSON parsing → domain models
+**Updated `docs/architecture/architecture.md`:**
+- Added "StatisticsService: Example of Metadata-First Architecture" section
+- Showed before/after code comparison demonstrating the refactoring
+- Listed 7 key improvements achieved by the refactoring
+- Added reference to complete refactoring documentation
+- Extended Related Documentation section with refactoring process link
 
-**Create decision record:**
+**Updated `docs/architecture/python-code-style.md`:**
+- Added comprehensive "Example: StatisticsService Refactoring" section under "Domain Models and Data Parsing"
+- Showed detailed before/after code comparison (JSON parsing vs domain models)
+- Listed 6 problems with old approach and 8 benefits of new approach
+- Included clean testing example demonstrating type-safe mocking
+- Added reference to complete 10-phase refactoring journey
+
+**Created decision record:**
 - `docs/architecture/decisions/adr-001-metadata-as-source-of-truth.md`
-- Explain why we chose metadata over GitHub API for statistics
-- Document trade-offs and future evolution path
+- Documented context, decision, and consequences of metadata-first architecture
+- Explained 3 alternatives considered and why they were rejected
+- Described future evolution path (synchronize command)
+- Included comprehensive code examples and trade-off analysis
+- Listed all related documentation and references
 
-**Files to modify:**
-- `docs/architecture/architecture.md`
-- `docs/architecture/python-code-style.md`
+**Files modified:**
+- `docs/architecture/architecture.md` - Added StatisticsService example section
+- `docs/architecture/python-code-style.md` - Added comprehensive refactoring example
 
-**Files to create:**
-- `docs/architecture/decisions/adr-001-metadata-as-source-of-truth.md`
+**Files created:**
+- `docs/architecture/decisions/adr-001-metadata-as-source-of-truth.md` - Complete ADR document
+
+**Implementation notes:**
+- Architecture documentation now clearly explains the metadata-first principle
+- StatisticsService serves as the canonical example of proper layering
+- ADR provides comprehensive context for future maintainers
+- All documentation cross-references the refactoring process document
+- Phase 8 had already documented GitHub operations for future use
+- 593 core tests passing (metadata store integration test failures expected)
 
 - [ ] Phase 10: Validation
 
