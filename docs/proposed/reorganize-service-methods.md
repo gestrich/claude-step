@@ -126,7 +126,7 @@ Reorganize methods in `src/claudestep/application/services/metadata_service.py` 
 - No changes needed - organization already follows best practices
 - Section comment style (with `====` separators) is more descriptive than the simple `#` style used in other services, providing better visual separation
 
-- [ ] Phase 6: Reorganize StatisticsService
+- [x] Phase 6: Reorganize StatisticsService
 
 Reorganize methods in `src/claudestep/application/services/statistics_service.py` following this order:
 
@@ -140,11 +140,15 @@ Reorganize methods in `src/claudestep/application/services/statistics_service.py
    - `count_tasks()` - Low-level: Count tasks from spec
    - `extract_cost_from_comment()` - Low-level: Parse cost from text
 
-Current issues:
-- Static utilities (`extract_cost_from_comment`, `count_tasks`) are mixed between high-level methods
-- Not organized from high to low abstraction level
-
-Expected result: Clear progression from highest-level "collect all" down through specific collectors to parsing utilities.
+**Completed**: Methods reorganized with clear section comments:
+- Added "# Public API methods" section after constructor
+- Reorganized public methods from highest-level (`collect_all_statistics()`) to mid-level methods
+- Added "# Static utility methods" section before static methods
+- Moved static utilities (`count_tasks()` and `extract_cost_from_comment()`) to end
+- All 56 unit tests pass successfully
+- StatisticsService maintains 77.55% code coverage
+- No changes to public API or functionality
+- Clear progression from high-level collection to low-level parsing utilities
 
 - [ ] Phase 7: Reorganize artifact_operations.py
 
