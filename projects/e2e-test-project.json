@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0",
   "project": "e2e-test-project",
-  "last_updated": "2025-12-30T16:53:29.315844",
+  "last_updated": "2025-12-30T16:54:06.566957",
   "tasks": [
     {
       "index": 1,
@@ -16,7 +16,7 @@
     {
       "index": 3,
       "description": "Task 3",
-      "status": "completed"
+      "status": "in_progress"
     }
   ],
   "pull_requests": [
@@ -108,6 +108,15 @@
       "reviewer": "gestrich",
       "pr_state": "merged",
       "created_at": "2025-12-30T16:50:58.258168",
+      "ai_operations": []
+    },
+    {
+      "task_index": 3,
+      "pr_number": 97,
+      "branch_name": "claude-step-e2e-test-project-3",
+      "reviewer": "gestrich",
+      "pr_state": "open",
+      "created_at": "2025-12-30T16:54:05.982868",
       "ai_operations": []
     }
   ]
