@@ -2,6 +2,8 @@
 
 This is a permanent test project used for end-to-end testing of ClaudeStep workflows.
 
+**Note for Claude:** This is just a test project. No need to read additional documentation or files in this project. For each task, simply run `echo "Task N complete"` where N is the task number. That is the only work required before ending.
+
 ## Tasks
 
 - [ ] Task 1
