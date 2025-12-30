@@ -71,7 +71,7 @@ Re-enable the `mark_task_complete()` function call in finalize.py so that spec.m
 - Checks for commits_count AFTER spec.md update to include spec commit in PR
 - Integration tests need updating with `get_file_from_branch` mock (deferred to Phase 4)
 
-- [ ] Phase 2: Add pull_request trigger to e2e workflow
+- [x] Phase 2: Add pull_request trigger to e2e workflow
 
 Add the `pull_request: types: [closed]` trigger to `.github/workflows/claudestep.yml` so the workflow runs automatically after PRs are merged.
 
@@ -109,6 +109,23 @@ jobs:
 - Workflow triggers automatically when ClaudeStep PRs are merged
 - Project name is correctly extracted from branch name
 - Only ClaudeStep PRs trigger the workflow (not unrelated PRs)
+
+**✅ Completed - Technical notes:**
+- Added `pull_request: types: [closed]` trigger after workflow_dispatch in `.github/workflows/claudestep.yml`
+- Created "Determine project and checkout ref" step that:
+  - Checks `github.event_name` to determine trigger type
+  - For workflow_dispatch: uses manual inputs as before
+  - For pull_request: validates PR has 'claudestep' label, extracts project name from branch using sed regex, uses PR base_ref for both base_branch and checkout_ref
+  - Sets skip=true if PR doesn't have claudestep label to prevent running on unrelated PRs
+  - Outputs: name (project), base_branch, and checkout_ref
+- Updated checkout step to use `steps.project.outputs.checkout_ref` and conditionally skip if not a claudestep PR
+- Updated ClaudeStep action call to:
+  - Use `steps.project.outputs.name` for project_name
+  - Use `steps.project.outputs.base_branch` for base_branch
+  - Pass `github.event.pull_request.number` as merged_pr_number
+  - Conditionally skip if not a claudestep PR
+- YAML validated successfully using Python yaml.safe_load()
+- The workflow now supports both manual dispatch (original behavior) and automatic trigger on PR close (new behavior)
 
 - [ ] Phase 3: Implement merged PR metadata update (Python-level)
 
