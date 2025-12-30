@@ -61,7 +61,7 @@ Each argument should have a help message describing its purpose.
 - Verified help text displays correctly with `python -m claudestep statistics --help`
 - Parser module imports and builds successfully
 
-- [ ] Phase 2: Refactor cmd_statistics to use explicit parameters
+- [x] Phase 2: Refactor cmd_statistics to use explicit parameters
 
 Update `src/claudestep/cli/commands/statistics.py`:
 
@@ -91,6 +91,16 @@ Changes needed:
 - Update docstring to document the new parameters
 
 **Expected outcome:** Command function is pure with no environment variable access
+
+**Status: ✅ Completed**
+- Updated function signature to use explicit parameters instead of `argparse.Namespace`
+- Removed `argparse` and `os` imports from the module
+- Removed all `os.environ.get()` calls from lines 35-41
+- Parameters now used directly throughout the function body
+- Updated docstring to document all seven parameters with their types and defaults
+- Added `from typing import Optional` for proper type annotation
+- Verified the module compiles and can be imported successfully
+- Function is now a pure function with explicit dependencies visible in the signature
 
 - [ ] Phase 3: Update __main__.py adapter for statistics command
 

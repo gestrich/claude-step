@@ -5,18 +5,24 @@ This command instantiates services and coordinates their operations but
 does not implement business logic directly.
 """
 
-import argparse
-import os
 from datetime import datetime
+from typing import Optional
 
-from claudestep.domain.exceptions import ConfigurationError
 from claudestep.infrastructure.github.actions import GitHubActionsHelper
 from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
 from claudestep.services.metadata_service import MetadataService
 from claudestep.services.statistics_service import StatisticsService
 
 
-def cmd_statistics(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
+def cmd_statistics(
+    gh: GitHubActionsHelper,
+    repo: str,
+    base_branch: str = "main",
+    config_path: Optional[str] = None,
+    days_back: int = 30,
+    format_type: str = "slack",
+    slack_webhook_url: str = "",
+) -> int:
     """Orchestrate statistics workflow using Service Layer classes.
 
     This command instantiates services and coordinates their operations but
@@ -24,21 +30,18 @@ def cmd_statistics(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
     where CLI acts as thin orchestration layer.
 
     Args:
-        args: Parsed command-line arguments
         gh: GitHub Actions helper instance
+        repo: GitHub repository (owner/name)
+        base_branch: Base branch to fetch specs from (default: "main")
+        config_path: Optional path to configuration file
+        days_back: Days to look back for statistics (default: 30)
+        format_type: Output format - "slack" or "json" (default: "slack")
+        slack_webhook_url: Slack webhook URL for posting statistics (default: "")
 
     Returns:
         Exit code (0 for success, 1 for failure)
     """
     try:
-        # Get environment variables
-        repo = os.environ.get("GITHUB_REPOSITORY", "")
-        config_path = os.environ.get("CONFIG_PATH", "")
-        days_back = int(os.environ.get("STATS_DAYS_BACK", "30"))
-        format_type = os.environ.get(
-            "STATS_FORMAT", "slack"
-        )  # slack, json, summary
-        slack_webhook_url = os.environ.get("SLACK_WEBHOOK_URL", "")  # From action input
 
         print("=== ClaudeStep Statistics Collection ===")
         print(f"Days back: {days_back}")
