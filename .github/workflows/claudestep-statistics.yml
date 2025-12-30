@@ -14,7 +14,9 @@ on:
       base_branch:
         description: 'Base branch where spec files are located'
         required: false
-        default: 'main'
+
+env:
+  DEFAULT_BASE_BRANCH: 'main'
 
 permissions:
   contents: read
@@ -33,18 +35,7 @@ jobs:
         # For external repos, use: gestrich/claude-step/statistics@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          base_branch: ${{ github.event.inputs.base_branch || 'main' }}
-          days_back: 7  # Last 7 days of activity
+          # config_path: refactor/my-project/configuration.json # Use for per-project statitics
+          base_branch: ${{ github.event.inputs.base_branch || env.DEFAULT_BASE_BRANCH }}
+          days_back: 30
           slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      # Example: Per-project statistics
-      # Uncomment to generate stats for a specific project only
-      #
-      # - name: Generate Project-Specific Statistics
-      #   id: project_stats
-      #   uses: ./statistics
-      #   with:
-      #     github_token: ${{ secrets.GITHUB_TOKEN }}
-      #     config_path: refactor/my-project/configuration.json
-      #     days_back: 30
-      #     slack_webhook_url: ${{ secrets.MY_PROJECT_SLACK_WEBHOOK }}
