@@ -31,7 +31,8 @@ class TestCheckProjectReady:
         spec_path.write_text("- [x] Task 1\n- [ ] Task 2\n- [ ] Task 3")
 
         # Mock the dependencies
-        with patch("claudestep.cli.commands.discover_ready.detect_project_paths") as mock_paths:
+        with patch("claudestep.cli.commands.discover_ready.ProjectDetectionService") as MockProjectService:
+            mock_paths = MockProjectService.detect_project_paths
             mock_paths.return_value = (
                 str(config_path),
                 str(spec_path),
@@ -74,7 +75,8 @@ class TestCheckProjectReady:
         base_dir = tmp_path / "claude-step" / project_name
         base_dir.mkdir(parents=True)
 
-        with patch("claudestep.cli.commands.discover_ready.detect_project_paths") as mock_paths:
+        with patch("claudestep.cli.commands.discover_ready.ProjectDetectionService") as MockProjectService:
+            mock_paths = MockProjectService.detect_project_paths
             mock_paths.return_value = (
                 str(base_dir / "configuration.yml"),  # Doesn't exist
                 str(base_dir / "spec.md"),
@@ -102,7 +104,8 @@ class TestCheckProjectReady:
         config_path = base_dir / "configuration.yml"
         config_path.write_text("reviewers:\n  - username: alice\n    maxOpenPRs: 2")
 
-        with patch("claudestep.cli.commands.discover_ready.detect_project_paths") as mock_paths:
+        with patch("claudestep.cli.commands.discover_ready.ProjectDetectionService") as MockProjectService:
+            mock_paths = MockProjectService.detect_project_paths
             mock_paths.return_value = (
                 str(config_path),
                 str(base_dir / "spec.md"),  # Doesn't exist
@@ -133,7 +136,8 @@ class TestCheckProjectReady:
         spec_path = base_dir / "spec.md"
         spec_path.write_text("- [ ] Task 1")
 
-        with patch("claudestep.cli.commands.discover_ready.detect_project_paths") as mock_paths:
+        with patch("claudestep.cli.commands.discover_ready.ProjectDetectionService") as MockProjectService:
+            mock_paths = MockProjectService.detect_project_paths
             mock_paths.return_value = (
                 str(config_path),
                 str(spec_path),
@@ -166,7 +170,8 @@ class TestCheckProjectReady:
         spec_path = base_dir / "spec.md"
         spec_path.write_text("Invalid content without checkboxes")
 
-        with patch("claudestep.cli.commands.discover_ready.detect_project_paths") as mock_paths:
+        with patch("claudestep.cli.commands.discover_ready.ProjectDetectionService") as MockProjectService:
+            mock_paths = MockProjectService.detect_project_paths
             mock_paths.return_value = (
                 str(config_path),
                 str(spec_path),
@@ -200,7 +205,8 @@ class TestCheckProjectReady:
         spec_path = base_dir / "spec.md"
         spec_path.write_text("- [ ] Task 1")
 
-        with patch("claudestep.cli.commands.discover_ready.detect_project_paths") as mock_paths:
+        with patch("claudestep.cli.commands.discover_ready.ProjectDetectionService") as MockProjectService:
+            mock_paths = MockProjectService.detect_project_paths
             mock_paths.return_value = (
                 str(config_path),
                 str(spec_path),
@@ -235,7 +241,8 @@ class TestCheckProjectReady:
         spec_path = base_dir / "spec.md"
         spec_path.write_text("- [x] Task 1\n- [x] Task 2")  # All completed
 
-        with patch("claudestep.cli.commands.discover_ready.detect_project_paths") as mock_paths:
+        with patch("claudestep.cli.commands.discover_ready.ProjectDetectionService") as MockProjectService:
+            mock_paths = MockProjectService.detect_project_paths
             mock_paths.return_value = (
                 str(config_path),
                 str(spec_path),
@@ -280,7 +287,8 @@ class TestCheckProjectReady:
         spec_path = base_dir / "spec.md"
         spec_path.write_text("- [ ] Task 1")
 
-        with patch("claudestep.cli.commands.discover_ready.detect_project_paths") as mock_paths:
+        with patch("claudestep.cli.commands.discover_ready.ProjectDetectionService") as MockProjectService:
+            mock_paths = MockProjectService.detect_project_paths
             mock_paths.return_value = (
                 str(config_path),
                 str(spec_path),
@@ -323,7 +331,8 @@ class TestCheckProjectReady:
         project_name = "test-project"
         repo = "owner/repo"
 
-        with patch("claudestep.cli.commands.discover_ready.detect_project_paths") as mock_paths:
+        with patch("claudestep.cli.commands.discover_ready.ProjectDetectionService") as MockProjectService:
+            mock_paths = MockProjectService.detect_project_paths
             mock_paths.side_effect = Exception("Unexpected error")
 
             # Act
@@ -349,7 +358,8 @@ class TestCheckProjectReady:
         spec_path = base_dir / "spec.md"
         spec_path.write_text("- [x] Task 1\n- [ ] Task 2\n- [ ] Task 3\n- [ ] Task 4\n- [x] Task 5")
 
-        with patch("claudestep.cli.commands.discover_ready.detect_project_paths") as mock_paths:
+        with patch("claudestep.cli.commands.discover_ready.ProjectDetectionService") as MockProjectService:
+            mock_paths = MockProjectService.detect_project_paths
             mock_paths.return_value = (
                 str(config_path),
                 str(spec_path),

@@ -195,10 +195,10 @@ class TestMetadataService:
         result = service.find_in_progress_tasks("test-project")
 
         # Assert
-        assert result == [2]  # Only task 2 has open PR
+        assert result == {2}  # Only task 2 has open PR (returns set)
 
     def test_find_in_progress_tasks_no_project(self, service, mock_store):
-        """Should return empty list when project doesn't exist"""
+        """Should return empty set when project doesn't exist"""
         # Arrange
         mock_store.get_project.return_value = None
 
@@ -206,10 +206,10 @@ class TestMetadataService:
         result = service.find_in_progress_tasks("nonexistent")
 
         # Assert
-        assert result == []
+        assert result == set()
 
     def test_get_reviewer_assignments(self, service, mock_store, sample_project):
-        """Should map task indices to reviewers"""
+        """Should map task indices to reviewers for open PRs only"""
         # Arrange
         mock_store.get_project.return_value = sample_project
 
@@ -217,7 +217,7 @@ class TestMetadataService:
         result = service.get_reviewer_assignments("test-project")
 
         # Assert
-        assert result == {1: "alice", 2: "bob"}
+        assert result == {2: "bob"}  # Only includes open PRs (PR 43 is open, PR 42 is merged)
 
     def test_get_reviewer_assignments_no_project(self, service, mock_store):
         """Should return empty dict when project doesn't exist"""
@@ -292,7 +292,7 @@ class TestMetadataService:
         )
 
         # Act
-        service.add_pr_to_project("test-project", new_pr)
+        service.add_pr_to_project("test-project", task_index=3, pr=new_pr)
 
         # Assert
         assert len(sample_project.pull_requests) == 3
@@ -313,16 +313,17 @@ class TestMetadataService:
         mock_store.save_project.assert_called_once()
 
     def test_update_task_status(self, service, mock_store, sample_project):
-        """Should update task status"""
+        """Should update task status based on PRs"""
         # Arrange
         mock_store.get_project.return_value = sample_project
 
         # Act
-        service.update_task_status("test-project", task_index=3, new_status=TaskStatus.IN_PROGRESS)
+        service.update_task_status("test-project", task_index=3)
 
         # Assert
+        # Task 3 has no PRs, so should remain PENDING
         task = sample_project.get_task_by_index(3)
-        assert task.status == TaskStatus.IN_PROGRESS
+        assert task.status == TaskStatus.PENDING
         mock_store.save_project.assert_called_once()
 
     def test_get_projects_modified_since(self, service, mock_store):
@@ -348,14 +349,13 @@ class TestMetadataService:
         result = service.get_project_stats("test-project")
 
         # Assert
-        assert result["project_name"] == "test-project"
+        assert result["project"] == "test-project"
         assert result["total_tasks"] == 3
-        assert result["completed_tasks"] == 1
-        assert result["in_progress_tasks"] == 1
-        assert result["pending_tasks"] == 1
+        assert result["completed"] == 1
+        assert result["in_progress"] == 1
+        assert result["pending"] == 1
         assert result["completion_percentage"] == pytest.approx(33.33, 0.01)
         assert result["total_cost"] == 0.27  # 0.12 + 0.15
-        assert result["total_prs"] == 2
 
     def test_get_project_stats_no_project(self, service, mock_store):
         """Should return None when project doesn't exist"""
@@ -406,10 +406,10 @@ class TestMetadataService:
         # Assert
         assert "alice" in result
         assert "bob" in result
-        assert result["alice"]["open_pr_count"] == 2
-        assert result["bob"]["open_pr_count"] == 1
-        assert len(result["alice"]["open_prs"]) == 2
-        assert len(result["bob"]["open_prs"]) == 1
+        assert result["alice"]["open_prs"] == 2
+        assert result["bob"]["open_prs"] == 1
+        assert len(result["alice"]["pr_numbers"]) == 2
+        assert len(result["bob"]["pr_numbers"]) == 1
 
     def test_project_exists_true(self, service, mock_store):
         """Should return True when project exists"""

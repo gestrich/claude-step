@@ -292,7 +292,7 @@ def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
                 project_metadata.tasks.append(task_obj)
 
         # Add PR to project
-        metadata_service.add_pr_to_project(project, int(task_index), pr_obj)
+        metadata_service.add_pr_to_project(project, task_index=int(task_index), pr=pr_obj)
         print(f"✅ Saved metadata to GitHub branch storage")
 
         # Write outputs

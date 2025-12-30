@@ -101,16 +101,18 @@ class TestCmdStatistics:
             },
         ):
             with patch(
-                "claudestep.cli.commands.statistics.collect_all_statistics"
-            ) as mock_collect:
-                mock_collect.return_value = sample_statistics_report
+                "claudestep.cli.commands.statistics.StatisticsService"
+            ) as mock_service_class:
+                mock_service = Mock()
+                mock_service.collect_all_statistics.return_value = sample_statistics_report
+                mock_service_class.return_value = mock_service
 
                 # Act
                 result = cmd_statistics(mock_args, mock_github_helper)
 
         # Assert
         assert result == 0
-        mock_collect.assert_called_once_with(config_path=None, days_back=30)
+        mock_service.collect_all_statistics.assert_called_once_with(config_path=None, days_back=30)
 
         # Verify Slack output was written
         slack_output_calls = [
@@ -146,16 +148,18 @@ class TestCmdStatistics:
             },
         ):
             with patch(
-                "claudestep.cli.commands.statistics.collect_all_statistics"
-            ) as mock_collect:
-                mock_collect.return_value = sample_statistics_report
+                "claudestep.cli.commands.statistics.StatisticsService"
+            ) as mock_service_class:
+                mock_service = Mock()
+                mock_service.collect_all_statistics.return_value = sample_statistics_report
+                mock_service_class.return_value = mock_service
 
                 # Act
                 result = cmd_statistics(mock_args, mock_github_helper)
 
         # Assert
         assert result == 0
-        mock_collect.assert_called_once_with(
+        mock_service.collect_all_statistics.assert_called_once_with(
             config_path="/path/to/config.yml", days_back=7
         )
 
@@ -178,8 +182,11 @@ class TestCmdStatistics:
         # Arrange
         with patch.dict("os.environ", {"STATS_FORMAT": "slack"}, clear=True):
             with patch(
-                "claudestep.cli.commands.statistics.collect_all_statistics"
-            ) as mock_collect:
+                "claudestep.cli.commands.statistics.StatisticsService"
+            ) as mock_service_class:
+                mock_service = Mock()
+                mock_collect = mock_service.collect_all_statistics
+                mock_service_class.return_value = mock_service
                 mock_collect.return_value = sample_statistics_report
 
                 # Act
@@ -196,8 +203,11 @@ class TestCmdStatistics:
         # Arrange
         with patch.dict("os.environ", {"STATS_FORMAT": "slack"}):
             with patch(
-                "claudestep.cli.commands.statistics.collect_all_statistics"
-            ) as mock_collect:
+                "claudestep.cli.commands.statistics.StatisticsService"
+            ) as mock_service_class:
+                mock_service = Mock()
+                mock_collect = mock_service.collect_all_statistics
+                mock_service_class.return_value = mock_service
                 # Mock format_leaderboard to return content
                 sample_statistics_report.format_leaderboard = Mock(
                     return_value="## Leaderboard\n1. bob - 7 PRs"
@@ -219,8 +229,11 @@ class TestCmdStatistics:
         # Arrange
         with patch.dict("os.environ", {"STATS_FORMAT": "slack"}):
             with patch(
-                "claudestep.cli.commands.statistics.collect_all_statistics"
-            ) as mock_collect:
+                "claudestep.cli.commands.statistics.StatisticsService"
+            ) as mock_service_class:
+                mock_service = Mock()
+                mock_collect = mock_service.collect_all_statistics
+                mock_service_class.return_value = mock_service
                 mock_collect.return_value = sample_statistics_report
 
                 # Act
@@ -247,8 +260,11 @@ class TestCmdStatistics:
         # Arrange
         with patch.dict("os.environ", {"STATS_FORMAT": "slack"}):
             with patch(
-                "claudestep.cli.commands.statistics.collect_all_statistics"
-            ) as mock_collect:
+                "claudestep.cli.commands.statistics.StatisticsService"
+            ) as mock_service_class:
+                mock_service = Mock()
+                mock_collect = mock_service.collect_all_statistics
+                mock_service_class.return_value = mock_service
                 mock_collect.return_value = sample_statistics_report
 
                 # Act
@@ -275,8 +291,11 @@ class TestCmdStatistics:
         # Arrange
         with patch.dict("os.environ", {"STATS_FORMAT": "slack"}):
             with patch(
-                "claudestep.cli.commands.statistics.collect_all_statistics"
-            ) as mock_collect:
+                "claudestep.cli.commands.statistics.StatisticsService"
+            ) as mock_service_class:
+                mock_service = Mock()
+                mock_collect = mock_service.collect_all_statistics
+                mock_service_class.return_value = mock_service
                 mock_collect.return_value = empty_statistics_report
 
                 # Act
@@ -295,8 +314,11 @@ class TestCmdStatistics:
         # Arrange
         with patch.dict("os.environ", {"STATS_FORMAT": "slack"}):
             with patch(
-                "claudestep.cli.commands.statistics.collect_all_statistics"
-            ) as mock_collect:
+                "claudestep.cli.commands.statistics.StatisticsService"
+            ) as mock_service_class:
+                mock_service = Mock()
+                mock_collect = mock_service.collect_all_statistics
+                mock_service_class.return_value = mock_service
                 mock_collect.side_effect = Exception("Test error")
 
                 # Act
@@ -333,8 +355,11 @@ class TestCmdStatistics:
             },
         ):
             with patch(
-                "claudestep.cli.commands.statistics.collect_all_statistics"
-            ) as mock_collect:
+                "claudestep.cli.commands.statistics.StatisticsService"
+            ) as mock_service_class:
+                mock_service = Mock()
+                mock_collect = mock_service.collect_all_statistics
+                mock_service_class.return_value = mock_service
                 mock_collect.return_value = sample_statistics_report
 
                 # Act
@@ -358,8 +383,11 @@ class TestCmdStatistics:
         # Arrange
         with patch.dict("os.environ", {"CONFIG_PATH": "", "STATS_FORMAT": "slack"}):
             with patch(
-                "claudestep.cli.commands.statistics.collect_all_statistics"
-            ) as mock_collect:
+                "claudestep.cli.commands.statistics.StatisticsService"
+            ) as mock_service_class:
+                mock_service = Mock()
+                mock_collect = mock_service.collect_all_statistics
+                mock_service_class.return_value = mock_service
                 mock_collect.return_value = sample_statistics_report
 
                 # Act
@@ -378,8 +406,11 @@ class TestCmdStatistics:
         slack_output = "Slack formatted report text"
         with patch.dict("os.environ", {"STATS_FORMAT": "slack"}):
             with patch(
-                "claudestep.cli.commands.statistics.collect_all_statistics"
-            ) as mock_collect:
+                "claudestep.cli.commands.statistics.StatisticsService"
+            ) as mock_service_class:
+                mock_service = Mock()
+                mock_collect = mock_service.collect_all_statistics
+                mock_service_class.return_value = mock_service
                 sample_statistics_report.format_for_slack = Mock(
                     return_value=slack_output
                 )
@@ -401,8 +432,11 @@ class TestCmdStatistics:
         # Arrange
         with patch.dict("os.environ", {"STATS_FORMAT": "slack"}):
             with patch(
-                "claudestep.cli.commands.statistics.collect_all_statistics"
-            ) as mock_collect:
+                "claudestep.cli.commands.statistics.StatisticsService"
+            ) as mock_service_class:
+                mock_service = Mock()
+                mock_collect = mock_service.collect_all_statistics
+                mock_service_class.return_value = mock_service
                 mock_collect.return_value = sample_statistics_report
 
                 with patch(
@@ -427,8 +461,11 @@ class TestCmdStatistics:
         # Arrange
         with patch.dict("os.environ", {"STATS_FORMAT": "json"}):
             with patch(
-                "claudestep.cli.commands.statistics.collect_all_statistics"
-            ) as mock_collect:
+                "claudestep.cli.commands.statistics.StatisticsService"
+            ) as mock_service_class:
+                mock_service = Mock()
+                mock_collect = mock_service.collect_all_statistics
+                mock_service_class.return_value = mock_service
                 mock_collect.return_value = sample_statistics_report
 
                 # Act
@@ -453,8 +490,11 @@ class TestCmdStatistics:
         # Arrange
         with patch.dict("os.environ", {"STATS_DAYS_BACK": "90", "STATS_FORMAT": "json"}):
             with patch(
-                "claudestep.cli.commands.statistics.collect_all_statistics"
-            ) as mock_collect:
+                "claudestep.cli.commands.statistics.StatisticsService"
+            ) as mock_service_class:
+                mock_service = Mock()
+                mock_collect = mock_service.collect_all_statistics
+                mock_service_class.return_value = mock_service
                 mock_collect.return_value = sample_statistics_report
 
                 # Act
@@ -471,8 +511,11 @@ class TestCmdStatistics:
         # Arrange
         with patch.dict("os.environ", {"STATS_FORMAT": "slack"}):
             with patch(
-                "claudestep.cli.commands.statistics.collect_all_statistics"
-            ) as mock_collect:
+                "claudestep.cli.commands.statistics.StatisticsService"
+            ) as mock_service_class:
+                mock_service = Mock()
+                mock_collect = mock_service.collect_all_statistics
+                mock_service_class.return_value = mock_service
                 # Mock format_leaderboard to return empty string
                 sample_statistics_report.format_leaderboard = Mock(return_value="")
                 mock_collect.return_value = sample_statistics_report
