@@ -1,0 +1,24 @@
+{
+  "schema_version": "2.0",
+  "project": "e2e-test-project",
+  "last_updated": "2025-12-30T22:42:17.631557",
+  "tasks": [
+    {
+      "index": 1,
+      "description": "Task 1",
+      "status": "in_progress"
+    }
+  ],
+  "pull_requests": [
+    {
+      "task_index": 1,
+      "pr_number": 106,
+      "branch_name": "claude-step-e2e-test-project-1",
+      "reviewer": "gestrich",
+      "pr_state": "open",
+      "created_at": "2025-12-30T22:42:16.650583",
+      "title": "ClaudeStep: Task 1",
+      "ai_operations": []
+    }
+  ]
+}
