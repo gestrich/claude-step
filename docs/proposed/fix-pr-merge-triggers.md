@@ -170,7 +170,7 @@ When a PR is merged and the workflow runs with `merged_pr_number`, update the me
 - Integration tests pass - the prepare command correctly handles merged PR metadata updates
 - The workflow will now update metadata when triggered by PR merge, then continue to prepare next task
 
-- [ ] Phase 4: Add tests for spec.md checkbox marking
+- [x] Phase 4: Add tests for spec.md checkbox marking
 
 Add or update tests to verify that spec.md is correctly updated during PR creation.
 
@@ -189,6 +189,19 @@ Add or update tests to verify that spec.md is correctly updated during PR creati
 - Tests verify spec.md is fetched from base branch
 - Tests verify `mark_task_complete()` is called with correct parameters
 - Tests verify spec.md is committed in the PR
+
+**✅ Completed - Technical notes:**
+- Updated `test_finalization_marks_task_complete_in_spec` to include `get_file_from_branch` and metadata service mocks
+- Added 6 new comprehensive tests for spec.md checkbox marking functionality:
+  1. `test_finalization_fetches_spec_from_base_branch` - Verifies spec.md is fetched from base branch via GitHub API with correct repository, branch, and path parameters
+  2. `test_finalization_creates_separate_commit_for_spec` - Verifies separate commit is created for spec.md changes with proper commit message
+  3. `test_finalization_handles_spec_fetch_failure_gracefully` - Verifies PR creation continues when spec.md fetch returns None
+  4. `test_finalization_handles_spec_fetch_exception_gracefully` - Verifies PR creation continues when spec.md fetch raises GitHubAPIError
+  5. `test_finalization_writes_spec_to_correct_path` - Verifies spec.md content is written to correct file path and directory is created
+  6. `test_finalization_skips_spec_commit_when_no_changes` - Verifies no spec.md commit is created when checkbox is already marked
+- All new tests properly mock `GitHubMetadataStore` and `MetadataService` (required by Phase 3 changes)
+- Tests verify the complete workflow: fetch → write → mark complete → commit
+- All 6 new tests pass successfully
 
 - [ ] Phase 5: Add tests for merged PR metadata updates
 

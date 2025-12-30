@@ -57,6 +57,19 @@ class TestCmdFinalize:
 - [ ] Tested locally
 """
 
+    @pytest.fixture
+    def common_mocks(self):
+        """Fixture providing commonly mocked objects for finalize tests"""
+        with patch("claudestep.cli.commands.finalize.GitHubMetadataStore") as mock_metadata_store:
+            with patch("claudestep.cli.commands.finalize.MetadataService") as mock_metadata_service:
+                with patch("claudestep.cli.commands.finalize.get_file_from_branch") as mock_get_file:
+                    mock_get_file.return_value = "- [ ] Task 1\n- [ ] Task 2"
+                    yield {
+                        "metadata_store": mock_metadata_store,
+                        "metadata_service": mock_metadata_service,
+                        "get_file_from_branch": mock_get_file
+                    }
+
     def test_successful_finalization_workflow(
         self, args, mock_gh, mock_env
     ):
@@ -67,41 +80,43 @@ class TestCmdFinalize:
                 with patch("claudestep.cli.commands.finalize.run_gh_command") as mock_gh_cmd:
                     with patch("claudestep.cli.commands.finalize.get_file_from_branch") as mock_get_file:
                         with patch("claudestep.cli.commands.finalize.mark_task_complete"):
-                            with patch("os.path.exists") as mock_exists:
-                                with patch("builtins.open", mock_open()):
-                                    with patch("os.getcwd") as mock_cwd:
-                                        with patch("os.makedirs"):
-                                            # Setup mocks
-                                            mock_cwd.return_value = "/workspace"
-                                            mock_exists.return_value = False
-                                            mock_get_file.return_value = "- [ ] Task 1\n- [ ] Task 2"
-                                            mock_git.side_effect = [
-                                                None,  # config user.name
-                                                None,  # config user.email
-                                                "M  file.py",  # status --porcelain (has changes)
-                                                None,  # add -A
-                                                "file.py",  # diff --cached --name-only (has staged)
-                                                None,  # commit
-                                                None,  # remote set-url
-                                                None,  # add spec_path
-                                                "spec.md",  # diff --cached (spec changed)
-                                                None,  # commit spec
-                                                "1",  # rev-list --count (1 commit)
-                                                None,  # push
-                                            ]
-                                            mock_gh_cmd.side_effect = [
-                                                "https://github.com/owner/repo/pull/42",  # pr create
-                                                json.dumps({"number": 42})  # pr view
-                                            ]
+                            with patch("claudestep.cli.commands.finalize.GitHubMetadataStore"):
+                                with patch("claudestep.cli.commands.finalize.MetadataService"):
+                                    with patch("os.path.exists") as mock_exists:
+                                        with patch("builtins.open", mock_open()):
+                                            with patch("os.getcwd") as mock_cwd:
+                                                with patch("os.makedirs"):
+                                                    # Setup mocks
+                                                    mock_cwd.return_value = "/workspace"
+                                                    mock_exists.return_value = False
+                                                    mock_get_file.return_value = "- [ ] Task 1\n- [ ] Task 2"
+                                                    mock_git.side_effect = [
+                                                        None,  # config user.name
+                                                        None,  # config user.email
+                                                        "M  file.py",  # status --porcelain (has changes)
+                                                        None,  # add -A
+                                                        "file.py",  # diff --cached --name-only (has staged)
+                                                        None,  # commit
+                                                        None,  # remote set-url
+                                                        None,  # add spec_path
+                                                        "spec.md",  # diff --cached (spec changed)
+                                                        None,  # commit spec
+                                                        "2",  # rev-list --count (2 commits)
+                                                        None,  # push
+                                                    ]
+                                                    mock_gh_cmd.side_effect = [
+                                                        "https://github.com/owner/repo/pull/42",  # pr create
+                                                        json.dumps({"number": 42})  # pr view
+                                                    ]
 
-                                            # Act
-                                            result = cmd_finalize(args, mock_gh)
+                                                    # Act
+                                                    result = cmd_finalize(args, mock_gh)
 
-                                            # Assert
-                                            assert result == 0
-                                            mock_gh.write_output.assert_any_call("pr_number", "42")
-                                            mock_gh.write_output.assert_any_call("pr_url", "https://github.com/owner/repo/pull/42")
-                                            mock_gh.write_step_summary.assert_any_call("✅ **Status**: PR created successfully")
+                                                    # Assert
+                                                    assert result == 0
+                                                    mock_gh.write_output.assert_any_call("pr_number", "42")
+                                                    mock_gh.write_output.assert_any_call("pr_url", "https://github.com/owner/repo/pull/42")
+                                                    mock_gh.write_step_summary.assert_any_call("✅ **Status**: PR created successfully")
 
     def test_finalization_skips_when_no_capacity(self, args, mock_gh, mock_env):
         """Should exit gracefully when HAS_CAPACITY is false"""
@@ -307,35 +322,44 @@ class TestCmdFinalize:
         with patch.dict("os.environ", mock_env):
             with patch("claudestep.cli.commands.finalize.run_git_command") as mock_git:
                 with patch("claudestep.cli.commands.finalize.run_gh_command") as mock_gh_cmd:
-                    with patch("claudestep.cli.commands.finalize.mark_task_complete") as mock_mark:
-                        with patch("os.path.exists") as mock_exists:
-                            with patch("os.getcwd") as mock_cwd:
-                                with patch("builtins.open", mock_open()):
-                                    # Setup mocks
-                                    mock_cwd.return_value = "/workspace"
-                                    mock_exists.return_value = False
-                                    mock_git.side_effect = [
-                                        None,  # config user.name
-                                        None,  # config user.email
-                                        "",  # status --porcelain
-                                        "1",  # rev-list --count
-                                        None,  # remote set-url
-                                        None,  # add spec
-                                        "",  # status --porcelain
-                                        None,  # push
-                                    ]
-                                    mock_gh_cmd.side_effect = [
-                                        "https://github.com/owner/repo/pull/42",
-                                        json.dumps({"number": 42})
-                                    ]
+                    with patch("claudestep.cli.commands.finalize.get_file_from_branch") as mock_get_file:
+                        with patch("claudestep.cli.commands.finalize.mark_task_complete") as mock_mark:
+                            with patch("os.path.exists") as mock_exists:
+                                with patch("os.getcwd") as mock_cwd:
+                                    with patch("builtins.open", mock_open()):
+                                        with patch("os.makedirs"):
+                                            # Setup mocks
+                                            mock_cwd.return_value = "/workspace"
+                                            mock_exists.return_value = False
+                                            mock_get_file.return_value = "- [ ] Task 1\n- [ ] Implement feature X\n- [ ] Task 3"
+                                            mock_git.side_effect = [
+                                                None,  # config user.name
+                                                None,  # config user.email
+                                                "",  # status --porcelain
+                                                None,  # remote set-url
+                                                None,  # add spec
+                                                "claude-step/my-project/spec.md",  # diff --cached (spec changed)
+                                                None,  # commit spec
+                                                "1",  # rev-list --count
+                                                None,  # push
+                                            ]
+                                            mock_gh_cmd.side_effect = [
+                                                "https://github.com/owner/repo/pull/42",
+                                                json.dumps({"number": 42})
+                                            ]
 
-                                    # Act
-                                    result = cmd_finalize(args, mock_gh)
+                                            # Act
+                                            result = cmd_finalize(args, mock_gh)
 
-                                    # Assert
-                                    assert result == 0
-                                    mock_mark.assert_called_once_with("claude-step/my-project/spec.md", "Implement feature X")
-                                    assert call(["add", "claude-step/my-project/spec.md"]) in mock_git.call_args_list
+                                            # Assert
+                                            assert result == 0
+                                            # Verify get_file_from_branch was called with correct parameters
+                                            mock_get_file.assert_called_once_with("owner/repo", "main", "claude-step/my-project/spec.md")
+                                            # Verify mark_task_complete was called
+                                            mock_mark.assert_called_once_with("/workspace/claude-step/my-project/spec.md", "Implement feature X")
+                                            # Verify spec.md was added and committed
+                                            assert call(["add", "/workspace/claude-step/my-project/spec.md"]) in mock_git.call_args_list
+                                            assert call(["commit", "-m", "Mark task 2 as complete in spec.md"]) in mock_git.call_args_list
 
     def test_finalization_skips_pr_when_no_commits(self, args, mock_gh, mock_env):
         """Should skip PR creation when no commits to push"""
@@ -982,3 +1006,235 @@ class TestCmdFinalize:
                                             assert any("## Task" in str(c) for c in write_calls)
                                             # Verify temp file was removed
                                             mock_remove.assert_called_once_with("/tmp/temp_pr_body")
+
+    def test_finalization_fetches_spec_from_base_branch(self, args, mock_gh, mock_env):
+        """Should fetch spec.md from base branch via GitHub API"""
+        # Arrange
+        with patch.dict("os.environ", mock_env):
+            with patch("claudestep.cli.commands.finalize.run_git_command") as mock_git:
+                with patch("claudestep.cli.commands.finalize.run_gh_command") as mock_gh_cmd:
+                    with patch("claudestep.cli.commands.finalize.get_file_from_branch") as mock_get_file:
+                        with patch("claudestep.cli.commands.finalize.mark_task_complete"):
+                            with patch("claudestep.cli.commands.finalize.GitHubMetadataStore"):
+                                with patch("claudestep.cli.commands.finalize.MetadataService"):
+                                    with patch("os.path.exists") as mock_exists:
+                                        with patch("os.getcwd") as mock_cwd:
+                                            with patch("builtins.open", mock_open()):
+                                                with patch("os.makedirs"):
+                                                    # Setup mocks
+                                                    mock_cwd.return_value = "/workspace"
+                                                    mock_exists.return_value = False
+                                                    mock_get_file.return_value = "- [ ] Task 1\n- [ ] Task 2"
+                                                    mock_git.side_effect = [
+                                                        None, None, "", None, None, "spec.md", None, "1", None
+                                                    ]
+                                                    mock_gh_cmd.side_effect = [
+                                                        "https://github.com/owner/repo/pull/42",
+                                                        json.dumps({"number": 42})
+                                                    ]
+
+                                                    # Act
+                                                    result = cmd_finalize(args, mock_gh)
+
+                                                    # Assert
+                                                    assert result == 0
+                                                    # Verify spec was fetched from base branch
+                                                    mock_get_file.assert_called_once_with(
+                                                        "owner/repo",
+                                                        "main",
+                                                        "claude-step/my-project/spec.md"
+                                                    )
+
+    def test_finalization_creates_separate_commit_for_spec(self, args, mock_gh, mock_env):
+        """Should create a separate commit for spec.md changes"""
+        # Arrange
+        with patch.dict("os.environ", mock_env):
+            with patch("claudestep.cli.commands.finalize.run_git_command") as mock_git:
+                with patch("claudestep.cli.commands.finalize.run_gh_command") as mock_gh_cmd:
+                    with patch("claudestep.cli.commands.finalize.get_file_from_branch") as mock_get_file:
+                        with patch("claudestep.cli.commands.finalize.mark_task_complete"):
+                            with patch("claudestep.cli.commands.finalize.GitHubMetadataStore"):
+                                with patch("claudestep.cli.commands.finalize.MetadataService"):
+                                    with patch("os.path.exists") as mock_exists:
+                                        with patch("os.getcwd") as mock_cwd:
+                                            with patch("builtins.open", mock_open()):
+                                                with patch("os.makedirs"):
+                                                    # Setup mocks
+                                                    mock_cwd.return_value = "/workspace"
+                                                    mock_exists.return_value = False
+                                                    mock_get_file.return_value = "- [ ] Task 1\n- [ ] Task 2"
+                                                    mock_git.side_effect = [
+                                                        None,  # config user.name
+                                                        None,  # config user.email
+                                                        "M  file.py",  # status --porcelain (has changes)
+                                                        None,  # add -A
+                                                        "file.py",  # diff --cached --name-only
+                                                        None,  # commit
+                                                        None,  # remote set-url
+                                                        None,  # add spec
+                                                        "spec.md",  # diff --cached (spec changed)
+                                                        None,  # commit spec
+                                                        "2",  # rev-list --count (2 commits)
+                                                        None,  # push
+                                                    ]
+                                                    mock_gh_cmd.side_effect = [
+                                                        "https://github.com/owner/repo/pull/42",
+                                                        json.dumps({"number": 42})
+                                                    ]
+
+                                                    # Act
+                                                    result = cmd_finalize(args, mock_gh)
+
+                                                    # Assert
+                                                    assert result == 0
+                                                    # Verify separate commits were created
+                                                    commit_calls = [c for c in mock_git.call_args_list if "commit" in c[0][0]]
+                                                    assert len(commit_calls) == 2
+                                                    # First commit for code changes
+                                                    assert call(["commit", "-m", "Complete task: Implement feature X"]) in mock_git.call_args_list
+                                                    # Second commit for spec.md
+                                                    assert call(["commit", "-m", "Mark task 2 as complete in spec.md"]) in mock_git.call_args_list
+
+    def test_finalization_handles_spec_fetch_failure_gracefully(self, args, mock_gh, mock_env):
+        """Should continue PR creation when spec.md fetch fails"""
+        # Arrange
+        with patch.dict("os.environ", mock_env):
+            with patch("claudestep.cli.commands.finalize.run_git_command") as mock_git:
+                with patch("claudestep.cli.commands.finalize.run_gh_command") as mock_gh_cmd:
+                    with patch("claudestep.cli.commands.finalize.get_file_from_branch") as mock_get_file:
+                        with patch("claudestep.cli.commands.finalize.GitHubMetadataStore"):
+                            with patch("claudestep.cli.commands.finalize.MetadataService"):
+                                with patch("os.path.exists") as mock_exists:
+                                    with patch("os.getcwd") as mock_cwd:
+                                        with patch("builtins.open", mock_open()):
+                                            # Setup mocks
+                                            mock_cwd.return_value = "/workspace"
+                                            mock_exists.return_value = False
+                                            mock_get_file.return_value = None  # Failed to fetch
+                                            mock_git.side_effect = [
+                                                None, None, "", None, "1", None
+                                            ]
+                                            mock_gh_cmd.side_effect = [
+                                                "https://github.com/owner/repo/pull/42",
+                                                json.dumps({"number": 42})
+                                            ]
+
+                                            # Act
+                                            result = cmd_finalize(args, mock_gh)
+
+                                            # Assert
+                                            assert result == 0
+                                            # PR should still be created successfully
+                                            mock_gh.write_output.assert_any_call("pr_number", "42")
+
+    def test_finalization_handles_spec_fetch_exception_gracefully(self, args, mock_gh, mock_env):
+        """Should continue PR creation when spec.md fetch raises exception"""
+        # Arrange
+        with patch.dict("os.environ", mock_env):
+            with patch("claudestep.cli.commands.finalize.run_git_command") as mock_git:
+                with patch("claudestep.cli.commands.finalize.run_gh_command") as mock_gh_cmd:
+                    with patch("claudestep.cli.commands.finalize.get_file_from_branch") as mock_get_file:
+                        with patch("claudestep.cli.commands.finalize.GitHubMetadataStore"):
+                            with patch("claudestep.cli.commands.finalize.MetadataService"):
+                                with patch("os.path.exists") as mock_exists:
+                                    with patch("os.getcwd") as mock_cwd:
+                                        # Setup mocks
+                                        mock_cwd.return_value = "/workspace"
+                                        mock_exists.return_value = False
+                                        mock_get_file.side_effect = GitHubAPIError("File not found")
+                                        mock_git.side_effect = [
+                                            None, None, "", None, "1", None
+                                        ]
+                                        mock_gh_cmd.side_effect = [
+                                            "https://github.com/owner/repo/pull/42",
+                                            json.dumps({"number": 42})
+                                        ]
+
+                                        # Act
+                                        result = cmd_finalize(args, mock_gh)
+
+                                        # Assert
+                                        assert result == 0
+                                        # PR should still be created successfully
+                                        mock_gh.write_output.assert_any_call("pr_number", "42")
+
+    def test_finalization_writes_spec_to_correct_path(self, args, mock_gh, mock_env):
+        """Should write spec.md content to the correct file path"""
+        # Arrange
+        with patch.dict("os.environ", mock_env):
+            with patch("claudestep.cli.commands.finalize.run_git_command") as mock_git:
+                with patch("claudestep.cli.commands.finalize.run_gh_command") as mock_gh_cmd:
+                    with patch("claudestep.cli.commands.finalize.get_file_from_branch") as mock_get_file:
+                        with patch("claudestep.cli.commands.finalize.mark_task_complete"):
+                            with patch("claudestep.cli.commands.finalize.GitHubMetadataStore"):
+                                with patch("claudestep.cli.commands.finalize.MetadataService"):
+                                    with patch("os.path.exists") as mock_exists:
+                                        with patch("os.getcwd") as mock_cwd:
+                                            with patch("builtins.open", mock_open()) as mock_file:
+                                                with patch("os.makedirs") as mock_makedirs:
+                                                    # Setup mocks
+                                                    mock_cwd.return_value = "/workspace"
+                                                    mock_exists.return_value = False
+                                                    spec_content = "- [ ] Task 1\n- [ ] Task 2"
+                                                    mock_get_file.return_value = spec_content
+                                                    mock_git.side_effect = [
+                                                        None, None, "", None, None, "spec.md", None, "1", None
+                                                    ]
+                                                    mock_gh_cmd.side_effect = [
+                                                        "https://github.com/owner/repo/pull/42",
+                                                        json.dumps({"number": 42})
+                                                    ]
+
+                                                    # Act
+                                                    result = cmd_finalize(args, mock_gh)
+
+                                                    # Assert
+                                                    assert result == 0
+                                                    # Verify directory was created
+                                                    mock_makedirs.assert_called_once_with("/workspace/claude-step/my-project", exist_ok=True)
+                                                    # Verify file was written with correct content
+                                                    handle = mock_file()
+                                                    handle.write.assert_any_call(spec_content)
+
+    def test_finalization_skips_spec_commit_when_no_changes(self, args, mock_gh, mock_env):
+        """Should skip spec.md commit when no changes after marking"""
+        # Arrange
+        with patch.dict("os.environ", mock_env):
+            with patch("claudestep.cli.commands.finalize.run_git_command") as mock_git:
+                with patch("claudestep.cli.commands.finalize.run_gh_command") as mock_gh_cmd:
+                    with patch("claudestep.cli.commands.finalize.get_file_from_branch") as mock_get_file:
+                        with patch("claudestep.cli.commands.finalize.mark_task_complete"):
+                            with patch("claudestep.cli.commands.finalize.GitHubMetadataStore"):
+                                with patch("claudestep.cli.commands.finalize.MetadataService"):
+                                    with patch("os.path.exists") as mock_exists:
+                                        with patch("os.getcwd") as mock_cwd:
+                                            with patch("builtins.open", mock_open()):
+                                                with patch("os.makedirs"):
+                                                    # Setup mocks
+                                                    mock_cwd.return_value = "/workspace"
+                                                    mock_exists.return_value = False
+                                                    mock_get_file.return_value = "- [x] Task 2 already complete"
+                                                    mock_git.side_effect = [
+                                                        None,  # config user.name
+                                                        None,  # config user.email
+                                                        "",  # status --porcelain
+                                                        None,  # remote set-url
+                                                        None,  # add spec
+                                                        "",  # diff --cached (no spec changes)
+                                                        "1",  # rev-list --count
+                                                        None,  # push
+                                                    ]
+                                                    mock_gh_cmd.side_effect = [
+                                                        "https://github.com/owner/repo/pull/42",
+                                                        json.dumps({"number": 42})
+                                                    ]
+
+                                                    # Act
+                                                    result = cmd_finalize(args, mock_gh)
+
+                                                    # Assert
+                                                    assert result == 0
+                                                    # Should not create a commit for spec.md since it didn't change
+                                                    spec_commit_calls = [c for c in mock_git.call_args_list
+                                                                       if "commit" in c[0][0] and "Mark task" in str(c)]
+                                                    assert len(spec_commit_calls) == 0
