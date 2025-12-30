@@ -12,12 +12,9 @@ from datetime import datetime, timezone
 
 from claudestep.domain.config import substitute_template
 from claudestep.domain.exceptions import ConfigurationError, FileNotFoundError, GitError, GitHubAPIError
-from claudestep.domain.models import AIOperation, PullRequest, Task, TaskStatus
 from claudestep.infrastructure.git.operations import run_git_command
 from claudestep.infrastructure.github.actions import GitHubActionsHelper
 from claudestep.infrastructure.github.operations import run_gh_command, get_file_from_branch
-from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
-from claudestep.services.metadata_service import MetadataService
 from claudestep.services.task_management_service import TaskManagementService
 
 
@@ -40,10 +37,6 @@ def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
     try:
         # === Get common dependencies ===
         github_repository = os.environ.get("GITHUB_REPOSITORY", "")
-
-        # Initialize infrastructure
-        metadata_store = GitHubMetadataStore(github_repository)
-        metadata_service = MetadataService(metadata_store)
 
         # Get environment variables
         branch_name = os.environ.get("BRANCH_NAME", "")
@@ -224,87 +217,9 @@ def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
         pr_number = pr_data.get("number")
         pr_title = pr_data.get("title")
 
-        # === STEP 3: Save to Metadata Storage ===
-        print("\n=== Step 3/3: Saving metadata ===")
-
-        # Get cost information from environment
-        main_cost = float(os.environ.get("MAIN_COST", "0"))
-        summary_cost = float(os.environ.get("SUMMARY_COST", "0"))
-
-        # Get model information from environment
-        claude_model = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4")
-
-        # Create AI operations list
-        ai_operations = []
-
-        # Add main task operation
-        if main_cost > 0:
-            ai_operations.append(AIOperation(
-                type="PRCreation",
-                model=claude_model,
-                cost_usd=main_cost,
-                created_at=datetime.now(timezone.utc),
-                workflow_run_id=int(github_run_id) if github_run_id else 0,
-                tokens_input=0,  # TODO: Extract from Claude Code output
-                tokens_output=0,
-                duration_seconds=0.0
-            ))
-
-        # Add PR summary operation
-        if summary_cost > 0:
-            ai_operations.append(AIOperation(
-                type="PRSummary",
-                model=claude_model,
-                cost_usd=summary_cost,
-                created_at=datetime.now(timezone.utc),
-                workflow_run_id=int(github_run_id) if github_run_id else 0,
-                tokens_input=0,
-                tokens_output=0,
-                duration_seconds=0.0
-            ))
-
-        # Save to metadata storage
-        print("Saving to GitHub metadata storage...")
-
-        # Create PullRequest object
-        pr_obj = PullRequest(
-            task_index=int(task_index),
-            pr_number=pr_number,
-            branch_name=branch_name,
-            reviewer=reviewer,
-            pr_state="open",
-            created_at=datetime.now(timezone.utc),
-            title=pr_title,
-            ai_operations=ai_operations
-        )
-
-        # Get or create project metadata
-        project_metadata = metadata_service.get_project(project)
-        if project_metadata is None:
-            # Create new project with task
-            from claudestep.domain.models import HybridProjectMetadata
-            project_metadata = HybridProjectMetadata.create_empty(project)
-            # Add task if it doesn't exist
-            task_obj = Task(
-                index=int(task_index),
-                description=task,
-                status=TaskStatus.PENDING
-            )
-            project_metadata.tasks.append(task_obj)
-        else:
-            # Ensure task exists in project
-            existing_task = project_metadata.get_task_by_index(int(task_index))
-            if existing_task is None:
-                task_obj = Task(
-                    index=int(task_index),
-                    description=task,
-                    status=TaskStatus.PENDING
-                )
-                project_metadata.tasks.append(task_obj)
-
-        # Add PR to project
-        metadata_service.add_pr_to_project(project, task_index=int(task_index), pr=pr_obj)
-        print(f"✅ Saved metadata to GitHub branch storage")
+        # No metadata storage - PR state is tracked via GitHub API
+        print("\n=== Step 3/3: Finalization complete ===")
+        print(f"✅ PR created successfully (metadata tracked via GitHub API)")
 
         # Write outputs
         gh.write_output("pr_number", str(pr_number))

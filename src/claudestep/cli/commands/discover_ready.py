@@ -15,8 +15,6 @@ from claudestep.infrastructure.github.actions import GitHubActionsHelper
 from claudestep.infrastructure.repositories.project_repository import ProjectRepository
 from claudestep.services.project_detection_service import ProjectDetectionService
 from claudestep.services.reviewer_management_service import ReviewerManagementService
-from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
-from claudestep.services.metadata_service import MetadataService
 from claudestep.services.task_management_service import TaskManagementService
 
 
@@ -47,8 +45,6 @@ def check_project_ready(project_name: str, repo: str) -> bool:
             return False
 
         # Initialize infrastructure
-        metadata_store = GitHubMetadataStore(repo)
-        metadata_service = MetadataService(metadata_store)
         project_repository = ProjectRepository(repo)
 
         # Load and validate configuration
@@ -77,8 +73,8 @@ def check_project_ready(project_name: str, repo: str) -> bool:
         project_config = ProjectConfiguration.from_yaml_string(project, config_content)
 
         # Initialize services
-        reviewer_service = ReviewerManagementService(repo, metadata_service)
-        task_service = TaskManagementService(repo, metadata_service)
+        reviewer_service = ReviewerManagementService(repo)
+        task_service = TaskManagementService(repo)
 
         # Check reviewer capacity
         selected_reviewer, capacity_result = reviewer_service.find_available_reviewer(project_config, label, project_name)

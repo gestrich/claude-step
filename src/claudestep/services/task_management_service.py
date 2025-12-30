@@ -8,9 +8,10 @@ import os
 import re
 from typing import Optional
 
-from claudestep.services.metadata_service import MetadataService
 from claudestep.domain.exceptions import FileNotFoundError
 from claudestep.domain.spec_content import SpecContent
+from claudestep.infrastructure.github.operations import list_open_pull_requests
+from claudestep.services.pr_operations_service import PROperationsService
 
 
 class TaskManagementService:
@@ -21,15 +22,13 @@ class TaskManagementService:
     logic for ClaudeStep's task workflow.
     """
 
-    def __init__(self, repo: str, metadata_service: MetadataService):
+    def __init__(self, repo: str):
         """Initialize TaskManagementService
 
         Args:
             repo: GitHub repository (owner/name)
-            metadata_service: MetadataService instance for accessing project metadata
         """
         self.repo = repo
-        self.metadata_service = metadata_service
 
     # Public API methods
 
@@ -88,16 +87,29 @@ class TaskManagementService:
         """Get set of task indices currently being worked on
 
         Args:
-            label: GitHub label to filter PRs (unused, kept for compatibility)
+            label: GitHub label to filter PRs
             project: Project name to match
 
         Returns:
             Set of task indices that are in progress
         """
         try:
-            return self.metadata_service.find_in_progress_tasks(project)
+            # Query open PRs from GitHub API
+            open_prs = list_open_pull_requests(self.repo, label=label)
+
+            # Parse branch names to extract task indices for this project
+            task_indices = set()
+            for pr in open_prs:
+                if pr.head_ref_name:
+                    parsed = PROperationsService.parse_branch_name(pr.head_ref_name)
+                    if parsed:
+                        pr_project, task_index = parsed
+                        if pr_project == project:
+                            task_indices.add(task_index)
+
+            return task_indices
         except Exception as e:
-            print(f"Error: Failed to read from metadata storage: {e}")
+            print(f"Error: Failed to query GitHub PRs: {e}")
             return set()
 
     # Static utility methods
