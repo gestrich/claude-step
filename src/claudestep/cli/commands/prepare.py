@@ -9,6 +9,8 @@ from claudestep.domain.exceptions import ConfigurationError, FileNotFoundError, 
 from claudestep.infrastructure.git.operations import run_git_command
 from claudestep.infrastructure.github.actions import GitHubActionsHelper
 from claudestep.infrastructure.github.operations import ensure_label_exists, file_exists_in_branch, get_file_from_branch
+from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore
+from claudestep.application.services.metadata_service import MetadataService
 from claudestep.application.services.pr_operations import format_branch_name
 from claudestep.application.services.project_detection import detect_project_from_pr, detect_project_paths
 from claudestep.application.services.reviewer_management import find_available_reviewer
@@ -42,6 +44,28 @@ def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             if not detected_project:
                 gh.set_error(f"No refactor project found with matching label for PR #{merged_pr_number}")
                 return 1
+
+            # Update metadata to mark PR as merged and task as completed
+            print(f"Processing merged PR #{merged_pr_number} for project '{detected_project}'")
+            try:
+                metadata_store = GitHubMetadataStore(repo)
+                metadata_service = MetadataService(metadata_store)
+
+                # Update PR state to "merged"
+                metadata_service.update_pr_state(detected_project, int(merged_pr_number), "merged")
+                print(f"✅ Updated PR #{merged_pr_number} state to 'merged' in metadata")
+
+                # Note: Task status is automatically synced by save_project() in update_pr_state()
+                # The task will be marked as "completed" based on the merged PR
+
+            except Exception as e:
+                # Log warning but continue - we still want to create the next PR
+                print(f"⚠️  Warning: Failed to update metadata for merged PR: {str(e)}")
+                import traceback
+                traceback.print_exc()
+
+            print("Proceeding to prepare next task...")
+
         elif project_name:
             detected_project = project_name
             print(f"Using provided project name: {detected_project}")

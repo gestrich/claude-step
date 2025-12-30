@@ -127,7 +127,7 @@ jobs:
 - YAML validated successfully using Python yaml.safe_load()
 - The workflow now supports both manual dispatch (original behavior) and automatic trigger on PR close (new behavior)
 
-- [ ] Phase 3: Implement merged PR metadata update (Python-level)
+- [x] Phase 3: Implement merged PR metadata update (Python-level)
 
 When a PR is merged and the workflow runs with `merged_pr_number`, update the metadata to mark the PR as merged and task as completed. This is a Python-level change in the prepare or finalize commands.
 
@@ -157,6 +157,18 @@ When a PR is merged and the workflow runs with `merged_pr_number`, update the me
 - PR state changes from "open" to "merged"
 - Task status changes to "completed"
 - Workflow continues to create next PR
+
+**✅ Completed - Technical notes:**
+- Added imports for `GitHubMetadataStore` and `MetadataService` to prepare.py
+- Implemented merged PR handling in prepare.py (lines 48-67) after project detection
+- When `MERGED_PR_NUMBER` env var is set:
+  - Instantiates `GitHubMetadataStore` and `MetadataService` using repository name
+  - Calls `metadata_service.update_pr_state(project_name, pr_number, "merged")`
+  - Task status is automatically synced via `save_project()` call in `update_pr_state()` method
+  - Wrapped in try-except to handle gracefully if project doesn't exist yet (prints warning but continues)
+- The `update_pr_state()` method already existed in MetadataService (lines 218-254)
+- Integration tests pass - the prepare command correctly handles merged PR metadata updates
+- The workflow will now update metadata when triggered by PR merge, then continue to prepare next task
 
 - [ ] Phase 4: Add tests for spec.md checkbox marking
 
