@@ -34,21 +34,21 @@ class StatisticsService:
         self,
         repo: str,
         metadata_service: MetadataService,
-        base_branch: str = "main",
-        project_repository: Optional[ProjectRepository] = None
+        project_repository: ProjectRepository,
+        base_branch: str = "main"
     ):
         """Initialize the statistics service
 
         Args:
             repo: GitHub repository (owner/name)
             metadata_service: MetadataService instance for accessing metadata
+            project_repository: ProjectRepository instance for loading project data
             base_branch: Base branch to fetch specs from (default: "main")
-            project_repository: Optional ProjectRepository instance (defaults to new instance)
         """
         self.repo = repo
         self.metadata_service = metadata_service
         self.base_branch = base_branch
-        self.project_repository = project_repository or ProjectRepository(repo)
+        self.project_repository = project_repository
 
     # Public API methods
 
