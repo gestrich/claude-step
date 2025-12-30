@@ -802,8 +802,13 @@ class TestCollectProjectStats:
         pr1.pr_state = "merged"
         pr1.get_total_cost.return_value = 1.5
 
+        # Mock in-progress task
+        in_progress_task = Mock()
+        in_progress_task.index = 2
+
         project_metadata = Mock()
         project_metadata.pull_requests = [pr1]
+        project_metadata.get_in_progress_tasks.return_value = [in_progress_task]
         mock_metadata_service.get_project.return_value = project_metadata
 
         # Mock ProjectRepository

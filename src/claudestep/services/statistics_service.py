@@ -19,7 +19,7 @@ from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetad
 from claudestep.infrastructure.github.operations import get_file_from_branch, run_gh_command
 from claudestep.infrastructure.repositories.project_repository import ProjectRepository
 from claudestep.services.metadata_service import MetadataService
-from claudestep.domain.models import ProjectStats, StatisticsReport, TeamMemberStats
+from claudestep.domain.models import HybridProjectMetadata, ProjectStats, StatisticsReport, TeamMemberStats
 
 
 class StatisticsService:
@@ -90,7 +90,7 @@ class StatisticsService:
         # Use base branch from instance variable
         base_branch = self.base_branch
         all_reviewers = set()
-        projects_data = []  # List of (project_name, reviewers)
+        project_configs = []  # List of ProjectConfiguration objects
 
         if config_path:
             # Single project mode - fetch config from GitHub API
@@ -106,7 +106,7 @@ class StatisticsService:
                     return report
 
                 reviewers = config.get_reviewer_usernames()
-                projects_data.append((project.name, reviewers))
+                project_configs.append(config)
                 all_reviewers.update(reviewers)
 
             except Exception as e:
@@ -135,24 +135,26 @@ class StatisticsService:
                         continue
 
                     reviewers = config.get_reviewer_usernames()
-                    projects_data.append((project_name, reviewers))
+                    project_configs.append(config)
                     all_reviewers.update(reviewers)
 
                 except Exception as e:
                     print(f"Warning: Failed to load project {project_name}: {e}")
                     continue
 
-        print(f"\nProcessing {len(projects_data)} project(s)...")
+        print(f"\nProcessing {len(project_configs)} project(s)...")
         print(f"Tracking {len(all_reviewers)} unique reviewer(s)")
 
         # Collect project statistics
-        for project_name, _ in projects_data:
+        for config in project_configs:
             try:
-                project_stats = self.collect_project_stats(project_name, base_branch, label)
+                project_stats = self.collect_project_stats(
+                    config.project.name, base_branch, label, project=config.project
+                )
                 if project_stats:  # Only add if not None (spec exists in base branch)
                     report.add_project(project_stats)
             except Exception as e:
-                print(f"Error collecting stats for {project_name}: {e}")
+                print(f"Error collecting stats for {config.project.name}: {e}")
 
         # Collect team member statistics across all projects
         if all_reviewers:
@@ -168,7 +170,8 @@ class StatisticsService:
         return report
 
     def collect_project_stats(
-        self, project_name: str, base_branch: str = "main", label: str = DEFAULT_PR_LABEL
+        self, project_name: str, base_branch: str = "main", label: str = DEFAULT_PR_LABEL,
+        project: Optional[Project] = None
     ) -> ProjectStats:
         """Collect statistics for a single project
 
@@ -176,13 +179,15 @@ class StatisticsService:
             project_name: Name of the project
             base_branch: Base branch to fetch spec from
             label: GitHub label for filtering
+            project: Optional pre-loaded Project instance to avoid re-creating
 
         Returns:
             ProjectStats object, or None if spec files don't exist in base branch
         """
         print(f"Collecting statistics for project: {project_name}")
 
-        project = Project(project_name)
+        if project is None:
+            project = Project(project_name)
         stats = ProjectStats(project_name, project.spec_path)
 
         # Fetch and parse spec.md using repository
@@ -199,10 +204,20 @@ class StatisticsService:
             print(f"  Warning: Failed to fetch spec file: {e}")
             return None
 
-        # Get in-progress tasks from metadata storage
+        # Fetch project metadata once and reuse it for both in-progress and costs
+        project_metadata = None
         try:
-            in_progress_indices = self.metadata_service.find_in_progress_tasks(project_name)
-            stats.in_progress_tasks = len(in_progress_indices)
+            project_metadata = self.metadata_service.get_project(project_name)
+        except Exception as e:
+            print(f"  Warning: Failed to fetch project metadata: {e}")
+
+        # Get in-progress tasks from metadata
+        try:
+            if project_metadata:
+                in_progress_tasks = project_metadata.get_in_progress_tasks()
+                stats.in_progress_tasks = len(in_progress_tasks)
+            else:
+                stats.in_progress_tasks = 0
             print(f"  In-progress: {stats.in_progress_tasks}")
         except Exception as e:
             print(f"  Error: Failed to get in-progress tasks: {e}")
@@ -214,9 +229,11 @@ class StatisticsService:
         )
         print(f"  Pending: {stats.pending_tasks}")
 
-        # Collect costs from merged PRs
+        # Collect costs from merged PRs (reusing the already-fetched metadata)
         try:
-            stats.total_cost_usd = self.collect_project_costs(project_name, label)
+            stats.total_cost_usd = self.collect_project_costs(
+                project_name, label, project_metadata=project_metadata
+            )
         except Exception as e:
             print(f"  Warning: Failed to collect costs: {e}")
             stats.total_cost_usd = 0.0
@@ -281,7 +298,7 @@ class StatisticsService:
                     merged_at = datetime.strptime(
                         merged_at_str.replace("Z", "+00:00").split("+")[0],
                         "%Y-%m-%dT%H:%M:%S",
-                    )
+                    ).replace(tzinfo=timezone.utc)
                 except (ValueError, IndexError):
                     continue
 
@@ -349,13 +366,15 @@ class StatisticsService:
         return stats_dict
 
     def collect_project_costs(
-        self, project_name: str, label: str = DEFAULT_PR_LABEL
+        self, project_name: str, label: str = DEFAULT_PR_LABEL,
+        project_metadata: Optional['HybridProjectMetadata'] = None
     ) -> float:
         """Collect total costs for a project from metadata storage
 
         Args:
             project_name: Name of the project to collect costs for
             label: GitHub label to filter PRs (unused, kept for compatibility)
+            project_metadata: Optional pre-loaded HybridProjectMetadata to avoid re-fetching
 
         Returns:
             Total cost in USD across all merged PRs for this project
@@ -363,7 +382,8 @@ class StatisticsService:
         print(f"  Collecting costs from metadata storage...")
 
         try:
-            project_metadata = self.metadata_service.get_project(project_name)
+            if project_metadata is None:
+                project_metadata = self.metadata_service.get_project(project_name)
 
             if project_metadata:
                 # Use the hybrid model to get total cost from merged PRs
