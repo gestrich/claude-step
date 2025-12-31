@@ -48,13 +48,6 @@ def test_basic_workflow_end_to_end(
     6. Verifying the PR has cost/usage information
     7. Cleaning up test resources (PRs and branches)
 
-    This test replaces three separate tests (test_basic_workflow_creates_pr,
-    test_pr_has_ai_summary, test_pr_has_cost_information) to reduce redundant
-    workflow executions and speed up the E2E test suite.
-
-    With the new spec-file-source-of-truth design, the test project exists
-    permanently in the main branch, so no project creation is needed.
-
     Args:
         gh: GitHub helper fixture
         test_project: Test project name from fixture (e2e-test-project)
@@ -68,7 +61,7 @@ def test_basic_workflow_end_to_end(
         ref="e2e-test"
     )
 
-    # Wait for workflow to start (smart polling replaces fixed sleep)
+    # Wait for workflow to start
     gh.wait_for_workflow_to_start(
         workflow_name="claudestep.yml",
         timeout=30,
@@ -78,21 +71,23 @@ def test_basic_workflow_end_to_end(
     # Wait for workflow to complete
     workflow_run = gh.wait_for_workflow_completion(
         workflow_name="claudestep.yml",
-        timeout=900  # 15 minutes - increased to accommodate AI inference and GitHub operations
+        timeout=900  # 15 minutes
     )
 
     run_url = workflow_run.get("url", f"https://github.com/gestrich/claude-step/actions/runs/{workflow_run.get('databaseId')}")
     assert workflow_run["conclusion"] == "success", \
         f"Workflow should complete successfully. Run URL: {run_url}"
 
-    # Expected branch name for first task
-    expected_branch = f"claude-step-{test_project}-1"
+    # Get all PRs for this project (workflow now uses hash-based branch names)
+    project_prs = gh.get_pull_requests_for_project(test_project)
 
-    # Get the PR that was created
-    pr = gh.get_pull_request(expected_branch)
+    assert len(project_prs) > 0, \
+        f"At least one PR should be created for project '{test_project}'. Workflow run: {run_url}"
 
-    assert pr is not None, \
-        f"PR should be created on branch '{expected_branch}'. Workflow run: {run_url}"
+    # Get the first (most recent) PR
+    pr = project_prs[0]
+    branch_name = pr.get("headRefName")
+
     assert pr["state"] == "OPEN", \
         f"PR #{pr.get('number')} should be OPEN but is {pr.get('state')}. PR URL: {pr.get('url', 'N/A')}"
 
@@ -135,7 +130,8 @@ def test_basic_workflow_end_to_end(
         f"Found {len(comments)} comment(s). PR URL: {pr_url}"
 
     # Clean up: delete the PR branch
-    gh.delete_branch(expected_branch)
+    if branch_name:
+        gh.delete_branch(branch_name)
 
 
 def test_reviewer_capacity_limits(
@@ -165,7 +161,7 @@ def test_reviewer_capacity_limits(
     # We'll test that capacity limits are respected
 
     try:
-        # === First workflow run: should create PR for task 1 ===
+        # === First workflow run: should create PR for first task ===
         gh.trigger_workflow(
             workflow_name="claudestep.yml",
             inputs={"project_name": test_project},
@@ -180,13 +176,15 @@ def test_reviewer_capacity_limits(
         assert workflow_run_1["conclusion"] == "success", \
             f"First workflow run should succeed. Run URL: {run_url_1}"
 
-        # Verify first PR was created
-        pr1 = gh.get_pull_request(f"claude-step-{test_project}-1")
-        assert pr1 is not None, \
-            f"First PR should be created for task 1. Workflow run: {run_url_1}"
-        cleanup_prs.append(pr1["number"])
+        # Get PRs after first workflow run
+        prs_after_first = gh.get_pull_requests_for_project(test_project)
+        assert len(prs_after_first) >= 1, \
+            f"First PR should be created. Workflow run: {run_url_1}"
 
-        # === Second workflow run: should create PR for task 2 ===
+        for pr in prs_after_first:
+            cleanup_prs.append(pr["number"])
+
+        # === Second workflow run: should create PR for second task ===
         gh.trigger_workflow(
             workflow_name="claudestep.yml",
             inputs={"project_name": test_project},
@@ -201,37 +199,37 @@ def test_reviewer_capacity_limits(
         assert workflow_run_2["conclusion"] == "success", \
             f"Second workflow run should succeed. Run URL: {run_url_2}"
 
-        # Verify second PR was created
-        pr2 = gh.get_pull_request(f"claude-step-{test_project}-2")
-        assert pr2 is not None, \
-            f"Second PR should be created for task 2. Workflow run: {run_url_2}"
-        cleanup_prs.append(pr2["number"])
+        # Get PRs after second workflow run
+        prs_after_second = gh.get_pull_requests_for_project(test_project)
+        assert len(prs_after_second) >= 2, \
+            f"Second PR should be created. Workflow run: {run_url_2}"
+
+        # Track all PRs for cleanup
+        for pr in prs_after_second:
+            if pr["number"] not in cleanup_prs:
+                cleanup_prs.append(pr["number"])
 
         # Verify at least 2 PRs were created successfully
-        created_prs = []
-        for i in range(1, 3):  # Check for first 2 tasks
-            branch = f"claude-step-{test_project}-{i}"
-            pr = gh.get_pull_request(branch)
-            if pr:
-                created_prs.append(pr)
-
-        assert len(created_prs) >= 2, \
+        assert len(prs_after_second) >= 2, \
             f"Expected at least 2 PRs to be created. " \
             f"Workflow runs: [1] {run_url_1}, [2] {run_url_2}"
 
         # Clean up branches
-        for i in range(1, len(created_prs) + 1):
-            branch = f"claude-step-{test_project}-{i}"
-            gh.delete_branch(branch)
+        for pr in prs_after_second:
+            branch_name = pr.get("headRefName")
+            if branch_name:
+                gh.delete_branch(branch_name)
 
     except Exception as e:
-        # Clean up any branches that were created before the error
-        for i in range(1, 10):  # Check up to 10 potential branches
-            try:
-                branch = f"claude-step-{test_project}-{i}"
-                gh.delete_branch(branch)
-            except:
-                pass  # Ignore errors during cleanup
+        # Clean up any PRs that were created before the error
+        try:
+            all_prs = gh.get_pull_requests_for_project(test_project)
+            for pr in all_prs:
+                branch_name = pr.get("headRefName")
+                if branch_name:
+                    gh.delete_branch(branch_name)
+        except:
+            pass  # Ignore errors during cleanup
         raise e
 
 

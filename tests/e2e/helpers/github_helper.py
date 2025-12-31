@@ -281,7 +281,7 @@ class GitHubHelper:
             "gh", "pr", "list",
             "--repo", self.repo,
             "--head", branch,
-            "--json", "number,title,body,state,url",
+            "--json", "number,title,body,state,url,headRefName",
             "--limit", "1"
         ]
 
@@ -299,6 +299,41 @@ class GitHubHelper:
             logger.warning(f"No PR found for branch '{branch}'")
 
         return pr
+
+    def get_pull_requests_for_project(self, project_name: str, label: str = "claudestep") -> List[Dict[str, Any]]:
+        """Get all PRs for a given project.
+
+        Args:
+            project_name: Project name to filter PRs by
+            label: Label to filter PRs by (default: "claudestep")
+
+        Returns:
+            List of PR dictionaries matching the project
+        """
+        logger.info(f"Looking for PRs for project '{project_name}' with label '{label}'")
+        cmd = [
+            "gh", "pr", "list",
+            "--repo", self.repo,
+            "--label", label,
+            "--json", "number,title,body,state,url,headRefName",
+            "--limit", "100"
+        ]
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.warning(f"Failed to get PRs: {result.stderr}")
+            return []
+
+        all_prs = json.loads(result.stdout)
+
+        # Filter PRs that belong to this project based on branch naming
+        project_prs = [
+            pr for pr in all_prs
+            if pr.get("headRefName", "").startswith(f"claude-step-{project_name}-")
+        ]
+
+        logger.info(f"Found {len(project_prs)} PR(s) for project '{project_name}'")
+        return project_prs
 
     def get_pr_comments(self, pr_number: int) -> List[Dict[str, Any]]:
         """Get comments on a PR.
