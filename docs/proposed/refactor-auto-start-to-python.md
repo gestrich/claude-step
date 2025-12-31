@@ -361,7 +361,7 @@ Document in README.md how to disable via repository variables.
 - Build passes successfully with 641 tests collecting correctly
 - All changes follow Python-first architecture with configuration passed explicitly through layers
 
-- [ ] Phase 11: Add unit tests for auto-start service
+- [x] Phase 11: Add unit tests for auto-start service ✅
 
 Create test file `tests/unit/services/composite/test_auto_start_service.py`:
 - Test `detect_changed_projects()` with various git diff outputs
@@ -371,6 +371,21 @@ Create test file `tests/unit/services/composite/test_auto_start_service.py`:
 - Mock `PRService` (core service dependency) and git operations (infrastructure)
 
 Follow patterns from `tests/unit/services/composite/test_statistics_service.py` for mocking service dependencies.
+
+**Technical Notes:**
+- Created comprehensive test suite with 26 unit tests covering all public methods of `AutoStartService`
+- Test coverage breakdown:
+  - `TestDetectChangedProjects`: 7 tests covering added, modified, deleted projects, multiple changes, no changes, invalid paths, and custom patterns
+  - `TestDetermineNewProjects`: 6 tests covering new projects, existing projects, mixed scenarios, deleted projects, API errors, and empty lists
+  - `TestShouldAutoTrigger`: 5 tests covering new projects, existing projects, deleted projects, API errors, and single PR scenarios
+  - `TestAutoStartDisabledConfiguration`: 5 tests covering disabled auto-start for various project states and enabled defaults
+  - `TestServiceInitialization`: 3 tests covering basic initialization with different configuration options
+- All tests use mocking via `unittest.mock` to isolate service logic from infrastructure dependencies
+- Mocked dependencies: `PRService.get_project_prs()`, `detect_changed_files()`, `detect_deleted_files()`
+- Tests follow patterns from `test_statistics_service.py` for consistent mocking approach
+- Tests validate both success and error handling paths
+- All 26 tests pass successfully with 100% coverage of `AutoStartService` class
+- Build passes with overall test suite at 660 passing tests
 
 - [ ] Phase 12: Add integration tests for auto-start command
 
