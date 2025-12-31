@@ -97,6 +97,11 @@ def create_parser() -> argparse.ArgumentParser:
         "--ref-after",
         help="Git ref after the push"
     )
+    parser_auto_start.add_argument(
+        "--auto-start-enabled",
+        type=lambda x: x.lower() != 'false',
+        help="Whether auto-start is enabled (default: true, set to 'false' to disable)"
+    )
     parser_auto_start_summary = subparsers.add_parser(
         "auto-start-summary",
         help="Generate summary for auto-start workflow"

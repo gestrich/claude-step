@@ -24,15 +24,17 @@ class AutoStartService:
     detection and decision workflows.
     """
 
-    def __init__(self, repo: str, pr_service: PRService):
+    def __init__(self, repo: str, pr_service: PRService, auto_start_enabled: bool = True):
         """Initialize the auto-start service
 
         Args:
             repo: GitHub repository (owner/name)
             pr_service: PRService instance for PR operations
+            auto_start_enabled: Whether auto-start is enabled (default: True)
         """
         self.repo = repo
         self.pr_service = pr_service
+        self.auto_start_enabled = auto_start_enabled
 
     # Public API methods
 
@@ -149,6 +151,14 @@ class AutoStartService:
             >>> decision.reason
             'New project detected'
         """
+        # Check if auto-start is disabled
+        if not self.auto_start_enabled:
+            return AutoStartDecision(
+                project=project,
+                should_trigger=False,
+                reason="Auto-start is disabled via configuration"
+            )
+
         # Deleted projects should never be triggered
         if project.change_type == ProjectChangeType.DELETED:
             return AutoStartDecision(

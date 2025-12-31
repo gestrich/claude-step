@@ -20,7 +20,8 @@ def cmd_auto_start(
     repo: str,
     base_branch: str,
     ref_before: str,
-    ref_after: str
+    ref_after: str,
+    auto_start_enabled: bool = True
 ) -> int:
     """Detect new projects and trigger ClaudeStep workflows for them.
 
@@ -43,6 +44,7 @@ def cmd_auto_start(
         base_branch: Base branch name (e.g., "main")
         ref_before: Git reference before the push (commit SHA)
         ref_after: Git reference after the push (commit SHA)
+        auto_start_enabled: Whether auto-start is enabled (default: True)
 
     Returns:
         Exit code (0 for success, non-zero for failure)
@@ -55,7 +57,7 @@ def cmd_auto_start(
 
         # === Initialize services ===
         pr_service = PRService(repo)
-        auto_start_service = AutoStartService(repo, pr_service)
+        auto_start_service = AutoStartService(repo, pr_service, auto_start_enabled)
 
         # === Step 1: Detect changed projects ===
         print("=== Step 1/3: Detecting changed projects ===")

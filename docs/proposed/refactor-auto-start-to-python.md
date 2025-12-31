@@ -334,7 +334,7 @@ Keep summary generation in Python, not bash.
 - All 641 tests collect successfully
 - Build passes with command functioning correctly
 
-- [ ] Phase 10: Add configuration option to disable auto-start
+- [x] Phase 10: Add configuration option to disable auto-start ✅
 
 Add check in `AutoStartService.should_auto_trigger()`:
 - Read repository variable `CLAUDESTEP_AUTO_START_ENABLED`
@@ -348,6 +348,18 @@ env:
 ```
 
 Document in README.md how to disable via repository variables.
+
+**Technical Notes:**
+- Added `auto_start_enabled` parameter to `AutoStartService.__init__()` with default value `True`
+- Modified `should_auto_trigger()` to check `self.auto_start_enabled` first and return early with reason "Auto-start is disabled via configuration" if disabled
+- Updated `cmd_auto_start()` to accept `auto_start_enabled` parameter and pass it to `AutoStartService` constructor
+- Added `--auto-start-enabled` CLI argument to parser with custom type converter that treats string 'false' as boolean False
+- Updated `__main__.py` dispatcher to parse `auto_start_enabled` from CLI argument or environment variable `AUTO_START_ENABLED`, defaulting to true
+- Updated `.github/workflows/claudestep-auto-start.yml` to pass `AUTO_START_ENABLED` environment variable using GitHub repository variable `vars.CLAUDESTEP_AUTO_START_ENABLED`
+- Environment variable logic: `${{ vars.CLAUDESTEP_AUTO_START_ENABLED != 'false' }}` evaluates to true unless explicitly set to 'false'
+- Tested functionality: auto-start can be disabled by setting `auto_start_enabled=False`, which prevents all projects from auto-triggering
+- Build passes successfully with 641 tests collecting correctly
+- All changes follow Python-first architecture with configuration passed explicitly through layers
 
 - [ ] Phase 11: Add unit tests for auto-start service
 

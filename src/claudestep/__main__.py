@@ -64,12 +64,22 @@ def main():
             slack_webhook_url=os.environ.get("SLACK_WEBHOOK_URL", ""),
         )
     elif args.command == "auto-start":
+        # Parse auto_start_enabled from argument or environment variable
+        # Default to True if not set. Convert string "false" to boolean False.
+        auto_start_enabled_str = getattr(args, 'auto_start_enabled', None)
+        if auto_start_enabled_str is None:
+            env_value = os.environ.get("AUTO_START_ENABLED", "true")
+            auto_start_enabled = env_value.lower() != 'false'
+        else:
+            auto_start_enabled = auto_start_enabled_str
+
         return cmd_auto_start(
             gh=gh,
             repo=args.repo or os.environ.get("GITHUB_REPOSITORY", ""),
             base_branch=args.base_branch or os.environ.get("BASE_BRANCH", "main"),
             ref_before=args.ref_before or os.environ.get("REF_BEFORE", ""),
             ref_after=args.ref_after or os.environ.get("REF_AFTER", ""),
+            auto_start_enabled=auto_start_enabled,
         )
     elif args.command == "auto-start-summary":
         return cmd_auto_start_summary(

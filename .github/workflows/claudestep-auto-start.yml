@@ -37,6 +37,7 @@ jobs:
           REF_BEFORE: ${{ github.event.before }}
           REF_AFTER: ${{ github.sha }}
           GH_TOKEN: ${{ github.token }}
+          AUTO_START_ENABLED: ${{ vars.CLAUDESTEP_AUTO_START_ENABLED != 'false' }}
 
       - name: Generate summary
         if: always()
