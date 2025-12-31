@@ -303,7 +303,7 @@ class GitHubHelper:
 
         return pr
 
-    def get_pull_requests_for_project(self, project_name: str, label: str = DEFAULT_PR_LABEL) -> List[Dict[str, Any]]:
+    def get_pull_requests_for_project(self, project_name: str, label: str = DEFAULT_PR_LABEL):
         """Get all PRs for a given project using infrastructure layer.
 
         Args:
@@ -311,12 +311,12 @@ class GitHubHelper:
             label: Label to filter PRs by (default: DEFAULT_PR_LABEL)
 
         Returns:
-            List of PR dictionaries matching the project
+            List of GitHubPullRequest domain models
         """
         logger.info(f"Looking for PRs for project '{project_name}' with label '{label}'")
 
         # Use infrastructure layer function
-        pr_models = _list_prs_for_project(
+        prs = _list_prs_for_project(
             repo=self.repo,
             project_name=project_name,
             label=label,
@@ -324,21 +324,8 @@ class GitHubHelper:
             limit=100
         )
 
-        # Convert domain models to dicts for backward compatibility with tests
-        project_prs = [
-            {
-                "number": pr.number,
-                "title": pr.title,
-                "body": "",  # Not needed for current tests
-                "state": pr.state.upper(),  # Match GitHub API format (OPEN, CLOSED, MERGED)
-                "url": f"https://github.com/{self.repo}/pull/{pr.number}",
-                "headRefName": pr.head_ref_name
-            }
-            for pr in pr_models
-        ]
-
-        logger.info(f"Found {len(project_prs)} PR(s) for project '{project_name}'")
-        return project_prs
+        logger.info(f"Found {len(prs)} PR(s) for project '{project_name}'")
+        return prs
 
     def get_pr_comments(self, pr_number: int) -> List[Dict[str, Any]]:
         """Get comments on a PR.

@@ -86,25 +86,24 @@ def test_basic_workflow_end_to_end(
 
     # Get the first (most recent) PR
     pr = project_prs[0]
-    branch_name = pr.get("headRefName")
+    branch_name = pr.head_ref_name
+    pr_url = f"https://github.com/gestrich/claude-step/pull/{pr.number}"
 
-    assert pr["state"] == "OPEN", \
-        f"PR #{pr.get('number')} should be OPEN but is {pr.get('state')}. PR URL: {pr.get('url', 'N/A')}"
+    assert pr.state == "open", \
+        f"PR #{pr.number} should be open but is {pr.state}. PR URL: {pr_url}"
 
     # Track PR for cleanup
-    cleanup_prs.append(pr["number"])
-    pr_url = pr.get("url", f"https://github.com/gestrich/claude-step/pull/{pr['number']}")
+    cleanup_prs.append(pr.number)
 
-    # Verify PR has a title and body
-    assert pr["title"], f"PR #{pr['number']} should have a title. PR URL: {pr_url}"
-    assert pr["body"], f"PR #{pr['number']} should have a body/description. PR URL: {pr_url}"
+    # Verify PR has a title
+    assert pr.title, f"PR #{pr.number} should have a title. PR URL: {pr_url}"
 
     # Get PR comments for summary and cost verification
-    comments = gh.get_pr_comments(pr["number"])
+    comments = gh.get_pr_comments(pr.number)
 
     # Verify there's at least one comment
     assert len(comments) > 0, \
-        f"PR #{pr['number']} should have at least one comment. PR URL: {pr_url}"
+        f"PR #{pr.number} should have at least one comment. PR URL: {pr_url}"
 
     # Extract comment bodies for analysis
     comment_bodies = [c.get("body", "") for c in comments]
@@ -113,7 +112,7 @@ def test_basic_workflow_end_to_end(
     # The AI summary typically mentions "Summary" or "Changes"
     has_summary = any("Summary" in body or "Changes" in body for body in comment_bodies)
     assert has_summary, \
-        f"PR #{pr['number']} should have an AI-generated summary comment. " \
+        f"PR #{pr.number} should have an AI-generated summary comment. " \
         f"Found {len(comments)} comment(s). PR URL: {pr_url}"
 
     # Verify PR has cost/usage information
@@ -126,12 +125,11 @@ def test_basic_workflow_end_to_end(
         for body in comment_bodies
     )
     assert has_cost_info, \
-        f"PR #{pr['number']} should have cost/usage information in comments. " \
+        f"PR #{pr.number} should have cost/usage information in comments. " \
         f"Found {len(comments)} comment(s). PR URL: {pr_url}"
 
     # Clean up: delete the PR branch
-    if branch_name:
-        gh.delete_branch(branch_name)
+    gh.delete_branch(branch_name)
 
 
 def test_reviewer_capacity_limits(
@@ -182,7 +180,7 @@ def test_reviewer_capacity_limits(
             f"First PR should be created. Workflow run: {run_url_1}"
 
         for pr in prs_after_first:
-            cleanup_prs.append(pr["number"])
+            cleanup_prs.append(pr.number)
 
         # === Second workflow run: should create PR for second task ===
         gh.trigger_workflow(
@@ -206,8 +204,8 @@ def test_reviewer_capacity_limits(
 
         # Track all PRs for cleanup
         for pr in prs_after_second:
-            if pr["number"] not in cleanup_prs:
-                cleanup_prs.append(pr["number"])
+            if pr.number not in cleanup_prs:
+                cleanup_prs.append(pr.number)
 
         # Verify at least 2 PRs were created successfully
         assert len(prs_after_second) >= 2, \
@@ -216,18 +214,14 @@ def test_reviewer_capacity_limits(
 
         # Clean up branches
         for pr in prs_after_second:
-            branch_name = pr.get("headRefName")
-            if branch_name:
-                gh.delete_branch(branch_name)
+            gh.delete_branch(pr.head_ref_name)
 
     except Exception as e:
         # Clean up any PRs that were created before the error
         try:
             all_prs = gh.get_pull_requests_for_project(test_project)
             for pr in all_prs:
-                branch_name = pr.get("headRefName")
-                if branch_name:
-                    gh.delete_branch(branch_name)
+                gh.delete_branch(pr.head_ref_name)
         except:
             pass  # Ignore errors during cleanup
         raise e
