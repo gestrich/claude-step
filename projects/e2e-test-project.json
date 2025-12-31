@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0",
   "project": "e2e-test-project",
-  "last_updated": "2025-12-31T15:31:44.922838",
+  "last_updated": "2025-12-31T15:33:23.969654",
   "tasks": [
     {
       "index": 1,
@@ -16,6 +16,11 @@
     {
       "index": 4,
       "description": "Task 4",
+      "status": "in_progress"
+    },
+    {
+      "index": 5,
+      "description": "Task 5",
       "status": "in_progress"
     }
   ],
@@ -48,6 +53,16 @@
       "pr_state": "open",
       "created_at": "2025-12-31T15:31:44.070578",
       "title": "ClaudeStep: Task 4",
+      "ai_operations": []
+    },
+    {
+      "task_index": 5,
+      "pr_number": 111,
+      "branch_name": "claude-step-e2e-test-project-5",
+      "reviewer": "gestrich",
+      "pr_state": "open",
+      "created_at": "2025-12-31T15:33:23.399824",
+      "title": "ClaudeStep: Task 5",
       "ai_operations": []
     }
   ]
