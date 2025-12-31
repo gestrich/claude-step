@@ -121,20 +121,6 @@ runs:
         claude_args: '--allowedTools ${{ inputs.claude_allowed_tools }} --model ${{ inputs.claude_model }}'
         show_full_output: true
 
-    - name: Extract cost from main task
-      id: extract_main_cost
-      if: steps.claude_code.outputs.execution_file != ''
-      shell: bash
-      working-directory: ${{ inputs.working_directory }}
-      env:
-        EXECUTION_FILE: ${{ steps.claude_code.outputs.execution_file }}
-        EXECUTION_INDEX: '-1'  # Last item (only main task execution at this point)
-        ACTION_PATH: ${{ github.action_path }}
-      run: |
-        export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
-        python3 -m claudestep extract-cost
-      continue-on-error: true
-
     - name: Finalize and create PR
       id: finalize
       if: always()
@@ -194,38 +180,22 @@ runs:
         claude_args: '--allowedTools Bash,Write --model ${{ inputs.claude_model }}'
         show_full_output: true
 
-    - name: Extract cost from PR summary
-      id: extract_summary_cost
-      if: |
-        inputs.add_pr_summary == 'true' &&
-        steps.finalize.outputs.pr_number != '' &&
-        steps.pr_summary.outputs.execution_file != ''
-      shell: bash
-      working-directory: ${{ inputs.working_directory }}
-      env:
-        EXECUTION_FILE: ${{ steps.pr_summary.outputs.execution_file }}
-        EXECUTION_INDEX: '-1'  # Last item (PR summary)
-        ACTION_PATH: ${{ github.action_path }}
-      run: |
-        export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
-        python3 -m claudestep extract-cost
-      continue-on-error: true
-
-    - name: Post cost breakdown to PR
+    - name: Post PR summary and cost
       if: steps.finalize.outputs.pr_number != ''
       shell: bash
       working-directory: ${{ inputs.working_directory }}
       env:
         GH_TOKEN: ${{ inputs.github_token }}
         PR_NUMBER: ${{ steps.finalize.outputs.pr_number }}
-        MAIN_COST: ${{ steps.extract_main_cost.outputs.cost_usd }}
-        SUMMARY_COST: ${{ steps.extract_summary_cost.outputs.cost_usd }}
+        SUMMARY_FILE: '/tmp/pr-summary.md'
+        MAIN_COST: ${{ steps.prepare_summary.outputs.main_cost }}
+        SUMMARY_COST: ${{ steps.prepare_summary.outputs.summary_cost }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         GITHUB_RUN_ID: ${{ github.run_id }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
         export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
-        python3 -m claudestep add-cost-comment
+        python3 -m claudestep post-pr-comment
       continue-on-error: true
 
     - name: Prepare Slack notification
@@ -238,8 +208,8 @@ runs:
         PR_URL: ${{ steps.finalize.outputs.pr_url }}
         PROJECT_NAME: ${{ steps.prepare.outputs.project_name }}
         TASK: ${{ steps.prepare.outputs.task }}
-        MAIN_COST: ${{ steps.extract_main_cost.outputs.cost_usd }}
-        SUMMARY_COST: ${{ steps.extract_summary_cost.outputs.cost_usd }}
+        MAIN_COST: ${{ steps.prepare_summary.outputs.main_cost }}
+        SUMMARY_COST: ${{ steps.prepare_summary.outputs.summary_cost }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
