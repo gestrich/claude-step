@@ -74,8 +74,8 @@ def test_basic_workflow_end_to_end(
         timeout=900  # 15 minutes
     )
 
-    run_url = workflow_run.get("url", f"https://github.com/gestrich/claude-step/actions/runs/{workflow_run.get('databaseId')}")
-    assert workflow_run["conclusion"] == "success", \
+    run_url = workflow_run.url
+    assert workflow_run.conclusion == "success", \
         f"Workflow should complete successfully. Run URL: {run_url}"
 
     # Get all PRs for this project (workflow now uses hash-based branch names)
@@ -106,7 +106,7 @@ def test_basic_workflow_end_to_end(
         f"PR #{pr.number} should have at least one comment. PR URL: {pr_url}"
 
     # Extract comment bodies for analysis
-    comment_bodies = [c.get("body", "") for c in comments]
+    comment_bodies = [c.body for c in comments]
 
     # Verify PR has an AI-generated summary comment
     # The AI summary typically mentions "Summary" or "Changes"
@@ -170,8 +170,8 @@ def test_reviewer_capacity_limits(
             workflow_name="claudestep.yml",
             timeout=900  # 15 minutes - increased to accommodate AI inference and GitHub operations
         )
-        run_url_1 = workflow_run_1.get("url", f"https://github.com/gestrich/claude-step/actions/runs/{workflow_run_1.get('databaseId')}")
-        assert workflow_run_1["conclusion"] == "success", \
+        run_url_1 = workflow_run_1.url
+        assert workflow_run_1.conclusion == "success", \
             f"First workflow run should succeed. Run URL: {run_url_1}"
 
         # Get PRs after first workflow run
@@ -193,8 +193,8 @@ def test_reviewer_capacity_limits(
             workflow_name="claudestep.yml",
             timeout=900  # 15 minutes - increased to accommodate AI inference and GitHub operations
         )
-        run_url_2 = workflow_run_2.get("url", f"https://github.com/gestrich/claude-step/actions/runs/{workflow_run_2.get('databaseId')}")
-        assert workflow_run_2["conclusion"] == "success", \
+        run_url_2 = workflow_run_2.url
+        assert workflow_run_2.conclusion == "success", \
             f"Second workflow run should succeed. Run URL: {run_url_2}"
 
         # Get PRs after second workflow run

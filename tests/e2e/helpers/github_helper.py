@@ -10,6 +10,7 @@ from typing import Optional, Dict, Any, List, Callable
 
 from claudestep.domain.constants import DEFAULT_PR_LABEL
 from claudestep.domain.exceptions import GitHubAPIError
+from claudestep.domain.github_models import WorkflowRun, GitHubPullRequest, PRComment
 from claudestep.infrastructure.github.operations import (
     list_pull_requests_for_project as _list_prs_for_project,
     list_pull_requests as _list_pull_requests,
@@ -169,7 +170,7 @@ class GitHubHelper:
         self,
         workflow_name: str,
         branch: str = "e2e-test"
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[WorkflowRun]:
         """Get the latest workflow run for a given workflow.
 
         Args:
@@ -177,7 +178,7 @@ class GitHubHelper:
             branch: Branch to filter runs by
 
         Returns:
-            Dictionary with workflow run info, or None if no runs found
+            WorkflowRun domain model, or None if no runs found
         """
         try:
             runs = _list_workflow_runs(
@@ -188,18 +189,9 @@ class GitHubHelper:
             )
 
             if runs:
-                # Convert WorkflowRun domain model to dict for backward compatibility
                 run = runs[0]
-                result = {
-                    "databaseId": run.database_id,
-                    "status": run.status,
-                    "conclusion": run.conclusion,
-                    "createdAt": run.created_at.isoformat(),
-                    "headBranch": run.head_branch,
-                    "url": run.url
-                }
                 logger.debug(f"Found workflow run: ID={run.database_id}, status={run.status}, conclusion={run.conclusion}")
-                return result
+                return run
             else:
                 logger.debug(f"No workflow runs found for '{workflow_name}' on branch '{branch}'")
                 return None
@@ -214,7 +206,7 @@ class GitHubHelper:
         timeout: int = 600,
         poll_interval: int = 10,
         branch: str = "e2e-test"
-    ) -> Dict[str, Any]:
+    ) -> WorkflowRun:
         """Wait for a workflow to complete.
 
         Args:
@@ -224,7 +216,7 @@ class GitHubHelper:
             branch: Branch to filter runs by (defaults to "e2e-test")
 
         Returns:
-            Final workflow run info
+            WorkflowRun domain model for the completed workflow
 
         Raises:
             TimeoutError: If workflow doesn't complete within timeout
@@ -245,30 +237,25 @@ class GitHubHelper:
                 time.sleep(poll_interval)
                 continue
 
-            run_id = run.get("databaseId")
-            status = run.get("status")
-            conclusion = run.get("conclusion")
-            run_url = run.get("url", f"https://github.com/{self.repo}/actions/runs/{run_id}")
-
             # Log status changes
-            if status != last_status:
-                logger.info(f"[Poll {poll_count}, {elapsed:.1f}s] Workflow status: {status} (conclusion: {conclusion})")
-                logger.info(f"View workflow run: {run_url}")
-                last_status = status
+            if run.status != last_status:
+                logger.info(f"[Poll {poll_count}, {elapsed:.1f}s] Workflow status: {run.status} (conclusion: {run.conclusion})")
+                logger.info(f"View workflow run: {run.url}")
+                last_status = run.status
             else:
-                logger.debug(f"[Poll {poll_count}, {elapsed:.1f}s] Still {status}...")
+                logger.debug(f"[Poll {poll_count}, {elapsed:.1f}s] Still {run.status}...")
 
-            if status == "completed":
+            if run.status == "completed":
                 total_time = time.time() - start_time
-                if conclusion == "success":
+                if run.conclusion == "success":
                     logger.info(f"Workflow completed successfully in {total_time:.1f}s")
-                    logger.info(f"Workflow URL: {run_url}")
+                    logger.info(f"Workflow URL: {run.url}")
                     return run
                 else:
-                    logger.error(f"Workflow failed with conclusion '{conclusion}' after {total_time:.1f}s")
-                    logger.error(f"View failed workflow: {run_url}")
+                    logger.error(f"Workflow failed with conclusion '{run.conclusion}' after {total_time:.1f}s")
+                    logger.error(f"View failed workflow: {run.url}")
                     raise RuntimeError(
-                        f"Workflow failed with conclusion: {conclusion}. View details at: {run_url}"
+                        f"Workflow failed with conclusion: {run.conclusion}. View details at: {run.url}"
                     )
 
             time.sleep(poll_interval)
@@ -276,40 +263,30 @@ class GitHubHelper:
         elapsed = time.time() - start_time
         logger.error(f"Workflow timed out after {elapsed:.1f}s (limit: {timeout}s)")
         if run:
-            run_url = run.get("url", f"https://github.com/{self.repo}/actions/runs/{run.get('databaseId')}")
-            logger.error(f"Last known status: {run.get('status')} - View workflow: {run_url}")
+            logger.error(f"Last known status: {run.status} - View workflow: {run.url}")
             raise TimeoutError(
                 f"Workflow did not complete within {timeout} seconds. "
-                f"Last status: {run.get('status')}. View at: {run_url}"
+                f"Last status: {run.status}. View at: {run.url}"
             )
         else:
             raise TimeoutError(f"Workflow did not complete within {timeout} seconds (no run found)")
 
-    def get_pull_request(self, branch: str) -> Optional[Dict[str, Any]]:
+    def get_pull_request(self, branch: str) -> Optional[GitHubPullRequest]:
         """Get PR for a given branch.
 
         Args:
             branch: Branch name to find PR for
 
         Returns:
-            Dictionary with PR info, or None if no PR found
+            GitHubPullRequest domain model, or None if no PR found
         """
         logger.info(f"Looking for PR on branch '{branch}'")
 
         try:
-            pr_model = _get_pull_request_by_branch(repo=self.repo, branch=branch)
+            pr = _get_pull_request_by_branch(repo=self.repo, branch=branch)
 
-            if pr_model:
-                # Convert GitHubPullRequest domain model to dict for backward compatibility
-                pr = {
-                    "number": pr_model.number,
-                    "title": pr_model.title,
-                    "body": "",  # Not included in domain model, but tests may not need it
-                    "state": pr_model.state,
-                    "url": f"https://github.com/{self.repo}/pull/{pr_model.number}",
-                    "headRefName": pr_model.head_ref_name
-                }
-                logger.info(f"Found PR #{pr['number']}: {pr['title']} ({pr['state']}) - {pr['url']}")
+            if pr:
+                logger.info(f"Found PR #{pr.number}: {pr.title} ({pr.state})")
                 return pr
             else:
                 logger.warning(f"No PR found for branch '{branch}'")
@@ -343,35 +320,25 @@ class GitHubHelper:
         logger.info(f"Found {len(prs)} PR(s) for project '{project_name}'")
         return prs
 
-    def get_pr_comments(self, pr_number: int) -> List[Dict[str, Any]]:
+    def get_pr_comments(self, pr_number: int) -> List[PRComment]:
         """Get comments on a PR.
 
         Args:
             pr_number: PR number
 
         Returns:
-            List of comment dictionaries
+            List of PRComment domain models
         """
         logger.info(f"Fetching comments for PR #{pr_number}")
 
         try:
-            comment_models = _get_pull_request_comments(repo=self.repo, pr_number=pr_number)
-
-            # Convert PRComment domain models to dicts for backward compatibility
-            comments = [
-                {
-                    "body": comment.body,
-                    "author": comment.author,
-                    "createdAt": comment.created_at.isoformat()
-                }
-                for comment in comment_models
-            ]
+            comments = _get_pull_request_comments(repo=self.repo, pr_number=pr_number)
 
             logger.info(f"Found {len(comments)} comment(s) on PR #{pr_number}")
 
             # Log summary of comments for diagnostics
             for i, comment in enumerate(comments):
-                body_preview = comment.get("body", "")[:100].replace("\n", " ")
+                body_preview = comment.body[:100].replace("\n", " ")
                 logger.debug(f"  Comment {i+1}: {body_preview}...")
 
             return comments
