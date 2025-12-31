@@ -171,7 +171,7 @@ Follow pattern from existing commands like `statistics` and `discover`.
 - Build passes successfully and command help shows correctly
 - All 641 tests collect without import errors
 
-- [ ] Phase 6: Create workflow trigger service for GitHub workflow dispatch
+- [x] Phase 6: Create workflow trigger service for GitHub workflow dispatch ✅
 
 Create composite service in `src/claudestep/services/composite/workflow_service.py`:
 - `WorkflowService` class
@@ -180,6 +180,21 @@ Create composite service in `src/claudestep/services/composite/workflow_service.
 - Batch triggering for multiple projects
 
 Use infrastructure layer for `gh` command execution.
+
+**Technical Notes:**
+- Created `src/claudestep/services/composite/workflow_service.py` with `WorkflowService` class
+- Implemented two methods:
+  - `trigger_claudestep_workflow()`: Triggers workflow for a single project using `gh workflow run claudestep.yml`
+  - `batch_trigger_claudestep_workflows()`: Triggers workflows for multiple projects, collecting successes and failures
+- Uses existing `run_gh_command()` from `infrastructure.github.operations` for consistent error handling
+- Passes workflow inputs via `-f` flags: `project_name`, `base_branch`, `checkout_ref`
+- Batch triggering returns tuple of (successful_projects, failed_projects) for caller to handle
+- Individual failures in batch mode don't stop processing - all projects attempted
+- Raises `GitHubAPIError` for single trigger failures with clear error messages
+- Updated `src/claudestep/services/composite/__init__.py` to export `WorkflowService`
+- Module imports successfully and syntax check passes
+- Build passes with 641 tests collecting correctly
+- Ready for Phase 7 integration with `cmd_auto_start()`
 
 - [ ] Phase 7: Add workflow triggering to auto-start command
 
