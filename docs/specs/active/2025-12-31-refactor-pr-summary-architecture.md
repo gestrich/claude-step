@@ -424,7 +424,7 @@ grep -r "import extract_cost" src/
 - Python compilation succeeds for entire codebase
 - The file has been completely removed with no remaining references in production code
 
-- [ ] Phase 7: Update tests
+- [x] Phase 7: Update tests ✅
 
 **Unit tests to create:**
 
@@ -464,6 +464,24 @@ grep -r "import extract_cost" src/
 - CLI tests SHOULD mock domain models (test orchestration, not parsing)
 - Follow Arrange-Act-Assert pattern
 - Test edge cases (missing files, invalid data)
+
+**Technical Notes (Phase 7 Completion):**
+- Created `tests/unit/domain/test_cost_breakdown.py` with 26 comprehensive tests:
+  - 3 tests for basic construction and property calculation
+  - 4 tests for `from_execution_files()` class method
+  - 9 tests for `_extract_from_file()` edge cases (missing files, invalid JSON, list formats, etc.)
+  - 6 tests for `_extract_cost_from_dict()` helper method
+  - 4 tests for `format_for_github()` markdown formatting
+- Created `tests/unit/domain/test_summary_file.py` with 21 comprehensive tests:
+  - 6 tests for basic construction and `has_content` property
+  - 8 tests for `from_file()` class method (valid files, empty files, whitespace, errors)
+  - 7 tests for `format_with_cost()` method (with/without summary, formatting preservation)
+- All 47 new unit tests pass successfully
+- Integration tests for `prepare_summary` and `post_pr_comment` already updated in Phases 3 and 4 (30 tests)
+- Total test count increased from 658 to 705 passing tests (47 new tests added)
+- All tests use real temp files (no mocking for file I/O in domain tests) following best practices
+- All tests follow Arrange-Act-Assert pattern for clarity
+- Edge cases thoroughly tested (missing files, invalid JSON, whitespace, empty data, etc.)
 
 - [ ] Phase 8: Validation
 
