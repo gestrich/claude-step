@@ -1230,68 +1230,6 @@ def test_prepare_command_with_services(mock_subprocess):
             mock_project_service.detect_project_from_pr.assert_called_once()
 ```
 
-### Migration History
-
-The ClaudeStep codebase has undergone two major service layer refactorings:
-
-#### Migration 1: Function-Based to Class-Based Services
-
-The codebase was migrated from function-based services to class-based services:
-
-**Before (Function-Based)**:
-```python
-def find_available_reviewer(repo: str, reviewers: list, metadata_service: MetadataService):
-    # Function approach - parameters passed every time
-    pass
-```
-
-**After (Class-Based)**:
-```python
-class ReviewerService:
-    def __init__(self, repo: str, metadata_service: MetadataService):
-        self.repo = repo
-        self.metadata_service = metadata_service
-
-    def find_available_reviewer(self, reviewers: list):
-        # Class approach - uses self.repo and self.metadata_service
-        pass
-```
-
-#### Migration 2: Flat Structure to Two-Level Organization
-
-The service layer was reorganized from a flat structure to a two-level architecture (documented in `docs/proposed/reorganize-service-layer-folders.md`):
-
-**Before (Flat Structure)**:
-```
-src/claudestep/services/
-├── pr_operations_service.py
-├── task_management_service.py
-├── reviewer_management_service.py
-├── project_detection_service.py
-├── statistics_service.py
-└── artifact_operations_service.py
-```
-
-**After (Two-Level Structure)**:
-```
-src/claudestep/services/
-├── core/
-│   ├── pr_service.py
-│   ├── task_service.py
-│   ├── reviewer_service.py
-│   └── project_service.py
-└── composite/
-    ├── statistics_service.py
-    └── artifact_service.py
-```
-
-**Key Changes**:
-- Services organized into `core/` (foundational) and `composite/` (orchestration) directories
-- Service names simplified by removing redundant words ("Operations", "Management", "Detection")
-- Clear dependency hierarchy: Composite → Core → Infrastructure
-
----
-
 ## Future: Metadata Synchronization
 
 ### Convention: Metadata as Source of Truth with Future Sync Capability
