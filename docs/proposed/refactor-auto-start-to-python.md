@@ -46,7 +46,7 @@ Follow patterns from existing domain models like `domain/project.py` and `domain
 - All models include `__repr__` methods for debugging
 - Build passes successfully and module imports correctly
 
-- [ ] Phase 2: Add git diff operations to infrastructure layer
+- [x] Phase 2: Add git diff operations to infrastructure layer ✅
 
 Extend existing `src/claudestep/infrastructure/git/operations.py` with new functions:
 - `detect_changed_files(ref_before: str, ref_after: str, pattern: str) -> List[str]` - Wrapper around `git diff --name-only --diff-filter=AM`
@@ -54,6 +54,18 @@ Extend existing `src/claudestep/infrastructure/git/operations.py` with new funct
 - `parse_spec_path_to_project(path: str) -> Optional[str]` - Extract project name from `claude-step/*/spec.md` paths
 
 Use existing `run_git_command()` helper for consistent error handling. Follow patterns from the existing functions in this module.
+
+**Technical Notes:**
+- Added three new functions to `src/claudestep/infrastructure/git/operations.py`:
+  - `detect_changed_files()`: Detects added or modified files using `git diff --name-only --diff-filter=AM`
+  - `detect_deleted_files()`: Detects deleted files using `git diff --name-only --diff-filter=D`
+  - `parse_spec_path_to_project()`: Parses `claude-step/{project}/spec.md` paths to extract project names
+- All functions use the existing `run_git_command()` helper for consistent error handling
+- Added `Optional` type import for the parse function return type
+- Included comprehensive docstrings with Args, Returns, Raises, and Examples sections
+- Functions handle empty git output gracefully by returning empty lists
+- Parse function validates path format strictly (must be exactly 3 parts: claude-step/project/spec.md)
+- Build passes successfully and all functions import and execute correctly
 
 - [ ] Phase 3: Create composite service for auto-start orchestration
 
