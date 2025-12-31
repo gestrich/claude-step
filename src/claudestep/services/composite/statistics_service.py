@@ -249,13 +249,20 @@ class StatisticsService:
                 # Use domain model properties instead of manual parsing
                 project_name = pr.project_name
                 task_index = pr.task_index
+                task_hash = pr.task_hash
 
-                if not project_name or task_index is None:
+                # PR must have a project name and either a task_index (old) or task_hash (new)
+                if not project_name or (task_index is None and task_hash is None):
                     continue
 
                 # Create PRReference from GitHub PR
-                # Use task index and cleaned task description
-                title = f"Task {task_index}: {pr.task_description}"
+                # Format title differently for hash-based vs index-based PRs
+                if task_hash:
+                    # Hash-based PR: use hash in title
+                    title = f"Task {task_hash[:8]}: {pr.task_description}"
+                else:
+                    # Index-based PR: use index in title (legacy)
+                    title = f"Task {task_index}: {pr.task_description}"
 
                 # Determine timestamp based on state
                 timestamp = pr.merged_at if pr.state == "merged" and pr.merged_at else pr.created_at
