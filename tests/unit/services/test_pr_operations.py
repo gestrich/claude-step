@@ -366,3 +366,751 @@ class TestGetProjectPrs:
 
         # Should return empty list on error
         assert result == []
+
+
+class TestGetOpenPrsForProject:
+    """Tests for get_open_prs_for_project convenience method"""
+
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_open_prs_for_project(self, mock_list_prs):
+        """Should call get_project_prs with state='open'"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            )
+        ]
+        mock_list_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_open_prs_for_project("my-refactor")
+
+        # Should return only open PRs
+        assert len(result) == 1
+        assert result[0].state == "open"
+
+        # Verify infrastructure layer was called with state="open"
+        mock_list_prs.assert_called_once_with(
+            repo="owner/repo",
+            state="open",
+            label="claudestep",
+            limit=100
+        )
+
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_open_prs_with_custom_label(self, mock_list_prs):
+        """Should use custom label when provided"""
+        mock_list_prs.return_value = []
+
+        service = PROperationsService("owner/repo")
+        service.get_open_prs_for_project("my-refactor", label="custom-label")
+
+        # Verify custom label passed through
+        mock_list_prs.assert_called_once_with(
+            repo="owner/repo",
+            state="open",
+            label="custom-label",
+            limit=100
+        )
+
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_open_prs_empty_result(self, mock_list_prs):
+        """Should handle empty results gracefully"""
+        mock_list_prs.return_value = []
+
+        service = PROperationsService("owner/repo")
+        result = service.get_open_prs_for_project("my-refactor")
+
+        assert result == []
+
+
+class TestGetOpenPrsForReviewer:
+    """Tests for get_open_prs_for_reviewer method"""
+
+    @patch("claudestep.services.pr_operations_service.list_open_pull_requests")
+    def test_get_open_prs_for_reviewer(self, mock_list_open_prs):
+        """Should fetch open PRs assigned to reviewer"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=2,
+                state="open",
+                head_ref_name="claude-step-my-refactor-2",
+                title="Task 2",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+        ]
+        mock_list_open_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_open_prs_for_reviewer("reviewer1")
+
+        # Should return PRs assigned to reviewer
+        assert len(result) == 2
+        assert result[0].number == 1
+        assert result[1].number == 2
+
+        # Verify infrastructure layer was called with assignee parameter
+        mock_list_open_prs.assert_called_once_with(
+            repo="owner/repo",
+            label="claudestep",
+            assignee="reviewer1"
+        )
+
+    @patch("claudestep.services.pr_operations_service.list_open_pull_requests")
+    def test_get_open_prs_with_custom_label(self, mock_list_open_prs):
+        """Should use custom label when provided"""
+        mock_list_open_prs.return_value = []
+
+        service = PROperationsService("owner/repo")
+        service.get_open_prs_for_reviewer("reviewer1", label="custom-label")
+
+        # Verify custom label passed through
+        mock_list_open_prs.assert_called_once_with(
+            repo="owner/repo",
+            label="custom-label",
+            assignee="reviewer1"
+        )
+
+    @patch("claudestep.services.pr_operations_service.list_open_pull_requests")
+    def test_get_open_prs_empty_result(self, mock_list_open_prs):
+        """Should handle reviewers with no assigned PRs"""
+        mock_list_open_prs.return_value = []
+
+        service = PROperationsService("owner/repo")
+        result = service.get_open_prs_for_reviewer("reviewer-no-prs")
+
+        assert result == []
+
+    @patch("claudestep.services.pr_operations_service.list_open_pull_requests")
+    def test_get_open_prs_returns_domain_models(self, mock_list_open_prs):
+        """Should return typed GitHubPullRequest domain models"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            )
+        ]
+        mock_list_open_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_open_prs_for_reviewer("reviewer1")
+
+        # Verify return type
+        assert all(isinstance(pr, GitHubPullRequest) for pr in result)
+
+
+class TestGetAllPrs:
+    """Tests for get_all_prs method"""
+
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_all_prs_default_params(self, mock_list_prs):
+        """Should fetch all PRs with default parameters"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=2,
+                state="merged",
+                head_ref_name="claude-step-my-refactor-2",
+                title="Task 2",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=datetime.now(timezone.utc),
+            ),
+        ]
+        mock_list_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_all_prs()
+
+        # Should return all PRs
+        assert len(result) == 2
+
+        # Verify infrastructure layer was called with defaults
+        mock_list_prs.assert_called_once_with(
+            repo="owner/repo",
+            state="all",
+            label="claudestep",
+            limit=500
+        )
+
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_all_prs_custom_label(self, mock_list_prs):
+        """Should use custom label when provided"""
+        mock_list_prs.return_value = []
+
+        service = PROperationsService("owner/repo")
+        service.get_all_prs(label="custom-label")
+
+        # Verify custom label passed through
+        mock_list_prs.assert_called_once_with(
+            repo="owner/repo",
+            state="all",
+            label="custom-label",
+            limit=500
+        )
+
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_all_prs_custom_state(self, mock_list_prs):
+        """Should use custom state when provided"""
+        mock_list_prs.return_value = []
+
+        service = PROperationsService("owner/repo")
+        service.get_all_prs(state="open")
+
+        # Verify custom state passed through
+        mock_list_prs.assert_called_once_with(
+            repo="owner/repo",
+            state="open",
+            label="claudestep",
+            limit=500
+        )
+
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_all_prs_custom_limit(self, mock_list_prs):
+        """Should use custom limit when provided"""
+        mock_list_prs.return_value = []
+
+        service = PROperationsService("owner/repo")
+        service.get_all_prs(limit=100)
+
+        # Verify custom limit passed through
+        mock_list_prs.assert_called_once_with(
+            repo="owner/repo",
+            state="all",
+            label="claudestep",
+            limit=100
+        )
+
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_all_prs_returns_domain_models(self, mock_list_prs):
+        """Should return typed GitHubPullRequest domain models"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            )
+        ]
+        mock_list_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_all_prs()
+
+        # Verify return type
+        assert all(isinstance(pr, GitHubPullRequest) for pr in result)
+
+
+class TestGetUniqueProjects:
+    """Tests for get_unique_projects method"""
+
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_unique_projects(self, mock_list_prs):
+        """Should extract unique project names from PRs"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=2,
+                state="open",
+                head_ref_name="claude-step-my-refactor-2",
+                title="Task 2",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=3,
+                state="open",
+                head_ref_name="claude-step-other-project-1",
+                title="Other project",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+        ]
+        mock_list_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_unique_projects()
+
+        # Should return unique project names
+        assert result == {"my-refactor", "other-project"}
+
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_unique_projects_handles_invalid_branches(self, mock_list_prs):
+        """Should ignore PRs with invalid branch names"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=2,
+                state="open",
+                head_ref_name="invalid-branch-name",
+                title="Invalid",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=3,
+                state="open",
+                head_ref_name="claude-step-no-index",
+                title="No index",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+        ]
+        mock_list_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_unique_projects()
+
+        # Should only return valid project
+        assert result == {"my-refactor"}
+
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_unique_projects_empty_result(self, mock_list_prs):
+        """Should return empty set when no projects found"""
+        mock_list_prs.return_value = []
+
+        service = PROperationsService("owner/repo")
+        result = service.get_unique_projects()
+
+        assert result == set()
+
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_unique_projects_custom_label(self, mock_list_prs):
+        """Should use custom label when provided"""
+        mock_list_prs.return_value = []
+
+        service = PROperationsService("owner/repo")
+        service.get_unique_projects(label="custom-label")
+
+        # Verify custom label passed through to get_all_prs
+        mock_list_prs.assert_called_once_with(
+            repo="owner/repo",
+            state="all",
+            label="custom-label",
+            limit=500
+        )
+
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_unique_projects_handles_none_branch_names(self, mock_list_prs):
+        """Should handle PRs with None as branch name"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=2,
+                state="open",
+                head_ref_name=None,  # None branch name
+                title="No branch",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+        ]
+        mock_list_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_unique_projects()
+
+        # Should only return valid project, skipping None
+        assert result == {"my-refactor"}
+
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_unique_projects_deduplicates(self, mock_list_prs):
+        """Should deduplicate project names from multiple PRs"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=2,
+                state="open",
+                head_ref_name="claude-step-my-refactor-2",
+                title="Task 2",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=3,
+                state="open",
+                head_ref_name="claude-step-my-refactor-3",
+                title="Task 3",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+        ]
+        mock_list_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_unique_projects()
+
+        # Should return single project, not duplicates
+        assert result == {"my-refactor"}
+        assert len(result) == 1
+
+
+class TestGetReviewerPrsForProject:
+    """Tests for get_reviewer_prs_for_project method"""
+
+    @patch("claudestep.services.pr_operations_service.list_open_pull_requests")
+    def test_get_reviewer_prs_for_project(self, mock_list_open_prs):
+        """Should filter reviewer's PRs by project"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=2,
+                state="open",
+                head_ref_name="claude-step-my-refactor-2",
+                title="Task 2",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=3,
+                state="open",
+                head_ref_name="claude-step-other-project-1",
+                title="Other project",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+        ]
+        mock_list_open_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_reviewer_prs_for_project("reviewer1", "my-refactor")
+
+        # Should return only PRs for the specified project
+        assert len(result) == 2
+        assert result[0].number == 1
+        assert result[1].number == 2
+        assert all(pr.project_name == "my-refactor" for pr in result)
+
+    @patch("claudestep.services.pr_operations_service.list_open_pull_requests")
+    def test_get_reviewer_prs_for_project_empty_result(self, mock_list_open_prs):
+        """Should handle reviewers with no PRs for project"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-other-project-1",
+                title="Other project",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+        ]
+        mock_list_open_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_reviewer_prs_for_project("reviewer1", "my-refactor")
+
+        # Should return empty list - reviewer has PRs but not for this project
+        assert result == []
+
+    @patch("claudestep.services.pr_operations_service.list_open_pull_requests")
+    def test_get_reviewer_prs_no_prs_at_all(self, mock_list_open_prs):
+        """Should handle reviewers with no PRs at all"""
+        mock_list_open_prs.return_value = []
+
+        service = PROperationsService("owner/repo")
+        result = service.get_reviewer_prs_for_project("reviewer1", "my-refactor")
+
+        assert result == []
+
+    @patch("claudestep.services.pr_operations_service.list_open_pull_requests")
+    def test_get_reviewer_prs_custom_label(self, mock_list_open_prs):
+        """Should use custom label when provided"""
+        mock_list_open_prs.return_value = []
+
+        service = PROperationsService("owner/repo")
+        service.get_reviewer_prs_for_project("reviewer1", "my-refactor", label="custom-label")
+
+        # Verify custom label passed through
+        mock_list_open_prs.assert_called_once_with(
+            repo="owner/repo",
+            label="custom-label",
+            assignee="reviewer1"
+        )
+
+    @patch("claudestep.services.pr_operations_service.list_open_pull_requests")
+    def test_get_reviewer_prs_returns_domain_models(self, mock_list_open_prs):
+        """Should return typed GitHubPullRequest domain models"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            )
+        ]
+        mock_list_open_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_reviewer_prs_for_project("reviewer1", "my-refactor")
+
+        # Verify return type
+        assert all(isinstance(pr, GitHubPullRequest) for pr in result)
+
+    @patch("claudestep.services.pr_operations_service.list_open_pull_requests")
+    def test_get_reviewer_prs_filters_using_domain_model_property(self, mock_list_open_prs):
+        """Should use domain model's project_name property for filtering"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=2,
+                state="open",
+                head_ref_name="invalid-branch-name",  # Invalid branch - project_name will be None
+                title="Invalid",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+        ]
+        mock_list_open_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_reviewer_prs_for_project("reviewer1", "my-refactor")
+
+        # Should only return PR with valid project name
+        assert len(result) == 1
+        assert result[0].number == 1
+
+
+class TestGetReviewerPrCount:
+    """Tests for get_reviewer_pr_count convenience method"""
+
+    @patch("claudestep.services.pr_operations_service.list_open_pull_requests")
+    def test_get_reviewer_pr_count(self, mock_list_open_prs):
+        """Should return count of reviewer's PRs for project"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=2,
+                state="open",
+                head_ref_name="claude-step-my-refactor-2",
+                title="Task 2",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+        ]
+        mock_list_open_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_reviewer_pr_count("reviewer1", "my-refactor")
+
+        # Should return count of PRs
+        assert result == 2
+
+    @patch("claudestep.services.pr_operations_service.list_open_pull_requests")
+    def test_get_reviewer_pr_count_zero(self, mock_list_open_prs):
+        """Should return 0 for reviewers with no PRs"""
+        mock_list_open_prs.return_value = []
+
+        service = PROperationsService("owner/repo")
+        result = service.get_reviewer_pr_count("reviewer1", "my-refactor")
+
+        assert result == 0
+
+    @patch("claudestep.services.pr_operations_service.list_open_pull_requests")
+    def test_get_reviewer_pr_count_with_other_projects(self, mock_list_open_prs):
+        """Should count only PRs for the specified project"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=2,
+                state="open",
+                head_ref_name="claude-step-other-project-1",
+                title="Other project",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=3,
+                state="open",
+                head_ref_name="claude-step-other-project-2",
+                title="Other project 2",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+        ]
+        mock_list_open_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_reviewer_pr_count("reviewer1", "my-refactor")
+
+        # Should count only PRs for my-refactor, not other projects
+        assert result == 1
+
+    @patch("claudestep.services.pr_operations_service.list_open_pull_requests")
+    def test_get_reviewer_pr_count_custom_label(self, mock_list_open_prs):
+        """Should use custom label when provided"""
+        mock_list_open_prs.return_value = []
+
+        service = PROperationsService("owner/repo")
+        service.get_reviewer_pr_count("reviewer1", "my-refactor", label="custom-label")
+
+        # Verify custom label passed through
+        mock_list_open_prs.assert_called_once_with(
+            repo="owner/repo",
+            label="custom-label",
+            assignee="reviewer1"
+        )
+
+    @patch("claudestep.services.pr_operations_service.list_open_pull_requests")
+    def test_get_reviewer_pr_count_returns_int(self, mock_list_open_prs):
+        """Should return integer type"""
+        mock_prs = [
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=["reviewer1"],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            )
+        ]
+        mock_list_open_prs.return_value = mock_prs
+
+        service = PROperationsService("owner/repo")
+        result = service.get_reviewer_pr_count("reviewer1", "my-refactor")
+
+        # Verify return type
+        assert isinstance(result, int)
