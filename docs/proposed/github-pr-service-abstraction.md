@@ -160,7 +160,7 @@ Refactor `ReviewerManagementService` to use the enhanced `PROperationsService` i
 
 **Expected outcome:** ✅ COMPLETED - `ReviewerManagementService` uses clean service API, no GitHub API calls or parsing logic.
 
-- [ ] Phase 5: Update TaskManagementService to use PROperationsService
+- [x] Phase 5: Update TaskManagementService to use PROperationsService
 
 Refactor `TaskManagementService` to use `PROperationsService` instead of calling GitHub API operations directly.
 
@@ -170,11 +170,21 @@ Refactor `TaskManagementService` to use `PROperationsService` instead of calling
 - Remove manual branch parsing code (use domain model properties)
 - Update all call sites in CLI commands to instantiate and pass `PROperationsService`
 
-**Files to modify:**
-- `src/claudestep/services/task_management_service.py`
-- CLI commands that use `TaskManagementService` (likely `prepare.py`, `discover.py`)
+**Files modified:**
+- `src/claudestep/services/task_management_service.py` - Updated to accept PROperationsService dependency
+- `src/claudestep/cli/commands/prepare.py` - Updated to pass PROperationsService to TaskManagementService
+- `src/claudestep/cli/commands/discover_ready.py` - Updated to pass PROperationsService to TaskManagementService
 
-**Expected outcome:** `TaskManagementService` uses service abstraction, no direct GitHub API calls.
+**Technical notes:**
+- Successfully implemented dependency injection pattern: CLI creates PROperationsService before TaskManagementService
+- Removed direct call to infrastructure layer (list_open_pull_requests)
+- Service now uses get_open_prs_for_project() which returns filtered, typed domain models
+- Removed manual branch parsing (using pr.task_index property from domain model)
+- All 573 tests pass successfully
+- finalize.py only uses static method TaskManagementService.mark_task_complete(), so no changes needed
+- Coverage at 67.25% (TaskManagementService has no tests yet - will be added in Phase 8)
+
+**Expected outcome:** ✅ COMPLETED - `TaskManagementService` uses service abstraction, no direct GitHub API calls.
 
 - [ ] Phase 6: Update StatisticsService to use PROperationsService
 

@@ -10,7 +10,6 @@ from typing import Optional
 
 from claudestep.domain.exceptions import FileNotFoundError
 from claudestep.domain.spec_content import SpecContent
-from claudestep.infrastructure.github.operations import list_open_pull_requests
 from claudestep.services.pr_operations_service import PROperationsService
 
 
@@ -22,13 +21,15 @@ class TaskManagementService:
     logic for ClaudeStep's task workflow.
     """
 
-    def __init__(self, repo: str):
+    def __init__(self, repo: str, pr_operations_service: PROperationsService):
         """Initialize TaskManagementService
 
         Args:
             repo: GitHub repository (owner/name)
+            pr_operations_service: Service for PR operations
         """
         self.repo = repo
+        self.pr_operations_service = pr_operations_service
 
     # Public API methods
 
@@ -94,18 +95,14 @@ class TaskManagementService:
             Set of task indices that are in progress
         """
         try:
-            # Query open PRs from GitHub API
-            open_prs = list_open_pull_requests(self.repo, label=label)
+            # Query open PRs for this project using service abstraction
+            open_prs = self.pr_operations_service.get_open_prs_for_project(project, label=label)
 
-            # Parse branch names to extract task indices for this project
+            # Extract task indices using domain model properties
             task_indices = set()
             for pr in open_prs:
-                if pr.head_ref_name:
-                    parsed = PROperationsService.parse_branch_name(pr.head_ref_name)
-                    if parsed:
-                        pr_project, task_index = parsed
-                        if pr_project == project:
-                            task_indices.add(task_index)
+                if pr.task_index is not None:
+                    task_indices.add(pr.task_index)
 
             return task_indices
         except Exception as e:

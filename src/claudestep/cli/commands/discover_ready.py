@@ -76,7 +76,7 @@ def check_project_ready(project_name: str, repo: str) -> bool:
         from claudestep.services.pr_operations_service import PROperationsService
         pr_service = PROperationsService(repo)
         reviewer_service = ReviewerManagementService(repo, pr_service)
-        task_service = TaskManagementService(repo)
+        task_service = TaskManagementService(repo, pr_service)
 
         # Check reviewer capacity
         selected_reviewer, capacity_result = reviewer_service.find_available_reviewer(project_config, label, project_name)
