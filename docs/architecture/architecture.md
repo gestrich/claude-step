@@ -545,6 +545,8 @@ python3 -m claudestep <command>
 | `finalize` | Commit changes and create PR | Main action |
 | `prepare-summary` | Generate prompt for PR summary | Main action |
 | `statistics` | Generate reports and statistics | Statistics action |
+| `auto-start` | Detect new projects and trigger workflows | Auto-Start workflow |
+| `auto-start-summary` | Generate summary for auto-start results | Auto-Start workflow |
 
 ### Command Structure
 
@@ -1071,6 +1073,50 @@ concurrency:
 - Uses concurrency control to prevent race conditions
 - Both concurrent runs execute (they'll detect existing PRs and skip appropriately)
 
+### Python-First Implementation
+
+Following ClaudeStep's **Python-first architecture**, the auto-start workflow delegates all business logic to Python services, with YAML acting as a lightweight wrapper.
+
+**YAML Workflow** (`.github/workflows/claudestep-auto-start.yml`):
+```yaml
+steps:
+  - name: Setup Python
+    uses: actions/setup-python@v5
+    with:
+      python-version: '3.11'
+
+  - name: Install ClaudeStep
+    run: pip install -e .
+
+  - name: Detect and trigger auto-start
+    id: auto_start
+    run: python3 -m claudestep auto-start
+    env:
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      BASE_BRANCH: main
+      REF_BEFORE: ${{ github.event.before }}
+      REF_AFTER: ${{ github.sha }}
+      GH_TOKEN: ${{ github.token }}
+      AUTO_START_ENABLED: ${{ vars.CLAUDESTEP_AUTO_START_ENABLED != 'false' }}
+
+  - name: Generate summary
+    if: always()
+    run: python3 -m claudestep auto-start-summary
+    env:
+      TRIGGERED_PROJECTS: ${{ steps.auto_start.outputs.triggered_projects }}
+      FAILED_PROJECTS: ${{ steps.auto_start.outputs.failed_projects }}
+```
+
+**Python Service Layer** (`src/claudestep/services/composite/auto_start_service.py`):
+- `detect_changed_projects()` - Uses git operations to find changed spec files
+- `determine_new_projects()` - Uses PRService to check for existing PRs
+- `should_auto_trigger()` - Business logic for auto-start decision
+
+**Python CLI Command** (`src/claudestep/cli/commands/auto_start.py`):
+- Orchestrates service calls
+- Writes GitHub Actions outputs
+- Handles error cases
+
 ### Detection Flow
 
 ```
@@ -1080,36 +1126,42 @@ concurrency:
              │
              ▼
 ┌─────────────────────────────────────────┐
-│  Detect Changed Spec Files              │
-│  • git diff --diff-filter=AM            │
-│  • Extract project names                │
-│  • Log deleted specs (ignored)          │
+│  Python: AutoStartService               │
+│  detect_changed_projects()              │
+│  • git diff via infrastructure layer    │
+│  • Returns AutoStartProject models      │
 └────────────┬────────────────────────────┘
              │
              ▼
 ┌─────────────────────────────────────────┐
-│  Check if Projects are New              │
-│  • Query GitHub for existing PRs        │
-│  • Filter by claudestep label           │
-│  • Check branch name pattern            │
-│  • PR count = 0 → new project           │
-│  • PR count > 0 → existing project      │
+│  Python: AutoStartService               │
+│  determine_new_projects()               │
+│  • Uses PRService.get_project_prs()     │
+│  • Filters to new projects only         │
 └────────────┬────────────────────────────┘
              │
              ▼
 ┌─────────────────────────────────────────┐
-│  Auto-Trigger for New Projects          │
-│  • gh workflow run claudestep.yml       │
-│  • Pass project_name and base_branch    │
-│  • One trigger per new project          │
+│  Python: AutoStartService               │
+│  should_auto_trigger()                  │
+│  • Returns AutoStartDecision model      │
+│  • Checks auto_start_enabled config     │
 └────────────┬────────────────────────────┘
              │
              ▼
 ┌─────────────────────────────────────────┐
-│  Generate Summary                        │
-│  • List all projects with spec changes  │
-│  • Show which were auto-triggered        │
-│  • Explain skipped projects              │
+│  Python: WorkflowService                │
+│  batch_trigger_claudestep_workflows()   │
+│  • Uses gh workflow run                 │
+│  • Passes project_name, base_branch     │
+└────────────┬────────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────────┐
+│  Python: cmd_auto_start_summary()       │
+│  • Reads outputs from auto-start step   │
+│  • Generates GitHub Actions summary     │
+│  • Shows triggered/failed projects      │
 └─────────────────────────────────────────┘
 ```
 
@@ -1171,12 +1223,31 @@ Summary: "Existing project, relies on PR merge triggers"
 
 ### Disabling Auto-Start
 
-Users can disable auto-start by:
+Users can disable auto-start using the `CLAUDESTEP_AUTO_START_ENABLED` repository variable:
+
+**Via GitHub UI:**
+1. Navigate to repository Settings > Secrets and variables > Actions > Variables
+2. Add a new repository variable: `CLAUDESTEP_AUTO_START_ENABLED`
+3. Set value to `false`
+
+**Behavior:**
+- When `CLAUDESTEP_AUTO_START_ENABLED` is set to `'false'`, the auto-start workflow still runs but skips triggering any workflows
+- The workflow generates a summary explaining that auto-start is disabled
+- Default behavior (if variable is not set or set to any other value): auto-start is enabled
+
+**Alternative methods:**
 1. Deleting `.github/workflows/claudestep-auto-start.yml`
 2. Disabling the workflow in GitHub Actions settings
 3. Manually triggering tasks via Actions > ClaudeStep > Run workflow
 
 **Note:** Disabling only affects the first task trigger. Subsequent tasks continue to auto-trigger on PR merge.
+
+**Implementation:**
+The configuration is passed through the service layer following ClaudeStep's explicit parameter passing pattern:
+- YAML workflow reads `vars.CLAUDESTEP_AUTO_START_ENABLED` and sets environment variable
+- `__main__.py` adapter layer reads environment variable and passes to CLI command
+- CLI command passes to `AutoStartService` constructor
+- Service checks configuration before making auto-trigger decisions
 
 ### Integration with Main Action
 
@@ -1385,6 +1456,17 @@ class ServiceName:
 
 6. **ArtifactService** - Artifact operations
    - Module-level functions: `find_project_artifacts()`, `get_artifact_metadata()`, `find_in_progress_tasks()`, `get_reviewer_assignments()`
+
+7. **AutoStartService** - Auto-start project detection and decision logic
+   - Constructor: `__init__(self, repo: str, pr_service: PRService, auto_start_enabled: bool = True)`
+   - Instance methods: `detect_changed_projects()`, `determine_new_projects()`, `should_auto_trigger()`
+   - Dependency: Uses `PRService` (core) to check for existing PRs
+   - Orchestrates: Git operations (infrastructure) for file change detection
+
+8. **WorkflowService** - GitHub workflow triggering
+   - Constructor: `__init__(self, repo: str)`
+   - Instance methods: `trigger_claudestep_workflow()`, `batch_trigger_claudestep_workflows()`
+   - Uses infrastructure layer for `gh` command execution
 
 **Infrastructure Services** (`src/claudestep/infrastructure/`):
 

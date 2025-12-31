@@ -417,7 +417,7 @@ Follow patterns from `tests/integration/cli/commands/test_statistics.py`.
 - Tests verify both successful and error paths
 - Build passes with test suite at 678 total passing tests (660 + 18 new integration tests)
 
-- [ ] Phase 13: Update architecture documentation
+- [x] Phase 13: Update architecture documentation ✅
 
 Update `docs/architecture/architecture.md`:
 - Add `auto-start` to command dispatcher table
@@ -430,6 +430,21 @@ Add to "Available Commands" table:
 ```markdown
 | `auto-start` | Detect new projects and trigger workflows | Auto-Start workflow |
 ```
+
+**Technical Notes:**
+- Updated `docs/architecture/architecture.md` with comprehensive documentation of the refactored auto-start workflow
+- Added `auto-start` and `auto-start-summary` commands to the Available Commands table (docs/architecture/architecture.md:540-549)
+- Documented `AutoStartService` and `WorkflowService` in the composite services section (docs/architecture/architecture.md:1391-1400)
+- Updated Auto-Start Workflow section with Python-first implementation details:
+  - Added example YAML showing minimal wrapper pattern (docs/architecture/architecture.md:1080-1108)
+  - Documented Python service layer responsibilities (docs/architecture/architecture.md:1110-1118)
+  - Updated detection flow diagram to show service orchestration (docs/architecture/architecture.md:1122-1166)
+- Added comprehensive documentation for disabling auto-start (docs/architecture/architecture.md:1224-1250):
+  - Instructions for using `CLAUDESTEP_AUTO_START_ENABLED` repository variable
+  - Explanation of configuration flow through service layers
+  - Alternative disabling methods
+- All 685 tests collect successfully, confirming documentation changes don't break anything
+- Architecture documentation now accurately reflects the Python-first refactoring completed in Phases 1-12
 
 - [ ] Phase 14: Validation - E2E testing
 
