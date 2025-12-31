@@ -609,13 +609,13 @@ When adding new tests:
 
 ## Further Documentation
 
-- [E2E Testing Guide](../../docs/architecture/e2e-testing.md) - Comprehensive guide
-- [Local Testing Setup](../../docs/architecture/local-testing.md) - Development setup
-- [Migration Plan](../../docs/proposed/e2e-test-migration.md) - Background and design
+- [E2E Testing Guide](../../docs/feature-architecture/e2e-testing.md) - Comprehensive guide
+- [Testing Philosophy](../../docs/general-architecture/testing-philosophy.md) - Testing approach and requirements
+- [Migration Plan](../../docs/specs/archive/2025-12-28-e2e-test-migration.md) - Background and design
 
 ## Need Help?
 
 - Check the [troubleshooting section](#troubleshooting) above
 - Review workflow logs: `gh run view <run_id> --log`
-- See [docs/architecture/e2e-testing.md](../../docs/architecture/e2e-testing.md) for details
+- See [docs/feature-architecture/e2e-testing.md](../../docs/feature-architecture/e2e-testing.md) for details
 - Open an issue with test output and workflow logs

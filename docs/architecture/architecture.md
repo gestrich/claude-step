@@ -1807,7 +1807,7 @@ def collect_team_member_stats(self, days_back: int) -> Dict[str, TeamMemberStats
 - ✅ Cross-project aggregation automatic (all projects in metadata)
 - ✅ No GitHub API rate limits for statistics queries
 
-For the complete refactoring process, see `docs/proposed/refactor-statistics-service-architecture.md`.
+For the complete refactoring process, see `docs/specs/active/2025-12-27-refactor-statistics-service-architecture.md`.
 
 ### Related Documentation
 
@@ -1815,7 +1815,7 @@ For the complete refactoring process, see `docs/proposed/refactor-statistics-ser
 - **GitHub operations**: `src/claudestep/infrastructure/github/operations.py` - `list_pull_requests()`, `list_merged_pull_requests()`, `list_open_pull_requests()`
 - **Metadata models**: `src/claudestep/domain/models.py` - `PullRequest`, `PRReference`, `HybridProjectMetadata`
 - **Statistics service**: `src/claudestep/services/composite/statistics_service.py` - Uses metadata only, no GitHub API
-- **Refactoring documentation**: `docs/proposed/refactor-statistics-service-architecture.md` - Complete refactoring process (Phases 1-9)
+- **Refactoring documentation**: `docs/specs/active/2025-12-27-refactor-statistics-service-architecture.md` - Complete refactoring process (Phases 1-9)
 
 ---
 

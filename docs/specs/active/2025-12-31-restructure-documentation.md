@@ -192,7 +192,7 @@ Move ephemeral specs to appropriate locations:
 - Test coverage: 69.18% (just below 70% threshold due to pre-existing gaps)
 - All ephemeral implementation specs now properly organized in specs/ structure
 
-- [ ] Phase 7: Update cross-references
+- [x] Phase 7: Update cross-references
 
 Update references between documents and from CLAUDE.md:
 - Update `CLAUDE.md` to reference new structure (feature-guides/, feature-architecture/, general-architecture/)
@@ -204,6 +204,17 @@ Update references between documents and from CLAUDE.md:
 - `CLAUDE.md`
 - All newly created README files
 - Any documents with cross-references
+
+**Completion Notes:**
+- Updated `CLAUDE.md` to reference new documentation structure with clear navigation paths
+- Updated `tests/e2e/README.md` to point to new locations for E2E testing guide and migration plan
+- Updated `docs/architecture/architecture.md` references to refactor-statistics-service-architecture.md
+- Updated `docs/general-architecture/domain-model-design.md` to reference correct spec locations
+- Updated `docs/general-architecture/python-style.md` to reference correct spec locations
+- Updated `docs/specs/active/2025-12-31-refactor-pr-summary-architecture.md` to reference python-style.md in new location
+- Build passes (705 tests pass, 4 pre-existing failures unrelated to documentation changes)
+- All cross-references now point to the new documentation structure
+- Remaining references to old paths are in archived specs (historical context) and review documents (not updated)
 
 - [ ] Phase 8: Clean up old structure
 

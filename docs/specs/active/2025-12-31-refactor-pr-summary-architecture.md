@@ -16,7 +16,7 @@ This refactoring addresses several architectural violations in the PR summary an
 
 ### Architecture Principles Applied
 
-From `docs/architecture/python-code-style.md`:
+From `docs/general-architecture/python-style.md`:
 - **Parse once into well-formed models**: Domain models should own parsing logic
 - **Commands use explicit parameters**: CLI commands receive parameters, not environment variables
 - **Services don't read environment variables**: Configuration flows from entry point
