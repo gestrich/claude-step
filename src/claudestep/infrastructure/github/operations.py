@@ -359,7 +359,7 @@ def list_open_pull_requests(
 def list_pull_requests_for_project(
     repo: str,
     project_name: str,
-    label: str = "claudestep",
+    label: str,
     state: str = "all",
     limit: int = 100
 ) -> List[GitHubPullRequest]:
@@ -368,17 +368,17 @@ def list_pull_requests_for_project(
     Filters PRs by label and project name based on branch naming convention
     (claude-step-{project_name}-{hash}).
 
-    **Current Usage**: E2E testing to verify PR creation for specific projects
+    **Current Usage**: Test automation and project status queries
 
     **Usage Examples**:
-    - E2E tests: Verify workflow created PRs for a test project
+    - Test automation: Verify workflow created PRs for a project
     - Project status: Check all PRs for a specific refactoring project
     - Cleanup: Find and close all PRs for a project
 
     Args:
         repo: GitHub repository (owner/name)
         project_name: Project name to filter by (matches branch pattern)
-        label: Label filter (default: "claudestep")
+        label: Label filter (use DEFAULT_PR_LABEL from constants)
         state: "open", "closed", "merged", or "all" (default: "all")
         limit: Max results (default 100)
 
@@ -386,8 +386,11 @@ def list_pull_requests_for_project(
         List of GitHubPullRequest domain models for the project
 
     Example:
-        >>> # E2E test: Verify PRs created for test project
-        >>> project_prs = list_pull_requests_for_project("owner/repo", "e2e-test-project")
+        >>> from claudestep.domain.constants import DEFAULT_PR_LABEL
+        >>> # Verify PRs created for a project
+        >>> project_prs = list_pull_requests_for_project(
+        ...     "owner/repo", "my-project", DEFAULT_PR_LABEL
+        ... )
         >>> print(f"Found {len(project_prs)} PRs for project")
 
     See Also:

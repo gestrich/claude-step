@@ -10,6 +10,7 @@ import json
 import logging
 from typing import Optional, Dict, Any, List, Callable
 
+from claudestep.domain.constants import DEFAULT_PR_LABEL
 from claudestep.infrastructure.github.operations import list_pull_requests_for_project as _list_prs_for_project
 
 # Configure logger for E2E test diagnostics
@@ -302,12 +303,12 @@ class GitHubHelper:
 
         return pr
 
-    def get_pull_requests_for_project(self, project_name: str, label: str = "claudestep") -> List[Dict[str, Any]]:
+    def get_pull_requests_for_project(self, project_name: str, label: str = DEFAULT_PR_LABEL) -> List[Dict[str, Any]]:
         """Get all PRs for a given project using infrastructure layer.
 
         Args:
             project_name: Project name to filter PRs by
-            label: Label to filter PRs by (default: "claudestep")
+            label: Label to filter PRs by (default: DEFAULT_PR_LABEL)
 
         Returns:
             List of PR dictionaries matching the project
