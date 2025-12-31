@@ -489,7 +489,7 @@ concurrency:
 
 ---
 
-- [ ] Phase 8: Add configuration option to disable auto-start
+- [x] Phase 8: Add configuration option to disable auto-start
 
 **Objective**: Allow users to opt-out of auto-start if they prefer manual control.
 
@@ -531,6 +531,24 @@ auto_start_enabled: false
 - Users can disable auto-start if desired
 - Default behavior remains auto-start enabled
 - Configuration is discoverable and documented
+
+**Status**: ✅ Completed
+- Implemented configuration option using GitHub repository variables approach
+- Added `Check if auto-start is enabled` step that:
+  - Reads the `CLAUDESTEP_AUTO_START_ENABLED` repository variable
+  - Defaults to enabled if variable is not set
+  - Outputs enabled/disabled status for use in subsequent steps
+- Updated trigger step condition to check `steps.check_enabled.outputs.enabled == 'true'`
+- Enhanced workflow summary to display clear message when auto-start is disabled:
+  - Shows warning icon and disabled status
+  - Explains how to re-enable auto-start
+  - Exits early to avoid confusing messaging about no new projects
+- YAML syntax validated successfully
+- **Technical notes**:
+  - Chose repository variables over workflow_dispatch inputs for cleaner UX
+  - Users can disable by setting `CLAUDESTEP_AUTO_START_ENABLED=false` in Settings > Secrets and variables > Actions > Variables
+  - Default behavior (variable not set) is auto-start enabled, maintaining backward compatibility
+  - Summary provides clear feedback about disabled state with instructions to re-enable
 
 ---
 

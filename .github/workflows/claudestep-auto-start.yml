@@ -87,8 +87,23 @@ jobs:
           echo "new_projects=$NEW_PROJECTS" >> $GITHUB_OUTPUT
           echo "New projects to auto-trigger: $NEW_PROJECTS"
 
+      - name: Check if auto-start is enabled
+        id: check_enabled
+        run: |
+          # Check if auto-start is disabled via repository variable
+          # Default to enabled if variable is not set
+          AUTO_START_ENABLED="${{ vars.CLAUDESTEP_AUTO_START_ENABLED }}"
+
+          if [ "$AUTO_START_ENABLED" = "false" ]; then
+            echo "Auto-start is disabled via CLAUDESTEP_AUTO_START_ENABLED repository variable"
+            echo "enabled=false" >> $GITHUB_OUTPUT
+          else
+            echo "Auto-start is enabled (default behavior)"
+            echo "enabled=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Trigger ClaudeStep for new projects
-        if: steps.check_new.outputs.new_projects != ''
+        if: steps.check_new.outputs.new_projects != '' && steps.check_enabled.outputs.enabled == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -127,6 +142,15 @@ jobs:
             echo "- $project" >> $GITHUB_STEP_SUMMARY
           done
           echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Check if auto-start is disabled
+          if [ "${{ steps.check_enabled.outputs.enabled }}" = "false" ]; then
+            echo "⚠️ **Auto-start is disabled**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Auto-start has been disabled via the \`CLAUDESTEP_AUTO_START_ENABLED\` repository variable." >> $GITHUB_STEP_SUMMARY
+            echo "To enable auto-start, remove this variable or set it to \`true\` in repository settings." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
 
           if [ -n "${{ steps.check_new.outputs.new_projects }}" ]; then
             echo "## Auto-triggered for new projects:" >> $GITHUB_STEP_SUMMARY
