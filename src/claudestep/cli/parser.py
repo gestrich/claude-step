@@ -47,6 +47,10 @@ def create_parser() -> argparse.ArgumentParser:
         "add-cost-comment",
         help="Post cost breakdown comment to PR"
     )
+    parser_post_pr_comment = subparsers.add_parser(
+        "post-pr-comment",
+        help="Post unified PR comment with summary and cost breakdown"
+    )
     parser_notify_pr = subparsers.add_parser(
         "notify-pr",
         help="Generate Slack notification for created PR"

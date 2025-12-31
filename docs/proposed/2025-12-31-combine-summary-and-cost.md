@@ -76,7 +76,7 @@ Expected outcome: Single step handles both summary prompt AND cost extraction
   - All 9 tests pass successfully
 - Build succeeds, changes follow Python-First principle by consolidating cost extraction logic in Python
 
-- [ ] Phase 3: Create new unified comment posting command
+- [x] Phase 3: Create new unified comment posting command
 
 **Current behavior:** `add_cost_comment.py` only posts cost breakdown
 
@@ -104,6 +104,29 @@ Create new command `src/claudestep/cli/commands/post_pr_comment.py`:
 **Testing Note:** Following [Testing Guide](../architecture/testing-guide.md), create unit tests that mock subprocess calls and verify comment formatting.
 
 Expected outcome: New command reliably posts combined comment
+
+**Technical notes:**
+- Created new command `src/claudestep/cli/commands/post_pr_comment.py` with:
+  - `cmd_post_pr_comment()` function that reads environment variables:
+    - `PR_NUMBER`: Pull request number
+    - `SUMMARY_FILE`: Path to AI-generated summary file
+    - `MAIN_COST`, `SUMMARY_COST`, `TOTAL_COST`: Cost values from Phase 2
+    - `GITHUB_REPOSITORY`, `GITHUB_RUN_ID`: For workflow URL
+  - `format_unified_comment()` function that combines summary and cost breakdown
+  - Graceful fallback to cost-only comment when summary file is missing or empty
+  - Identical error handling and cleanup logic as `add_cost_comment.py` for reliability
+- Registered command in CLI:
+  - Added import in `src/claudestep/__main__.py`
+  - Added routing in main() function
+  - Added parser definition in `src/claudestep/cli/parser.py`
+- Created comprehensive integration tests in `tests/integration/cli/commands/test_post_pr_comment.py`:
+  - 21 test cases covering all scenarios
+  - Tests for combined comment formatting with summary and cost
+  - Tests for cost-only fallback when summary missing/empty
+  - Tests for error handling, file cleanup, input validation
+  - All tests pass successfully
+- Build succeeds: `python3 -m claudestep --help` shows new `post-pr-comment` command
+- Test suite: 700 tests pass (including all 21 new tests), coverage at 70.19%
 
 - [ ] Phase 4: Update action.yml workflow to use new unified approach
 

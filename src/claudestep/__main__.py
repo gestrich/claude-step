@@ -16,6 +16,7 @@ from claudestep.cli.commands.discover_ready import main as cmd_discover_ready
 from claudestep.cli.commands.extract_cost import cmd_extract_cost
 from claudestep.cli.commands.finalize import cmd_finalize
 from claudestep.cli.commands.notify_pr import cmd_notify_pr
+from claudestep.cli.commands.post_pr_comment import cmd_post_pr_comment
 from claudestep.cli.commands.prepare import cmd_prepare
 from claudestep.cli.commands.prepare_summary import cmd_prepare_summary
 from claudestep.cli.commands.statistics import cmd_statistics
@@ -51,6 +52,8 @@ def main():
         return cmd_extract_cost(args, gh)
     elif args.command == "add-cost-comment":
         return cmd_add_cost_comment(args, gh)
+    elif args.command == "post-pr-comment":
+        return cmd_post_pr_comment(args, gh)
     elif args.command == "notify-pr":
         return cmd_notify_pr(args, gh)
     elif args.command == "statistics":
