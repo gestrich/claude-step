@@ -6,7 +6,7 @@ This is a permanent test project used for end-to-end testing of ClaudeStep workf
 
 ## Tasks
 
-- [ ] Task 1
+- [x] Task 1
 - [x] Task 2
 - [ ] Task 3
 - [ ] Task 4
