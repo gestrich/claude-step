@@ -308,8 +308,8 @@ ClaudeStep's architecture consists of four layers:
 ```python
 def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
     # Instantiate services
-    task_service = TaskManagementService(repo, metadata_service)
-    reviewer_service = ReviewerManagementService(repo, metadata_service)
+    task_service = TaskService(repo, metadata_service)
+    reviewer_service = ReviewerService(repo, metadata_service)
 
     # Orchestrate operations
     task = task_service.find_next_available_task(spec_content)
@@ -335,7 +335,7 @@ def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
 
 **Example**:
 ```python
-class TaskManagementService:
+class TaskService:
     """Service Layer class for task management operations.
 
     Coordinates task finding, marking, and tracking across
@@ -420,7 +420,7 @@ class ServiceName:
 
 #### Services Encapsulate Related Operations
 ```python
-class TaskManagementService:
+class TaskService:
     """Groups all task-related operations."""
 
     def find_next_available_task(self, spec_content: str) -> TaskMetadata:
@@ -499,12 +499,12 @@ def cmd_statistics(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
 ```python
 # CLI Layer - Orchestrates the workflow
 def cmd_prepare(args, gh):
-    task_service = TaskManagementService(repo, metadata_service)
+    task_service = TaskService(repo, metadata_service)
     task = task_service.find_next_available_task(spec_content)
     gh.write_output("task_description", task.description)
 
 # Service Layer - Implements business logic
-class TaskManagementService:
+class TaskService:
     def find_next_available_task(self, spec_content: str) -> TaskMetadata:
         tasks = self._parse_tasks(spec_content)
         in_progress = self._get_in_progress_tasks()
@@ -912,15 +912,20 @@ src/claudestep/
 │   └── filesystem/
 │       └── operations.py    # File I/O operations
 │
-├── application/             # Layer 3: Business logic services
-│   ├── services/
-│   │   ├── reviewer_management.py
-│   │   ├── task_management.py
-│   │   ├── project_detection.py
-│   │   ├── pr_operations.py
-│   │   ├── artifact_operations.py
-│   │   ├── metadata_service.py
-│   │   └── statistics_service.py
+├── services/                # Layer 3: Business logic services
+│   ├── __init__.py
+│   ├── core/                # Foundational services
+│   │   ├── __init__.py
+│   │   ├── pr_service.py
+│   │   ├── project_service.py
+│   │   ├── reviewer_service.py
+│   │   └── task_service.py
+│   └── composite/           # Higher-level orchestration
+│       ├── __init__.py
+│       ├── artifact_service.py
+│       └── statistics_service.py
+│
+├── application/             # Application layer utilities
 │   └── formatters/
 │       └── table_formatter.py
 │
@@ -985,6 +990,117 @@ src/claudestep/
 
 ---
 
+## Service Layer Organization
+
+### Convention: Two-Level Service Architecture
+
+ClaudeStep organizes services into **two architectural levels** that reflect their role and dependencies:
+
+#### Core Services (`services/core/`)
+
+**Purpose**: Foundational services providing basic operations
+
+Core services are the building blocks of the system. They provide focused, single-responsibility operations that can be used independently or composed together.
+
+**Characteristics**:
+- Focus on a single domain area (PRs, tasks, reviewers, projects)
+- Minimal dependencies on other services
+- Can be used independently
+- Provide the foundation for composite services
+
+**Available Core Services**:
+
+1. **PRService** (`pr_service.py`)
+   - PR and branch naming utilities
+   - PR querying and filtering
+   - Branch name parsing and formatting
+
+2. **TaskService** (`task_service.py`)
+   - Task finding and tracking
+   - Task marking and completion
+   - Task ID generation
+
+3. **ReviewerService** (`reviewer_service.py`)
+   - Reviewer capacity management
+   - Reviewer assignment logic
+   - Availability checking
+
+4. **ProjectService** (`project_service.py`)
+   - Project detection from PRs
+   - Project path parsing
+   - Project validation
+
+**Example Usage**:
+```python
+# Core services can be used independently
+pr_service = PRService(repo)
+branch_name = pr_service.format_branch_name(project, task_index)
+
+task_service = TaskService(repo, metadata_service)
+next_task = task_service.find_next_available_task(spec_content)
+```
+
+#### Composite Services (`services/composite/`)
+
+**Purpose**: Higher-level orchestration services that coordinate multiple operations
+
+Composite services build on core services to provide complex, multi-step operations. They orchestrate workflows across multiple domains and aggregate data from various sources.
+
+**Characteristics**:
+- Depend on multiple core services
+- Coordinate complex multi-service operations
+- Aggregate data from multiple sources
+- Implement higher-level business logic
+
+**Available Composite Services**:
+
+1. **StatisticsService** (`statistics_service.py`)
+   - Aggregates data from multiple projects
+   - Collects team member statistics
+   - Generates comprehensive reports
+   - Coordinates across metadata, tasks, and PRs
+
+2. **ArtifactService** (`artifact_service.py`)
+   - Finds project artifacts
+   - Extracts artifact metadata
+   - Identifies in-progress tasks
+   - Aggregates reviewer assignments
+
+**Example Usage**:
+```python
+# Composite services use multiple core services
+stats_service = StatisticsService(repo, metadata_service, base_branch)
+all_stats = stats_service.collect_all_statistics(config_path=config_path)
+# Internally uses: ProjectService, TaskService, PRService, MetadataService
+
+artifact_metadata = get_artifact_metadata(repo, artifact_name)
+# Internally uses: metadata operations, file operations, task parsing
+```
+
+### Benefits of Two-Level Organization
+
+1. **Clear Dependency Direction**: Composite → Core → Infrastructure (no circular dependencies)
+2. **Easy Navigation**: Service level immediately visible in folder structure
+3. **Scalability**: Easy to add new services in the appropriate layer
+4. **Maintainability**: Clear separation between foundational and orchestration logic
+5. **Testability**: Core services can be tested independently, composites with mocked cores
+6. **Understandability**: Architecture visible at a glance in the filesystem
+
+### Service Naming Conventions
+
+Services follow simplified naming without redundant words:
+
+- ✅ `PRService` (not `PROperationsService`)
+- ✅ `TaskService` (not `TaskManagementService`)
+- ✅ `ReviewerService` (not `ReviewerManagementService`)
+- ✅ `ProjectService` (not `ProjectDetectionService`)
+- ✅ `StatisticsService` (already clean)
+- ✅ `ArtifactService` (not `ArtifactOperationsService`)
+
+This makes service names concise while maintaining clarity.
+
+---
+
 ## Services
 
 ### Convention: Class-Based Services with Dependency Injection
@@ -1033,38 +1149,42 @@ class ServiceName:
 
 ### Available Services
 
-**Application Services** (`src/claudestep/application/services/`):
+**Core Services** (`src/claudestep/services/core/`):
 
-1. **TaskManagementService** - Task finding, marking, and tracking
+1. **TaskService** - Task finding, marking, and tracking
    - Constructor: `__init__(self, repo: str, metadata_service: MetadataService)`
    - Instance methods: `find_next_available_task()`, `get_in_progress_task_indices()`
    - Static methods: `generate_task_id()`, `mark_task_complete()`
 
-2. **ReviewerManagementService** - Reviewer capacity and assignment
+2. **ReviewerService** - Reviewer capacity and assignment
    - Constructor: `__init__(self, repo: str, metadata_service: MetadataService)`
    - Instance methods: `find_available_reviewer()`
 
-3. **PROperationsService** - PR and branch naming utilities
+3. **PRService** - PR and branch naming utilities
    - Constructor: `__init__(self, repo: str)`
    - Instance methods: `get_project_prs()`
    - Static methods: `format_branch_name()`, `parse_branch_name()`
 
-4. **ProjectDetectionService** - Project detection from PRs and paths
+4. **ProjectService** - Project detection from PRs and paths
    - Constructor: `__init__(self, repo: str)`
    - Instance methods: `detect_project_from_pr()`
    - Static methods: `detect_project_paths()`
+
+**Composite Services** (`src/claudestep/services/composite/`):
 
 5. **StatisticsService** - Statistics collection and aggregation
    - Constructor: `__init__(self, repo: str, metadata_service: MetadataService, base_branch: str = "main")`
    - Instance methods: `collect_project_costs()`, `collect_team_member_stats()`, `collect_project_stats()`, `collect_all_statistics()`
    - Static methods: `extract_cost_from_comment()`, `count_tasks()`
 
-6. **MetadataService** - Project and artifact metadata management
+6. **ArtifactService** - Artifact operations
+   - Module-level functions: `find_project_artifacts()`, `get_artifact_metadata()`, `find_in_progress_tasks()`, `get_reviewer_assignments()`
+
+**Infrastructure Services** (`src/claudestep/infrastructure/`):
+
+7. **MetadataService** - Project and artifact metadata management
    - Constructor: `__init__(self, metadata_store: GitHubMetadataStore)`
    - Instance methods: `get_project()`, `save_project()`, `update_project()`, `get_artifact()`, `save_artifact()`
-
-7. **ArtifactService** - Artifact operations
-   - Constructor and methods follow same pattern
 
 ### Service Instantiation in CLI Commands
 
@@ -1080,10 +1200,10 @@ def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
     metadata_service = MetadataService(metadata_store)
 
     # === Initialize services ===
-    project_service = ProjectDetectionService(repo)
-    task_service = TaskManagementService(repo, metadata_service)
-    reviewer_service = ReviewerManagementService(repo, metadata_service)
-    pr_service = PROperationsService(repo)
+    project_service = ProjectService(repo)
+    task_service = TaskService(repo, metadata_service)
+    reviewer_service = ReviewerService(repo, metadata_service)
+    pr_service = PRService(repo)
 
     # === Use services throughout command ===
     project = project_service.detect_project_from_pr(pr_number)
@@ -1122,7 +1242,7 @@ This pattern:
 
 **Example**:
 ```python
-class PROperationsService:
+class PRService:
     def __init__(self, repo: str):
         self.repo = repo
 
@@ -1141,14 +1261,14 @@ class PROperationsService:
 
 **Unit Test Pattern**:
 ```python
-class TestTaskManagementService:
-    """Test suite for TaskManagementService"""
+class TestTaskService:
+    """Test suite for TaskService"""
 
     def test_find_next_available_task_returns_first_unchecked(self):
         """Should return the first unchecked task from spec content"""
         # Arrange
         mock_metadata_service = Mock()
-        service = TaskManagementService(
+        service = TaskService(
             repo="owner/repo",
             metadata_service=mock_metadata_service
         )
@@ -1170,8 +1290,8 @@ class TestTaskManagementService:
 ```python
 def test_prepare_command_with_services(mock_subprocess):
     """Should use services to orchestrate preparation workflow"""
-    with patch('claudestep.cli.commands.prepare.ProjectDetectionService') as MockProject:
-        with patch('claudestep.cli.commands.prepare.TaskManagementService') as MockTask:
+    with patch('claudestep.cli.commands.prepare.ProjectService') as MockProject:
+        with patch('claudestep.cli.commands.prepare.TaskService') as MockTask:
             # Mock service instances
             mock_project_service = MockProject.return_value
             mock_task_service = MockTask.return_value
@@ -1189,13 +1309,13 @@ def test_prepare_command_with_services(mock_subprocess):
             mock_project_service.detect_project_from_pr.assert_called_once()
 ```
 
-### Migration from Function-Based to Class-Based
+### Migration History
 
-The ClaudeStep codebase was migrated from function-based services to class-based services in phases:
+The ClaudeStep codebase has undergone two major service layer refactorings:
 
-1. **Phase 1-5**: Converted individual service modules to classes
-2. **Phase 6**: Updated CLI commands to use consistent service instantiation pattern
-3. **Phase 7**: Updated architecture documentation (this section)
+#### Migration 1: Function-Based to Class-Based Services
+
+The codebase was migrated from function-based services to class-based services:
 
 **Before (Function-Based)**:
 ```python
@@ -1206,7 +1326,7 @@ def find_available_reviewer(repo: str, reviewers: list, metadata_service: Metada
 
 **After (Class-Based)**:
 ```python
-class ReviewerManagementService:
+class ReviewerService:
     def __init__(self, repo: str, metadata_service: MetadataService):
         self.repo = repo
         self.metadata_service = metadata_service
@@ -1215,6 +1335,39 @@ class ReviewerManagementService:
         # Class approach - uses self.repo and self.metadata_service
         pass
 ```
+
+#### Migration 2: Flat Structure to Two-Level Organization
+
+The service layer was reorganized from a flat structure to a two-level architecture (documented in `docs/proposed/reorganize-service-layer-folders.md`):
+
+**Before (Flat Structure)**:
+```
+src/claudestep/services/
+├── pr_operations_service.py
+├── task_management_service.py
+├── reviewer_management_service.py
+├── project_detection_service.py
+├── statistics_service.py
+└── artifact_operations_service.py
+```
+
+**After (Two-Level Structure)**:
+```
+src/claudestep/services/
+├── core/
+│   ├── pr_service.py
+│   ├── task_service.py
+│   ├── reviewer_service.py
+│   └── project_service.py
+└── composite/
+    ├── statistics_service.py
+    └── artifact_service.py
+```
+
+**Key Changes**:
+- Services organized into `core/` (foundational) and `composite/` (orchestration) directories
+- Service names simplified by removing redundant words ("Operations", "Management", "Detection")
+- Clear dependency hierarchy: Composite → Core → Infrastructure
 
 ---
 

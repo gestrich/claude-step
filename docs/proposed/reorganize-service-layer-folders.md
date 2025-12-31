@@ -347,7 +347,7 @@ src/claudestep/services/
 
 ---
 
-- [ ] Phase 6: Update architecture documentation
+- [x] Phase 6: Update architecture documentation
 
 **Tasks:**
 1. Update `docs/architecture/architecture.md` to reflect new structure
@@ -377,6 +377,17 @@ src/claudestep/services/
 - Documentation reflects new folder structure
 - Clear explanation of the two-level organization
 - Examples of which services belong in each level
+
+**Completion Notes:**
+- Successfully updated `docs/architecture/architecture.md` with comprehensive documentation
+- Added new "Service Layer Organization" section explaining the two-level architecture (Core vs Composite)
+- Updated "Module Organization" section to show new directory structure with `services/core/` and `services/composite/` subdirectories
+- Updated "Services" section with new service names (PRService, TaskService, etc.) and organized by layer
+- Updated all code examples throughout the document to use new service names
+- Added "Migration History" section documenting both the function-to-class migration and the flat-to-two-level reorganization
+- Updated service instantiation examples in CLI command patterns
+- All 517 unit tests pass successfully
+- Documentation now accurately reflects the new service layer organization and provides clear guidance for developers
 
 ---
 
