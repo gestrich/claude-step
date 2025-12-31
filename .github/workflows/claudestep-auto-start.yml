@@ -20,111 +20,23 @@ jobs:
         with:
           fetch-depth: 2  # Need previous commit to detect changes
 
-      - name: Detect changed spec files
-        id: detect
-        run: |
-          # Find spec.md files that were added or modified (not deleted)
-          CHANGED_SPECS=$(git diff --name-only --diff-filter=AM HEAD^ HEAD | grep 'claude-step/.*/spec.md' || true)
-          DELETED_SPECS=$(git diff --name-only --diff-filter=D HEAD^ HEAD | grep 'claude-step/.*/spec.md' || true)
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-          # Log deleted specs for visibility
-          if [ -n "$DELETED_SPECS" ]; then
-            echo "Deleted specs (will be ignored):"
-            for spec_path in $DELETED_SPECS; do
-              project=$(echo "$spec_path" | sed 's|claude-step/\([^/]*\)/spec.md|\1|')
-              echo "  - $project"
-            done
-          fi
+      - name: Install ClaudeStep
+        run: pip install -e .
 
-          if [ -z "$CHANGED_SPECS" ]; then
-            echo "No spec.md files added or modified"
-            echo "projects=" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Extract project names from added/modified specs
-          PROJECTS=""
-          for spec_path in $CHANGED_SPECS; do
-            # Extract project name from path: claude-step/<project>/spec.md
-            project=$(echo "$spec_path" | sed 's|claude-step/\([^/]*\)/spec.md|\1|')
-            PROJECTS="$PROJECTS $project"
-          done
-
-          echo "projects=$PROJECTS" >> $GITHUB_OUTPUT
-          echo "Detected projects with spec changes: $PROJECTS"
-
-      - name: Check if projects are new
-        id: check_new
+      - name: Detect and trigger auto-start
+        id: auto_start
+        run: python3 -m claudestep auto-start
         env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          BASE_BRANCH: main
+          REF_BEFORE: ${{ github.event.before }}
+          REF_AFTER: ${{ github.sha }}
           GH_TOKEN: ${{ github.token }}
-        run: |
-          PROJECTS="${{ steps.detect.outputs.projects }}"
-          NEW_PROJECTS=""
-
-          for project in $PROJECTS; do
-            echo "Checking if project '$project' is new..."
-
-            # Query for ClaudeStep PRs for this project with error handling
-            # Note: This requires PRs to have project in branch name or label
-            if ! PR_COUNT=$(gh pr list \
-              --label claudestep \
-              --state all \
-              --json headRefName \
-              --jq "[.[] | select(.headRefName | startswith(\"claude-step-$project-\"))] | length" 2>&1); then
-              echo "  ⚠️  Error querying GitHub API for project '$project': $PR_COUNT"
-              echo "  → Skipping this project to avoid duplicate triggers"
-              continue
-            fi
-
-            if [ "$PR_COUNT" -eq 0 ]; then
-              echo "  → New project (no PRs found)"
-              NEW_PROJECTS="$NEW_PROJECTS $project"
-            else
-              echo "  → Existing project ($PR_COUNT PRs found), skipping auto-trigger"
-            fi
-          done
-
-          echo "new_projects=$NEW_PROJECTS" >> $GITHUB_OUTPUT
-          echo "New projects to auto-trigger: $NEW_PROJECTS"
-
-      - name: Check if auto-start is enabled
-        id: check_enabled
-        run: |
-          # Check if auto-start is disabled via repository variable
-          # Default to enabled if variable is not set
-          AUTO_START_ENABLED="${{ vars.CLAUDESTEP_AUTO_START_ENABLED }}"
-
-          if [ "$AUTO_START_ENABLED" = "false" ]; then
-            echo "Auto-start is disabled via CLAUDESTEP_AUTO_START_ENABLED repository variable"
-            echo "enabled=false" >> $GITHUB_OUTPUT
-          else
-            echo "Auto-start is enabled (default behavior)"
-            echo "enabled=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Trigger ClaudeStep for new projects
-        if: steps.check_new.outputs.new_projects != '' && steps.check_enabled.outputs.enabled == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          FAILED_PROJECTS=""
-          for project in ${{ steps.check_new.outputs.new_projects }}; do
-            echo "Triggering ClaudeStep for project: $project"
-            if ! gh workflow run claudestep.yml \
-              -f project_name="$project" \
-              -f base_branch="main" \
-              -f checkout_ref="main" 2>&1; then
-              echo "  ⚠️  Failed to trigger workflow for project: $project"
-              FAILED_PROJECTS="$FAILED_PROJECTS $project"
-            else
-              echo "  ✅ Successfully triggered workflow for project: $project"
-            fi
-          done
-
-          if [ -n "$FAILED_PROJECTS" ]; then
-            echo "⚠️  Warning: Failed to trigger workflows for projects:$FAILED_PROJECTS"
-            echo "Please manually trigger these projects or check workflow permissions."
-          fi
 
       - name: Generate summary
         if: always()
@@ -132,31 +44,38 @@ jobs:
           echo "# ClaudeStep Auto-Start Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ -z "${{ steps.detect.outputs.projects }}" ]; then
+          TRIGGERED="${{ steps.auto_start.outputs.triggered_projects }}"
+          FAILED="${{ steps.auto_start.outputs.failed_projects }}"
+          ALL_PROJECTS="${{ steps.auto_start.outputs.projects_to_trigger }}"
+
+          if [ -z "$ALL_PROJECTS" ]; then
             echo "No spec.md files were changed in this push." >> $GITHUB_STEP_SUMMARY
             exit 0
           fi
 
           echo "## Projects with spec.md changes:" >> $GITHUB_STEP_SUMMARY
-          for project in ${{ steps.detect.outputs.projects }}; do
+          for project in $ALL_PROJECTS; do
             echo "- $project" >> $GITHUB_STEP_SUMMARY
           done
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Check if auto-start is disabled
-          if [ "${{ steps.check_enabled.outputs.enabled }}" = "false" ]; then
-            echo "⚠️ **Auto-start is disabled**" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "Auto-start has been disabled via the \`CLAUDESTEP_AUTO_START_ENABLED\` repository variable." >> $GITHUB_STEP_SUMMARY
-            echo "To enable auto-start, remove this variable or set it to \`true\` in repository settings." >> $GITHUB_STEP_SUMMARY
-            exit 0
-          fi
-
-          if [ -n "${{ steps.check_new.outputs.new_projects }}" ]; then
+          if [ -n "$TRIGGERED" ]; then
             echo "## Auto-triggered for new projects:" >> $GITHUB_STEP_SUMMARY
-            for project in ${{ steps.check_new.outputs.new_projects }}; do
+            for project in $TRIGGERED; do
               echo "- ✅ $project (first task will be started)" >> $GITHUB_STEP_SUMMARY
             done
-          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -n "$FAILED" ]; then
+            echo "## ⚠️ Failed to trigger:" >> $GITHUB_STEP_SUMMARY
+            for project in $FAILED; do
+              echo "- ❌ $project" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please manually trigger these projects or check workflow permissions." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -z "$TRIGGERED" ] && [ -z "$FAILED" ]; then
             echo "No new projects detected. Existing projects rely on PR merge triggers." >> $GITHUB_STEP_SUMMARY
           fi

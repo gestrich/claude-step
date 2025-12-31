@@ -228,7 +228,7 @@ Update GitHub Actions outputs to include:
 - Build passes successfully with 641 tests collecting correctly
 - Module imports successfully with no syntax errors
 
-- [ ] Phase 8: Refactor YAML workflow to use Python command
+- [x] Phase 8: Refactor YAML workflow to use Python command ✅
 
 Simplify `.github/workflows/claudestep-auto-start.yml`:
 
@@ -280,6 +280,24 @@ Move all bash logic to Python. YAML only:
 - Sets up environment
 - Invokes Python commands
 - Passes parameters via environment variables
+
+**Technical Notes:**
+- Refactored `.github/workflows/claudestep-auto-start.yml` to use Python-first architecture
+- Replaced ~130 lines of bash logic across 3 steps with single Python command invocation
+- Added Python setup step using `actions/setup-python@v5` with Python 3.11
+- Added ClaudeStep installation step: `pip install -e .`
+- Consolidated detection, checking, and triggering into single `python3 -m claudestep auto-start` command
+- Command reads environment variables: `GITHUB_REPOSITORY`, `BASE_BRANCH`, `REF_BEFORE`, `REF_AFTER`, `GH_TOKEN`
+- Simplified summary generation to use GitHub Actions outputs from Python command:
+  - `triggered_projects`: Successfully triggered projects
+  - `failed_projects`: Projects that failed to trigger
+  - `projects_to_trigger`: Legacy output for backward compatibility
+- Summary now handles three scenarios: successful triggers, failed triggers, and no projects detected
+- Removed auto-start enabled/disabled check (will be added in Phase 10)
+- Build passes successfully with 641 tests collecting correctly
+- Workflow now follows same Python-first pattern as other ClaudeStep workflows
+- YAML file reduced from 163 lines to 82 lines (50% reduction)
+- All business logic now lives in testable Python service layer
 
 - [ ] Phase 9: Add auto-start summary command
 
