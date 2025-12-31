@@ -93,27 +93,22 @@ Add the following generic GitHub operations to `src/claudestep/infrastructure/gi
 **Files modified:**
 - `tests/e2e/helpers/github_helper.py` - Refactored to use infrastructure layer
 
-- [ ] Phase 3: Update domain models for E2E test needs
+- [x] Phase 3: Update domain models for E2E test needs
 
-**Add test-specific properties if needed:**
+**Status:** Completed
 
-Review the `WorkflowRun` and `PRComment` domain models created in Phase 1 and ensure they have all properties needed by E2E tests:
+**Technical notes:**
+- Reviewed `WorkflowRun` and `PRComment` domain models against E2E test requirements
+- All required properties already present from Phase 1 implementation:
+  - **WorkflowRun**: `database_id`, `status`, `conclusion`, `created_at`, `head_branch`, `url` ✓
+  - **PRComment**: `body`, `author`, `created_at` ✓
+- GitHubHelper successfully converts domain models to dicts with correct property names for backward compatibility
+- E2E tests only access `conclusion` property from workflow runs, which is present
+- Build verified: all modules compile and import successfully
+- No modifications needed to domain models
 
-**WorkflowRun properties:**
-- `database_id: int` - Used for logging
-- `status: str` - Used for polling ("queued", "in_progress", "completed")
-- `conclusion: Optional[str]` - Used for success checking ("success", "failure", etc.)
-- `created_at: datetime` - Used for detecting new runs
-- `head_branch: str` - Used for filtering
-- `url: str` - Used for diagnostic logging
-
-**PRComment properties:**
-- `body: str` - Comment text
-- `author: str` - Comment author
-- `created_at: datetime` - When comment was posted
-
-**Files to modify:**
-- `src/claudestep/domain/github_models.py` - Add properties if missing
+**Analysis:**
+The domain models created in Phase 1 already contain all properties required by E2E tests. The refactored GitHubHelper properly maps domain model properties to dictionary keys (e.g., `database_id` → `databaseId`, `head_branch` → `headBranch`) ensuring backward compatibility with existing test code.
 
 - [ ] Phase 4: Validation and testing
 
