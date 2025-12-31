@@ -29,7 +29,7 @@ This plan addresses several improvements to the ClaudeStep project:
 
 **Expected outcome**: Hash details moved to focused document, architecture.md simplified
 
-- [ ] Phase 2: Extract branch naming to separate doc
+- [x] Phase 2: Extract branch naming to separate doc
 
 **Details**:
 - Create `docs/architecture/branch-naming.md`
@@ -37,6 +37,8 @@ This plan addresses several improvements to the ClaudeStep project:
 - Keep in `architecture.md` only: "Branch format: `claude-step-{project}-{task-hash}`"
 - Move to new doc: branch name parsing logic, format detection, all detailed examples
 - Remove backward compatibility sections mentioning "Old Format" and dual-mode support
+
+**Completed**: Branch naming documentation successfully extracted to dedicated document at `docs/architecture/branch-naming.md`. The main architecture.md now contains a concise 3-sentence summary with a link to the detailed documentation. The new document includes comprehensive coverage of branch format, parsing logic, format detection, project name handling, code examples, and integration points throughout the codebase. All tests pass (649 tests).
 
 **Expected outcome**: Branch naming details in separate doc, main doc just states the format
 

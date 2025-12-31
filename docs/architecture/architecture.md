@@ -590,9 +590,17 @@ def cmd_statistics(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
 
 ClaudeStep uses a **hash-based task identification** system where tasks are identified by content hash (8-character SHA-256 of description) rather than position in the spec file. This enables flexible task management - tasks can be freely reordered, inserted, or deleted in spec.md without breaking PR tracking.
 
-Branch format: `claude-step-{project}-{task-hash}` (e.g., `claude-step-auth-39b1209d`)
-
 For detailed information about hash generation, orphaned PR detection, and implementation details, see [Hash-Based Task Identification](hash-based-task-identification.md)
+
+---
+
+## Branch Naming
+
+### Convention: Standardized Branch Format
+
+All ClaudeStep branches follow the format: `claude-step-{project}-{task-hash}` (e.g., `claude-step-my-refactor-a3f2b891`). This format combines the project name with the task hash to create stable, identifiable branch names for pull requests.
+
+For detailed information about branch formatting, parsing logic, and implementation, see [Branch Naming](branch-naming.md)
 
 ---
 
