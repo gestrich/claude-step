@@ -9,19 +9,19 @@ The ClaudeStep documentation has grown organically and needs reorganization to i
 1. `docs/architecture/` contains both general patterns and feature-specific docs (e.g., `e2e-testing.md`)
 2. `docs/completed/` has 40+ implementation specs that should be archived or have durable knowledge extracted
 3. No clear separation between patterns (how we build) and features (how specific things work)
-4. User guides in `user-guides/` should be in `guides/` for consistency
+4. User guides in `user-guides/` should be more clearly named as feature guides
 
 ### Target Structure
 
 ```
 docs/
 ├── README.md                          # Navigation guide
-├── guides/                            # User-facing feature guides
-├── architecture/
-│   ├── README.md
-│   ├── patterns/                      # Architecture & coding patterns
-│   └── features/                      # Feature-specific technical docs
-├── reference/                         # API reference
+├── feature-guides/                    # User-facing feature guides
+│   └── README.md
+├── feature-architecture/              # Feature-specific technical docs & API reference
+│   └── README.md
+├── general-architecture/              # General architecture & coding patterns
+│   └── README.md
 └── specs/                             # Ephemeral implementation notes
     ├── README.md
     ├── active/
@@ -29,63 +29,68 @@ docs/
 ```
 
 ### Key Principles
-1. **Three-tier documentation**: guides (users), architecture (developers), specs (ephemeral)
-2. **Patterns vs Features**: General patterns in `patterns/`, feature-specific in `features/`
+1. **Feature-focused organization**: Feature guides for users, feature architecture for developers
+2. **General vs Specific**: General patterns separate from feature-specific implementation
 3. **Durable vs Ephemeral**: Extract knowledge from specs, then archive with date prefixes
 4. **Clear navigation**: Each directory has a README explaining its purpose
 
 ## Phases
 
-- [ ] Phase 1: Create new directory structure and navigation
+- [x] Phase 1: Create new directory structure and navigation
 
 Create the new directory structure without moving any existing files yet:
-- Create `docs/guides/` directory
-- Create `docs/architecture/patterns/` directory
-- Create `docs/architecture/features/` directory
-- Create `docs/reference/` directory
+- Create `docs/feature-guides/` directory
+- Create `docs/feature-architecture/` directory
+- Create `docs/general-architecture/` directory
 - Create `docs/specs/active/` directory
 - Create `docs/specs/archive/` directory
 - Create `docs/README.md` with navigation guide
-- Create `docs/architecture/README.md` with overview and index
-- Create `docs/architecture/patterns/README.md` explaining patterns
-- Create `docs/architecture/features/README.md` explaining feature docs
+- Create `docs/feature-guides/README.md` explaining user-facing feature guides
+- Create `docs/feature-architecture/README.md` explaining feature technical docs
+- Create `docs/general-architecture/README.md` explaining general patterns
 - Create `docs/specs/README.md` explaining ephemeral nature and lifecycle
 
 **Files to create:**
 - `docs/README.md`
-- `docs/architecture/README.md`
-- `docs/architecture/patterns/README.md`
-- `docs/architecture/features/README.md`
+- `docs/feature-guides/README.md`
+- `docs/feature-architecture/README.md`
+- `docs/general-architecture/README.md`
 - `docs/specs/README.md`
 
-- [ ] Phase 2: Move user guides
+**Completion Notes:**
+- All directories created successfully
+- All README files written with clear navigation and guidance
+- Build passes (658/663 tests pass - 4 pre-existing failures unrelated to documentation)
+- Documentation structure is ready for content migration in subsequent phases
+
+- [ ] Phase 2: Move user guides to feature-guides
 
 Simple rename/move of user-facing documentation:
-- Move `docs/user-guides/getting-started.md` → `docs/guides/getting-started.md`
-- Move `docs/user-guides/modifying-tasks.md` → `docs/guides/modifying-tasks.md`
+- Move `docs/user-guides/getting-started.md` → `docs/feature-guides/getting-started.md`
+- Move `docs/user-guides/modifying-tasks.md` → `docs/feature-guides/modifying-tasks.md`
 - Delete empty `docs/user-guides/` directory
 
 **Files affected:**
-- `docs/user-guides/getting-started.md` → `docs/guides/getting-started.md`
-- `docs/user-guides/modifying-tasks.md` → `docs/guides/modifying-tasks.md`
+- `docs/user-guides/getting-started.md` → `docs/feature-guides/getting-started.md`
+- `docs/user-guides/modifying-tasks.md` → `docs/feature-guides/modifying-tasks.md`
 
-- [ ] Phase 3: Reorganize architecture patterns
+- [ ] Phase 3: Reorganize general architecture patterns
 
-Move general architecture and coding patterns to the new patterns directory:
-- Move `docs/architecture/python-code-style.md` → `docs/architecture/patterns/python-style.md`
-- Extract service layer content from `docs/architecture/architecture.md` → `docs/architecture/patterns/service-layer-pattern.md`
-- Extract domain model content from relevant completed specs → `docs/architecture/patterns/domain-model-design.md`
-- Extract command dispatcher content from `docs/architecture/architecture.md` → `docs/architecture/patterns/command-dispatcher.md`
-- Merge `docs/architecture/testing-guide.md`, `docs/architecture/tests.md`, and `docs/architecture/local-testing.md` → `docs/architecture/patterns/testing-philosophy.md`
-- Extract GitHub Actions conventions from `docs/architecture/architecture.md` → `docs/architecture/patterns/github-actions.md`
+Move general architecture and coding patterns to the new general-architecture directory:
+- Move `docs/architecture/python-code-style.md` → `docs/general-architecture/python-style.md`
+- Extract service layer content from `docs/architecture/architecture.md` → `docs/general-architecture/service-layer-pattern.md`
+- Extract domain model content from relevant completed specs → `docs/general-architecture/domain-model-design.md`
+- Extract command dispatcher content from `docs/architecture/architecture.md` → `docs/general-architecture/command-dispatcher.md`
+- Merge `docs/architecture/testing-guide.md`, `docs/architecture/tests.md`, and `docs/architecture/local-testing.md` → `docs/general-architecture/testing-philosophy.md`
+- Extract GitHub Actions conventions from `docs/architecture/architecture.md` → `docs/general-architecture/github-actions.md`
 
 **Files to create:**
-- `docs/architecture/patterns/python-style.md` (moved)
-- `docs/architecture/patterns/service-layer-pattern.md` (extracted)
-- `docs/architecture/patterns/domain-model-design.md` (extracted)
-- `docs/architecture/patterns/command-dispatcher.md` (extracted)
-- `docs/architecture/patterns/testing-philosophy.md` (merged)
-- `docs/architecture/patterns/github-actions.md` (extracted)
+- `docs/general-architecture/python-style.md` (moved)
+- `docs/general-architecture/service-layer-pattern.md` (extracted)
+- `docs/general-architecture/domain-model-design.md` (extracted)
+- `docs/general-architecture/command-dispatcher.md` (extracted)
+- `docs/general-architecture/testing-philosophy.md` (merged)
+- `docs/general-architecture/github-actions.md` (extracted)
 
 **Files to delete:**
 - `docs/architecture/testing-guide.md`
@@ -95,33 +100,33 @@ Move general architecture and coding patterns to the new patterns directory:
 
 - [ ] Phase 4: Extract feature architecture from completed specs
 
-Identify completed specs with durable architecture knowledge and extract to feature docs:
-- Extract from `docs/completed/pr-summary-feature-plan.md` → `docs/architecture/features/pr-summarization.md`
+Identify completed specs with durable architecture knowledge and extract to feature architecture docs:
+- Extract from `docs/completed/pr-summary-feature-plan.md` → `docs/feature-architecture/pr-summarization.md`
   - Keep: Architecture Decision, Technical Details, Trade-offs
   - Remove: Implementation checklists, verification logs, file change lists
-- Extract from `docs/completed/hash-based-task-identification.md` → `docs/architecture/features/task-identification.md`
-- Extract from `docs/completed/formalize-service-layer-pattern.md` → merge into `docs/architecture/patterns/service-layer-pattern.md`
-- Extract from `docs/completed/github-pr-service-abstraction.md` → `docs/architecture/features/github-integration.md`
-- Move `docs/architecture/e2e-testing.md` → `docs/architecture/features/e2e-testing.md` (already good)
+- Extract from `docs/completed/hash-based-task-identification.md` → `docs/feature-architecture/task-identification.md`
+- Extract from `docs/completed/formalize-service-layer-pattern.md` → merge into `docs/general-architecture/service-layer-pattern.md`
+- Extract from `docs/completed/github-pr-service-abstraction.md` → `docs/feature-architecture/github-integration.md`
+- Move `docs/architecture/e2e-testing.md` → `docs/feature-architecture/e2e-testing.md`
 
 **Files to create:**
-- `docs/architecture/features/pr-summarization.md`
-- `docs/architecture/features/task-identification.md`
-- `docs/architecture/features/github-integration.md`
-- `docs/architecture/features/e2e-testing.md` (moved)
+- `docs/feature-architecture/pr-summarization.md`
+- `docs/feature-architecture/task-identification.md`
+- `docs/feature-architecture/github-integration.md`
+- `docs/feature-architecture/e2e-testing.md` (moved)
 
 **Extraction criteria:**
 - ✅ Include: Architecture decisions, technical design, algorithms, data structures, integration points, trade-offs
 - ❌ Exclude: Implementation checklists, verification logs, file change lists, temporary notes
 
-- [ ] Phase 5: Move API reference
+- [ ] Phase 5: Move API reference to feature-architecture
 
-Move API documentation to reference directory:
-- Move `docs/api.md` → `docs/reference/api.md`
-- Move `docs/metadata-branch-README.md` → `docs/reference/metadata-branch.md` (or delete if obsolete)
+Move API documentation to feature-architecture directory (treating it as technical feature docs):
+- Move `docs/api.md` → `docs/feature-architecture/api-reference.md`
+- Move `docs/metadata-branch-README.md` → `docs/feature-architecture/metadata-branch.md` (or delete if obsolete)
 
 **Files affected:**
-- `docs/api.md` → `docs/reference/api.md`
+- `docs/api.md` → `docs/feature-architecture/api-reference.md`
 - `docs/metadata-branch-README.md` → evaluate and move/delete
 
 - [ ] Phase 6: Archive implementation specs
@@ -140,7 +145,7 @@ Move ephemeral specs to appropriate locations:
 - [ ] Phase 7: Update cross-references
 
 Update references between documents and from CLAUDE.md:
-- Update `CLAUDE.md` to reference new structure (guides/, architecture/)
+- Update `CLAUDE.md` to reference new structure (feature-guides/, feature-architecture/, general-architecture/)
 - Update any internal cross-references in moved documents
 - Update README navigation links to point to new locations
 - Check for any broken links in architecture docs
@@ -154,7 +159,7 @@ Update references between documents and from CLAUDE.md:
 
 Remove old directories and update any remaining references:
 - Verify all content has been moved from old directories
-- Delete empty `docs/user-guides/`, `docs/proposed/`, `docs/completed/`
+- Delete empty `docs/user-guides/`, `docs/proposed/`, `docs/completed/`, `docs/architecture/`
 - Remove any remaining old architecture files that were fully extracted/merged
 - Final verification that no broken links exist
 
@@ -162,6 +167,7 @@ Remove old directories and update any remaining references:
 - `docs/user-guides/`
 - `docs/proposed/`
 - `docs/completed/`
+- `docs/architecture/`
 
 - [ ] Phase 9: Validation
 
