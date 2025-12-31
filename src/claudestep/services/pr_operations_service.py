@@ -5,12 +5,15 @@ for branch naming and PR fetching, eliminating duplication across the codebase.
 Encapsulates business logic for PR-related operations.
 """
 
-import json
 import re
-from typing import List, Optional, Tuple
+from typing import List, Optional, Set, Tuple
 
 from claudestep.domain.exceptions import GitHubAPIError
-from claudestep.infrastructure.github.operations import run_gh_command
+from claudestep.domain.github_models import GitHubPullRequest
+from claudestep.infrastructure.github.operations import (
+    list_pull_requests,
+    list_open_pull_requests,
+)
 from claudestep.domain.project import Project
 
 
@@ -34,7 +37,7 @@ class PROperationsService:
 
     def get_project_prs(
         self, project_name: str, state: str = "all", label: str = "claudestep"
-    ) -> List[dict]:
+    ) -> List[GitHubPullRequest]:
         """Fetch all PRs for a project by branch prefix.
 
         This is the primary API for getting PRs associated with a ClaudeStep project.
@@ -46,15 +49,7 @@ class PROperationsService:
             label: GitHub label to filter PRs (default: "claudestep")
 
         Returns:
-            List of PR data dicts with fields:
-                - number: PR number
-                - state: PR state
-                - headRefName: Branch name
-                - title: PR title
-                - labels: List of label dicts
-                - assignees: List of assignee dicts
-                - mergedAt: Merge timestamp (if merged)
-                - createdAt: Creation timestamp
+            List of GitHubPullRequest domain models filtered by project
 
         Raises:
             GitHubAPIError: If the GitHub API call fails
@@ -64,46 +59,139 @@ class PROperationsService:
             >>> prs = service.get_project_prs("my-refactor", state="open")
             >>> len(prs)
             3
-            >>> prs[0]["headRefName"]
+            >>> prs[0].head_ref_name
             'claude-step-my-refactor-1'
         """
         print(
             f"Fetching PRs for project '{project_name}' with state='{state}' and label='{label}'"
         )
 
-        # Fetch PRs with the label
+        # Fetch PRs with the label using infrastructure layer
         try:
-            pr_output = run_gh_command(
-                [
-                    "pr",
-                    "list",
-                    "--repo",
-                    self.repo,
-                    "--label",
-                    label,
-                    "--state",
-                    state,
-                    "--json",
-                    "number,state,headRefName,title,labels,assignees,mergedAt,createdAt",
-                    "--limit",
-                    "100",
-                ]
+            all_prs = list_pull_requests(
+                repo=self.repo,
+                state=state,
+                label=label,
+                limit=100
             )
-            all_prs = json.loads(pr_output) if pr_output else []
-        except (GitHubAPIError, json.JSONDecodeError) as e:
+        except GitHubAPIError as e:
             print(f"Warning: Failed to list PRs: {e}")
             return []
 
         # Filter to only PRs whose branch names match the project pattern
         project_prefix = f"claude-step-{project_name}-"
         project_prs = [
-            pr for pr in all_prs if pr.get("headRefName", "").startswith(project_prefix)
+            pr for pr in all_prs
+            if pr.head_ref_name and pr.head_ref_name.startswith(project_prefix)
         ]
 
         print(
             f"Found {len(project_prs)} PR(s) for project '{project_name}' (out of {len(all_prs)} total)"
         )
         return project_prs
+
+    def get_open_prs_for_project(
+        self, project: str, label: str = "claudestep"
+    ) -> List[GitHubPullRequest]:
+        """Fetch open PRs for a project.
+
+        Convenience wrapper for get_project_prs() with state="open".
+
+        Args:
+            project: Project name (e.g., "my-refactor")
+            label: GitHub label to filter PRs (default: "claudestep")
+
+        Returns:
+            List of open GitHubPullRequest domain models for the project
+
+        Examples:
+            >>> service = PROperationsService("owner/repo")
+            >>> open_prs = service.get_open_prs_for_project("my-refactor")
+            >>> all(pr.is_open() for pr in open_prs)
+            True
+        """
+        return self.get_project_prs(project, state="open", label=label)
+
+    def get_open_prs_for_reviewer(
+        self, username: str, label: str = "claudestep"
+    ) -> List[GitHubPullRequest]:
+        """Fetch open PRs assigned to a specific reviewer.
+
+        Args:
+            username: GitHub username of the reviewer
+            label: GitHub label to filter PRs (default: "claudestep")
+
+        Returns:
+            List of open GitHubPullRequest domain models assigned to the reviewer
+
+        Examples:
+            >>> service = PROperationsService("owner/repo")
+            >>> reviewer_prs = service.get_open_prs_for_reviewer("reviewer1")
+            >>> len(reviewer_prs)
+            5
+        """
+        return list_open_pull_requests(
+            repo=self.repo,
+            label=label,
+            assignee=username
+        )
+
+    def get_all_prs(
+        self, label: str = "claudestep", state: str = "all", limit: int = 500
+    ) -> List[GitHubPullRequest]:
+        """Fetch all PRs with the specified label.
+
+        Used for statistics and project discovery across all ClaudeStep PRs.
+
+        Args:
+            label: GitHub label to filter PRs (default: "claudestep")
+            state: PR state filter - "open", "closed", "merged", or "all"
+            limit: Max results (default: 500)
+
+        Returns:
+            List of GitHubPullRequest domain models with the label
+
+        Examples:
+            >>> service = PROperationsService("owner/repo")
+            >>> all_prs = service.get_all_prs()
+            >>> len(all_prs)
+            150
+        """
+        return list_pull_requests(
+            repo=self.repo,
+            state=state,
+            label=label,
+            limit=limit
+        )
+
+    def get_unique_projects(self, label: str = "claudestep") -> Set[str]:
+        """Extract unique project names from all PRs with the label.
+
+        Used by statistics service for multi-project discovery.
+
+        Args:
+            label: GitHub label to filter PRs (default: "claudestep")
+
+        Returns:
+            Set of unique project names extracted from branch names
+
+        Examples:
+            >>> service = PROperationsService("owner/repo")
+            >>> projects = service.get_unique_projects()
+            >>> projects
+            {'my-refactor', 'swift-migration', 'api-cleanup'}
+        """
+        all_prs = self.get_all_prs(label=label)
+        projects = set()
+
+        for pr in all_prs:
+            if pr.head_ref_name:
+                parsed = self.parse_branch_name(pr.head_ref_name)
+                if parsed:
+                    project_name, _ = parsed
+                    projects.add(project_name)
+
+        return projects
 
     # Static utility methods
 

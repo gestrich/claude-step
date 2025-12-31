@@ -1,10 +1,12 @@
 """Unit tests for PR operations and branch naming utilities"""
 
 import json
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from claudestep.domain.github_models import GitHubPullRequest
 from claudestep.services.pr_operations_service import PROperationsService
 
 
@@ -163,170 +165,204 @@ class TestParseBranchName:
 class TestGetProjectPrs:
     """Tests for get_project_prs instance method"""
 
-    @patch("claudestep.services.pr_operations_service.run_gh_command")
-    def test_get_open_prs(self, mock_gh_command):
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_open_prs(self, mock_list_prs):
         """Should fetch and filter open PRs for a project"""
-        # Mock GitHub API response
+        # Mock infrastructure layer response with domain models
         mock_prs = [
-            {
-                "number": 1,
-                "state": "open",
-                "headRefName": "claude-step-my-refactor-1",
-                "title": "Task 1",
-                "labels": [],
-                "assignees": [],
-            },
-            {
-                "number": 2,
-                "state": "open",
-                "headRefName": "claude-step-my-refactor-2",
-                "title": "Task 2",
-                "labels": [],
-                "assignees": [],
-            },
-            {
-                "number": 3,
-                "state": "open",
-                "headRefName": "claude-step-other-project-1",
-                "title": "Other project",
-                "labels": [],
-                "assignees": [],
-            },
+            GitHubPullRequest(
+                number=1,
+                state="open",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=2,
+                state="open",
+                head_ref_name="claude-step-my-refactor-2",
+                title="Task 2",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=3,
+                state="open",
+                head_ref_name="claude-step-other-project-1",
+                title="Other project",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
         ]
-        mock_gh_command.return_value = json.dumps(mock_prs)
+        mock_list_prs.return_value = mock_prs
 
         # Call method
         service = PROperationsService("owner/repo")
         result = service.get_project_prs("my-refactor", state="open")
 
-        # Verify
+        # Verify - should return domain models filtered by project
         assert len(result) == 2
-        assert result[0]["number"] == 1
-        assert result[1]["number"] == 2
+        assert result[0].number == 1
+        assert result[1].number == 2
 
-        # Verify GitHub CLI was called correctly
-        mock_gh_command.assert_called_once()
-        call_args = mock_gh_command.call_args[0][0]
-        assert "pr" in call_args
-        assert "list" in call_args
-        assert "--state" in call_args
-        assert "open" in call_args
+        # Verify infrastructure layer was called correctly
+        mock_list_prs.assert_called_once_with(
+            repo="owner/repo",
+            state="open",
+            label="claudestep",
+            limit=100
+        )
 
-    @patch("claudestep.services.pr_operations_service.run_gh_command")
-    def test_get_all_prs(self, mock_gh_command):
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_all_prs(self, mock_list_prs):
         """Should fetch all PRs regardless of state"""
         mock_prs = [
-            {
-                "number": 1,
-                "state": "merged",
-                "headRefName": "claude-step-my-refactor-1",
-                "title": "Task 1",
-            },
-            {
-                "number": 2,
-                "state": "open",
-                "headRefName": "claude-step-my-refactor-2",
-                "title": "Task 2",
-            },
+            GitHubPullRequest(
+                number=1,
+                state="merged",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=datetime.now(timezone.utc),
+            ),
+            GitHubPullRequest(
+                number=2,
+                state="open",
+                head_ref_name="claude-step-my-refactor-2",
+                title="Task 2",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
         ]
-        mock_gh_command.return_value = json.dumps(mock_prs)
+        mock_list_prs.return_value = mock_prs
 
         service = PROperationsService("owner/repo")
         result = service.get_project_prs("my-refactor", state="all")
 
         assert len(result) == 2
 
-    @patch("claudestep.services.pr_operations_service.run_gh_command")
-    def test_get_merged_prs(self, mock_gh_command):
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_get_merged_prs(self, mock_list_prs):
         """Should fetch only merged PRs"""
         mock_prs = [
-            {
-                "number": 1,
-                "state": "merged",
-                "headRefName": "claude-step-my-refactor-1",
-                "title": "Task 1",
-                "mergedAt": "2025-12-27T10:00:00Z",
-            }
+            GitHubPullRequest(
+                number=1,
+                state="merged",
+                head_ref_name="claude-step-my-refactor-1",
+                title="Task 1",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=datetime.now(timezone.utc),
+            )
         ]
-        mock_gh_command.return_value = json.dumps(mock_prs)
+        mock_list_prs.return_value = mock_prs
 
         service = PROperationsService("owner/repo")
         result = service.get_project_prs("my-refactor", state="merged")
 
         assert len(result) == 1
-        assert result[0]["state"] == "merged"
+        assert result[0].state == "merged"
 
-    @patch("claudestep.services.pr_operations_service.run_gh_command")
-    def test_filter_by_branch_prefix(self, mock_gh_command):
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_filter_by_branch_prefix(self, mock_list_prs):
         """Should only return PRs with matching branch prefix"""
         mock_prs = [
-            {
-                "number": 1,
-                "headRefName": "claude-step-my-refactor-1",
-                "title": "Match 1",
-            },
-            {
-                "number": 2,
-                "headRefName": "claude-step-my-refactor-2",
-                "title": "Match 2",
-            },
-            {
-                "number": 3,
-                "headRefName": "claude-step-other-project-1",
-                "title": "No match",
-            },
-            {"number": 4, "headRefName": "random-branch", "title": "No match"},
+            GitHubPullRequest(
+                number=1,
+                head_ref_name="claude-step-my-refactor-1",
+                title="Match 1",
+                state="open",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=2,
+                head_ref_name="claude-step-my-refactor-2",
+                title="Match 2",
+                state="open",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=3,
+                head_ref_name="claude-step-other-project-1",
+                title="No match",
+                state="open",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
+            GitHubPullRequest(
+                number=4,
+                head_ref_name="random-branch",
+                title="No match",
+                state="open",
+                labels=[],
+                assignees=[],
+                created_at=datetime.now(timezone.utc),
+                merged_at=None,
+            ),
         ]
-        mock_gh_command.return_value = json.dumps(mock_prs)
+        mock_list_prs.return_value = mock_prs
 
         service = PROperationsService("owner/repo")
         result = service.get_project_prs("my-refactor")
 
         assert len(result) == 2
-        assert all("my-refactor" in pr["headRefName"] for pr in result)
+        assert all("my-refactor" in pr.head_ref_name for pr in result)
 
-    @patch("claudestep.services.pr_operations_service.run_gh_command")
-    def test_custom_label(self, mock_gh_command):
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_custom_label(self, mock_list_prs):
         """Should use custom label when provided"""
-        mock_gh_command.return_value = "[]"
+        mock_list_prs.return_value = []
 
         service = PROperationsService("owner/repo")
         service.get_project_prs("my-refactor", label="custom-label")
 
-        call_args = mock_gh_command.call_args[0][0]
-        assert "--label" in call_args
-        assert "custom-label" in call_args
+        # Verify infrastructure layer was called with custom label
+        mock_list_prs.assert_called_once_with(
+            repo="owner/repo",
+            state="all",
+            label="custom-label",
+            limit=100
+        )
 
-    @patch("claudestep.services.pr_operations_service.run_gh_command")
-    def test_handle_empty_response(self, mock_gh_command):
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_handle_empty_response(self, mock_list_prs):
         """Should handle empty PR list gracefully"""
-        mock_gh_command.return_value = "[]"
+        mock_list_prs.return_value = []
 
         service = PROperationsService("owner/repo")
         result = service.get_project_prs("my-refactor")
 
         assert result == []
 
-    @patch("claudestep.services.pr_operations_service.run_gh_command")
-    def test_handle_api_error(self, mock_gh_command):
+    @patch("claudestep.services.pr_operations_service.list_pull_requests")
+    def test_handle_api_error(self, mock_list_prs):
         """Should handle GitHub API errors gracefully"""
         from claudestep.domain.exceptions import GitHubAPIError
 
-        mock_gh_command.side_effect = GitHubAPIError("API failed")
+        mock_list_prs.side_effect = GitHubAPIError("API failed")
 
         service = PROperationsService("owner/repo")
         result = service.get_project_prs("my-refactor")
 
         # Should return empty list on error
-        assert result == []
-
-    @patch("claudestep.services.pr_operations_service.run_gh_command")
-    def test_handle_invalid_json(self, mock_gh_command):
-        """Should handle invalid JSON response gracefully"""
-        mock_gh_command.return_value = "invalid json"
-
-        service = PROperationsService("owner/repo")
-        result = service.get_project_prs("my-refactor")
-
-        # Should return empty list on parse error
         assert result == []
