@@ -24,10 +24,6 @@ TESTS IN THIS MODULE:
 3. test_merge_triggered_workflow (SKIPPED)
    - What: Would verify merge triggers next PR creation
    - Why E2E: Would test GitHub Actions trigger-on-merge integration
-
-4. test_workflow_handles_empty_spec
-   - What: Verifies workflow gracefully handles specs with no tasks
-   - Why E2E: Tests edge case in complete workflow execution
 """
 
 import pytest
@@ -268,23 +264,3 @@ def test_merge_triggered_workflow(
     # 4. Verify workflow is triggered on merge
     # 5. Verify second PR is created
     # 6. Clean up
-
-
-def test_workflow_handles_empty_spec(
-    gh: GitHubHelper
-) -> None:
-    """Test that ClaudeStep handles a spec with no tasks gracefully.
-
-    Note: This test is skipped because the permanent e2e-test-project has
-    300+ incomplete tasks by design. To test the empty spec scenario, we would
-    need a separate permanent project with all tasks completed, which adds
-    complexity without much benefit since this edge case is well-covered by
-    unit tests.
-
-    Args:
-        gh: GitHub helper fixture
-    """
-    pytest.skip(
-        "Empty spec test skipped - permanent e2e-test-project has 300+ tasks. "
-        "Empty spec handling is covered by unit tests."
-    )
