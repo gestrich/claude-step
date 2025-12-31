@@ -103,7 +103,7 @@ Extend the existing `GitHubPullRequest` domain model to include parsed project a
 
 **Expected outcome:** ✅ COMPLETED - `GitHubPullRequest` model has typed properties for project, task index, and cleaned task description.
 
-- [ ] Phase 3: Add reviewer-specific convenience methods to PROperationsService
+- [x] Phase 3: Add reviewer-specific convenience methods to PROperationsService
 
 Add convenience methods to `PROperationsService` for reviewer capacity checking operations.
 
@@ -118,10 +118,17 @@ Add convenience methods to `PROperationsService` for reviewer capacity checking 
   - Internally calls `get_reviewer_prs_for_project()` and returns `len()`
   - Used for capacity checking
 
-**Files to modify:**
-- `src/claudestep/services/pr_operations_service.py`
+**Files modified:**
+- `src/claudestep/services/pr_operations_service.py` - Added two new reviewer-specific methods
 
-**Expected outcome:** PROperationsService provides typed domain models for all operations, not dictionaries.
+**Technical notes:**
+- Both methods implemented successfully with comprehensive docstrings and examples
+- `get_reviewer_prs_for_project()` leverages existing `get_open_prs_for_reviewer()` method and filters using domain model's `project_name` property
+- `get_reviewer_pr_count()` is a simple convenience wrapper that returns the count
+- All 573 tests pass successfully
+- Methods return typed `GitHubPullRequest` models, maintaining type safety throughout
+
+**Expected outcome:** ✅ COMPLETED - PROperationsService provides typed domain models for all operations, not dictionaries.
 
 - [ ] Phase 4: Update ReviewerManagementService to use PROperationsService
 

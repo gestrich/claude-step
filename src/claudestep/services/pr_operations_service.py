@@ -193,6 +193,68 @@ class PROperationsService:
 
         return projects
 
+    def get_reviewer_prs_for_project(
+        self, username: str, project: str, label: str = "claudestep"
+    ) -> List[GitHubPullRequest]:
+        """Fetch open PRs assigned to a reviewer for a specific project.
+
+        Combines reviewer filtering with project filtering to get PRs
+        assigned to a specific reviewer on a specific project. Used by
+        ReviewerManagementService for capacity checking.
+
+        Args:
+            username: GitHub username of the reviewer
+            project: Project name (e.g., "my-refactor")
+            label: GitHub label to filter PRs (default: "claudestep")
+
+        Returns:
+            List of GitHubPullRequest domain models assigned to the reviewer
+            for the specified project
+
+        Examples:
+            >>> service = PROperationsService("owner/repo")
+            >>> prs = service.get_reviewer_prs_for_project("reviewer1", "my-refactor")
+            >>> len(prs)
+            2
+            >>> all(pr.project_name == "my-refactor" for pr in prs)
+            True
+        """
+        # Get all open PRs for the reviewer
+        reviewer_prs = self.get_open_prs_for_reviewer(username, label=label)
+
+        # Filter to only PRs for the specified project
+        # Use domain model property for project name
+        project_prs = [
+            pr for pr in reviewer_prs
+            if pr.project_name == project
+        ]
+
+        return project_prs
+
+    def get_reviewer_pr_count(
+        self, username: str, project: str, label: str = "claudestep"
+    ) -> int:
+        """Get count of open PRs assigned to a reviewer for a specific project.
+
+        Convenience method for capacity checking that returns just the count.
+
+        Args:
+            username: GitHub username of the reviewer
+            project: Project name (e.g., "my-refactor")
+            label: GitHub label to filter PRs (default: "claudestep")
+
+        Returns:
+            Number of open PRs assigned to the reviewer for the project
+
+        Examples:
+            >>> service = PROperationsService("owner/repo")
+            >>> count = service.get_reviewer_pr_count("reviewer1", "my-refactor")
+            >>> count
+            2
+        """
+        prs = self.get_reviewer_prs_for_project(username, project, label=label)
+        return len(prs)
+
     # Static utility methods
 
     @staticmethod
