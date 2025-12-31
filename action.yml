@@ -187,7 +187,7 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github_token }}
         PR_NUMBER: ${{ steps.finalize.outputs.pr_number }}
-        SUMMARY_FILE: '/tmp/pr-summary.md'
+        SUMMARY_FILE: ${{ steps.prepare_summary.outputs.summary_file }}
         MAIN_COST: ${{ steps.prepare_summary.outputs.main_cost }}
         SUMMARY_COST: ${{ steps.prepare_summary.outputs.summary_cost }}
         GITHUB_REPOSITORY: ${{ github.repository }}

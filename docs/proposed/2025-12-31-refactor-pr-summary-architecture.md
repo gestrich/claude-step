@@ -338,7 +338,7 @@ elif args.command == "post-pr-comment":
 - No new test failures introduced by this refactoring
 - Added validation for whitespace-only PR numbers (skip gracefully)
 
-- [ ] Phase 5: Update summary_prompt.md to reference constant
+- [x] Phase 5: Update summary_prompt.md to reference constant ✅
 
 **Update `src/claudestep/resources/prompts/summary_prompt.md`:**
 
@@ -382,6 +382,14 @@ env:
 - Single source of truth (constant defined once in constants.py)
 - Easy to change file path in one place
 - No magic strings duplicated across files
+
+**Technical Notes (Phase 5 Completion):**
+- Updated `summary_prompt.md` to use `{SUMMARY_FILE_PATH}` template variable in two locations (lines 17 and 29)
+- Added template substitution in `prepare_summary.py` at line 74: `summary_prompt = summary_prompt.replace("{SUMMARY_FILE_PATH}", PR_SUMMARY_FILE_PATH)`
+- Updated `action.yml` line 190 to use `${{ steps.prepare_summary.outputs.summary_file }}` instead of hardcoded `/tmp/pr-summary.md`
+- The `PR_SUMMARY_FILE_PATH` constant is imported from `claudestep.domain.constants` (already present from Phase 3)
+- All 9 integration tests pass successfully
+- No build errors, Python compilation successful
 
 - [ ] Phase 6: Delete extract_cost.py
 

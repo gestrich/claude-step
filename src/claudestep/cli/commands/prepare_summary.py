@@ -71,6 +71,7 @@ def cmd_prepare_summary(
         summary_prompt = template.replace("{TASK_DESCRIPTION}", task)
         summary_prompt = summary_prompt.replace("{PR_NUMBER}", pr_number)
         summary_prompt = summary_prompt.replace("{WORKFLOW_URL}", workflow_url)
+        summary_prompt = summary_prompt.replace("{SUMMARY_FILE_PATH}", PR_SUMMARY_FILE_PATH)
 
         # Write output
         gh.write_output("summary_prompt", summary_prompt)
