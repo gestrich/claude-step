@@ -44,7 +44,7 @@ ClaudeStep currently requires manual triggering to start the first task when a n
 
 ## Phases
 
-- [ ] Phase 1: Create auto-start workflow
+- [x] Phase 1: Create auto-start workflow
 
 **Objective**: Create a new GitHub Actions workflow that triggers when spec.md files are pushed to the main branch.
 
@@ -84,6 +84,12 @@ jobs:
 - Workflow triggers on any push to main that touches spec.md
 - Workflow can access current and previous commits
 - Basic structure in place for detection logic
+
+**Status**: ✅ Completed
+- Created `.github/workflows/claudestep-auto-start.yml` with the exact structure specified
+- Workflow configured to trigger on pushes to main branch when `claude-step/*/spec.md` files change
+- Checkout step configured with `fetch-depth: 2` to enable detection of changes between commits
+- Basic foundation ready for subsequent phases to add detection and triggering logic
 
 ---
 

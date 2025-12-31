@@ -1,0 +1,17 @@
+name: ClaudeStep Auto-Start
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'claude-step/*/spec.md'
+
+jobs:
+  auto-start:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need previous commit to detect changes
