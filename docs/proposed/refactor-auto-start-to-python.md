@@ -67,7 +67,7 @@ Use existing `run_git_command()` helper for consistent error handling. Follow pa
 - Parse function validates path format strictly (must be exactly 3 parts: claude-step/project/spec.md)
 - Build passes successfully and all functions import and execute correctly
 
-- [ ] Phase 3: Create composite service for auto-start orchestration
+- [x] Phase 3: Create composite service for auto-start orchestration ✅
 
 Create composite service in `src/claudestep/services/composite/auto_start_service.py`:
 - `AutoStartService` class with dependency injection
@@ -93,6 +93,23 @@ class AutoStartService:
         self.repo = repo
         self.pr_service = pr_service
 ```
+
+**Technical Notes:**
+- Created `src/claudestep/services/composite/auto_start_service.py` with three methods:
+  - `detect_changed_projects()`: Detects changed spec files using git operations and returns list of AutoStartProject domain models
+  - `determine_new_projects()`: Filters projects to only those with no existing PRs using PRService
+  - `should_auto_trigger()`: Returns AutoStartDecision based on business logic (deleted projects → skip, new projects → trigger, existing projects → skip)
+- Followed composite service pattern from `StatisticsService`:
+  - Constructor takes `repo` and `pr_service` for dependency injection
+  - Orchestrates calls to infrastructure layer (git operations) and core layer (PRService)
+  - Returns domain models for type safety
+  - Handles exceptions gracefully with logging
+- Uses existing `detect_changed_files()` and `detect_deleted_files()` from Phase 2
+- Uses existing `parse_spec_path_to_project()` to extract project names from file paths
+- Uses `PRService.get_project_prs()` to check for existing PRs (not `count_project_prs()` as that method doesn't exist)
+- Updated `src/claudestep/services/composite/__init__.py` to export `AutoStartService`
+- Module imports successfully and instantiates correctly
+- Build passes with new service included in coverage report
 
 - [ ] Phase 4: Create CLI command for auto-start detection
 
