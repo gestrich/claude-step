@@ -145,7 +145,7 @@ jobs:
 
 ---
 
-- [ ] Phase 3: Check if project is new or existing
+- [x] Phase 3: Check if project is new or existing
 
 **Objective**: For each detected project, determine if it's a new project (no PRs yet) or existing project (has PRs).
 
@@ -193,6 +193,15 @@ jobs:
 - Accurately distinguishes new projects from existing ones
 - Handles projects with closed PRs (still counts as existing)
 - Outputs list of new projects only
+
+**Status**: ✅ Completed
+- Added "Check if projects are new" step to `.github/workflows/claudestep-auto-start.yml`
+- Uses GitHub CLI (`gh pr list`) to query for existing ClaudeStep PRs for each project
+- Filters PRs by the `claudestep` label and checks branch names with pattern `claude-step-$project-*`
+- Correctly distinguishes new projects (0 PRs) from existing projects (1+ PRs including closed)
+- Outputs space-separated list of new projects in `new_projects` output for use in subsequent steps
+- YAML syntax validated successfully
+- Ready for Phase 4 to consume the `new_projects` output
 
 ---
 

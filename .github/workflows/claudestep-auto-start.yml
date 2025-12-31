@@ -38,3 +38,33 @@ jobs:
 
           echo "projects=$PROJECTS" >> $GITHUB_OUTPUT
           echo "Detected projects with spec changes: $PROJECTS"
+
+      - name: Check if projects are new
+        id: check_new
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PROJECTS="${{ steps.detect.outputs.projects }}"
+          NEW_PROJECTS=""
+
+          for project in $PROJECTS; do
+            echo "Checking if project '$project' is new..."
+
+            # Query for ClaudeStep PRs for this project
+            # Note: This requires PRs to have project in branch name or label
+            PR_COUNT=$(gh pr list \
+              --label claudestep \
+              --state all \
+              --json headRefName \
+              --jq "[.[] | select(.headRefName | startswith(\"claude-step-$project-\"))] | length")
+
+            if [ "$PR_COUNT" -eq 0 ]; then
+              echo "  → New project (no PRs found)"
+              NEW_PROJECTS="$NEW_PROJECTS $project"
+            else
+              echo "  → Existing project ($PR_COUNT PRs found), skipping auto-trigger"
+            fi
+          done
+
+          echo "new_projects=$NEW_PROJECTS" >> $GITHUB_OUTPUT
+          echo "New projects to auto-trigger: $NEW_PROJECTS"
