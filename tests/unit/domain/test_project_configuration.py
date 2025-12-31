@@ -231,25 +231,6 @@ reviewers:
         assert config.reviewers[0].username == "alice"
         assert config.reviewers[1].username == "bob"
 
-    def test_from_yaml_string_stores_raw_config(self):
-        """Should store raw configuration for backward compatibility"""
-        # Arrange
-        project = Project("my-project")
-        yaml_content = """
-reviewers:
-  - username: alice
-    maxOpenPRs: 2
-custom_field: custom_value
-"""
-
-        # Act
-        config = ProjectConfiguration.from_yaml_string(project, yaml_content)
-
-        # Assert
-        assert "reviewers" in config.raw_config
-        assert "custom_field" in config.raw_config
-        assert config.raw_config["custom_field"] == "custom_value"
-
     def test_from_yaml_string_with_complex_yaml(self):
         """Should parse YAML with additional fields beyond reviewers"""
         # Arrange
@@ -268,8 +249,6 @@ settings:
 
         # Assert
         assert len(config.reviewers) == 1
-        assert "settings" in config.raw_config
-        assert config.raw_config["settings"]["auto_merge"] is True
 
 
 class TestProjectConfigurationGetReviewerUsernames:
@@ -394,8 +373,7 @@ reviewers:
         ]
         config = ProjectConfiguration(
             project=project,
-            reviewers=reviewers,
-            raw_config={}
+            reviewers=reviewers
         )
 
         # Act
@@ -437,8 +415,7 @@ reviewers:
         project = Project("my-project")
         config = ProjectConfiguration(
             project=project,
-            reviewers=[],
-            raw_config={}
+            reviewers=[]
         )
 
         # Act
@@ -485,9 +462,6 @@ settings:
         dev2 = config.get_reviewer("dev2")
         assert dev2 is not None
         assert dev2.max_open_prs == 2
-
-        # Assert - Raw config preserved
-        assert config.raw_config["settings"]["auto_merge"] is True
 
         # Assert - Conversion to dict
         dict_form = config.to_dict()

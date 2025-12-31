@@ -286,15 +286,13 @@ class StatisticsService:
         return stats_dict
 
     def collect_project_costs(
-        self, project_name: str, label: str = DEFAULT_PR_LABEL,
-        project_metadata: Optional[Dict] = None
+        self, project_name: str, label: str = DEFAULT_PR_LABEL
     ) -> float:
         """Collect total costs for a project (temporarily disabled in Phase 4)
 
         Args:
             project_name: Name of the project to collect costs for
             label: GitHub label to filter PRs (unused)
-            project_metadata: Optional metadata (unused, kept for compatibility)
 
         Returns:
             Total cost in USD (always 0.0 in Phase 4)

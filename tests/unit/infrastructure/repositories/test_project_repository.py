@@ -444,7 +444,6 @@ Ensure backward compatibility with existing sessions.
         assert reviewer_names == ["dev1", "dev2", "dev3"]
         dev2 = config.get_reviewer("dev2")
         assert dev2.max_open_prs == 3
-        assert config.raw_config["settings"]["auto_merge"] is True
 
         # Spec assertions
         assert spec.total_tasks == 7

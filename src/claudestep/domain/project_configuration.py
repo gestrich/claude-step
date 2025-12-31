@@ -46,7 +46,6 @@ class ProjectConfiguration:
 
     project: Project
     reviewers: List[Reviewer]
-    raw_config: dict  # Keep for backward compatibility
 
     @classmethod
     def from_yaml_string(cls, project: Project, yaml_content: str) -> 'ProjectConfiguration':
@@ -67,8 +66,7 @@ class ProjectConfiguration:
 
         return cls(
             project=project,
-            reviewers=reviewers,
-            raw_config=config
+            reviewers=reviewers
         )
 
     def get_reviewer_usernames(self) -> List[str]:

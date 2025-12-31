@@ -73,7 +73,7 @@ This plan addresses several improvements to the ClaudeStep project:
 
 **Expected outcome**: All index-based/backward compatibility code removed, only hash-based identification remains
 
-- [ ] Phase 4: Remove compatibility fields from domain models
+- [x] Phase 4: Remove compatibility fields from domain models
 
 **Details**:
 - Search for and remove fields marked as "compatibility", "legacy", or "unused"
@@ -81,6 +81,22 @@ This plan addresses several improvements to the ClaudeStep project:
   - `project_metadata: Optional metadata (unused, kept for compatibility)` parameter (line 304)
 - Review all domain models in `src/claudestep/domain/models.py` for unused compatibility fields
 - Update related docstrings that reference removed fields
+
+**Completed**: All unused compatibility fields successfully removed from domain models. Key changes:
+- Removed `project_metadata` parameter from `StatisticsService.collect_project_costs()` (line 290)
+- Removed `raw_config` field from `ProjectConfiguration` domain model in `src/claudestep/domain/project_configuration.py`
+- Updated `ProjectConfiguration.from_yaml_string()` to no longer store raw config
+- Removed test `test_from_yaml_string_stores_raw_config` which specifically tested the removed functionality
+- Updated all test assertions that referenced `raw_config` across:
+  - `tests/unit/domain/test_project_configuration.py` (3 instances)
+  - `tests/unit/infrastructure/repositories/test_project_repository.py` (1 instance)
+- 628 tests pass (3 pre-existing failures: 2 e2e GitHub API issues, 1 circular import issue)
+- Build succeeds
+
+**Technical Notes**:
+- The `raw_config` field was never used in the actual source code, only in tests, confirming it was truly unused
+- Legacy cost fields in `TaskMetadata` (`main_task_cost_usd`, `pr_summary_cost_usd`, `total_cost_usd`, `model`) were retained as they are still used for backward compatibility when reading artifact metadata and are actively used in serialization/deserialization logic
+- The `label` parameter in `collect_project_costs()` is marked as unused but retained as it's part of the method signature and doesn't cause confusion
 
 **Expected outcome**: Clean domain models without legacy compatibility fields
 
