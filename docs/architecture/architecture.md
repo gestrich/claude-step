@@ -19,11 +19,12 @@ This document describes the architectural decisions and conventions used in the 
 
 ### Convention: Multiple Actions in One Repository
 
-ClaudeStep provides **three GitHub Actions** in a single repository:
+ClaudeStep provides **three GitHub Actions** in a single repository, plus an **auto-start workflow** for seamless onboarding:
 
 1. **Main Action** (`action.yml`) - Core refactoring automation
 2. **Discovery Action** (`discovery/action.yml`) - Project discovery
 3. **Statistics Action** (`statistics/action.yml`) - Reporting and analytics
+4. **Auto-Start Workflow** (`.github/workflows/claudestep-auto-start.yml`) - Automatic first-task triggering
 
 ### Directory Structure
 
@@ -1041,6 +1042,154 @@ The PR summary feature adds AI-generated comments to PRs explaining what was cha
 - Missing required env vars: Error logged, step fails but workflow continues
 - Template file not found: Error logged, step fails but workflow continues
 - Claude Code failure: Workflow continues due to `continue-on-error: true`
+
+---
+
+## Auto-Start Workflow
+
+### Overview
+
+The ClaudeStep Auto-Start workflow (`.github/workflows/claudestep-auto-start.yml`) automatically triggers the first task when a new project's spec.md is merged to the main branch. This eliminates the manual workflow trigger step and provides seamless onboarding.
+
+### Workflow Trigger
+
+```yaml
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'claude-step/*/spec.md'
+
+concurrency:
+  group: claudestep-auto-start-${{ github.ref }}
+  cancel-in-progress: false
+```
+
+**Key Design:**
+- Triggers on any push to main that modifies spec.md files
+- Uses concurrency control to prevent race conditions
+- Both concurrent runs execute (they'll detect existing PRs and skip appropriately)
+
+### Detection Flow
+
+```
+┌─────────────────────────────────────────┐
+│  Push to main (spec.md changed)         │
+└────────────┬────────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────────┐
+│  Detect Changed Spec Files              │
+│  • git diff --diff-filter=AM            │
+│  • Extract project names                │
+│  • Log deleted specs (ignored)          │
+└────────────┬────────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────────┐
+│  Check if Projects are New              │
+│  • Query GitHub for existing PRs        │
+│  • Filter by claudestep label           │
+│  • Check branch name pattern            │
+│  • PR count = 0 → new project           │
+│  • PR count > 0 → existing project      │
+└────────────┬────────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────────┐
+│  Auto-Trigger for New Projects          │
+│  • gh workflow run claudestep.yml       │
+│  • Pass project_name and base_branch    │
+│  • One trigger per new project          │
+└────────────┬────────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────────┐
+│  Generate Summary                        │
+│  • List all projects with spec changes  │
+│  • Show which were auto-triggered        │
+│  • Explain skipped projects              │
+└─────────────────────────────────────────┘
+```
+
+### New vs Existing Project Detection
+
+The workflow uses hash-based branch naming to distinguish new projects from existing ones:
+
+**Detection Logic:**
+1. Query all PRs with `claudestep` label
+2. Filter PRs by branch name pattern: `claude-step-{project}-*`
+3. Count matching PRs for each project
+4. If count = 0 → new project (auto-trigger)
+5. If count > 0 → existing project (skip, relies on PR merge triggers)
+
+**Branch Pattern:**
+```bash
+gh pr list \
+  --label claudestep \
+  --state all \
+  --json headRefName \
+  --jq "[.[] | select(.headRefName | startswith(\"claude-step-$project-\"))] | length"
+```
+
+### Edge Cases Handled
+
+1. **Spec Deleted**: Detected via `git diff --diff-filter=D`, logged and skipped
+2. **Multiple Projects**: Iterates over all detected projects, triggers each independently
+3. **Existing Projects**: Skipped with clear message (relies on PR merge triggers)
+4. **Invalid Spec**: Delegated to ClaudeStep action validation
+5. **Missing Configuration**: Delegated to ClaudeStep action validation
+6. **API Failures**: Error handling catches rate limits, projects skipped on failure
+7. **Concurrent Pushes**: Concurrency group prevents race conditions
+
+### User Experience
+
+**For New Projects:**
+```
+User: git push origin main  (adds spec.md)
+  ↓
+Auto-Start Workflow: Detects new project "my-refactor"
+  ↓
+Auto-Start Workflow: Triggers ClaudeStep workflow
+  ↓
+ClaudeStep Workflow: Creates PR for first task
+  ↓
+User: Receives PR notification (no manual action needed)
+```
+
+**For Existing Projects:**
+```
+User: git push origin main  (updates spec.md)
+  ↓
+Auto-Start Workflow: Detects existing project "my-refactor"
+  ↓
+Auto-Start Workflow: Skips auto-trigger (existing PRs found)
+  ↓
+Summary: "Existing project, relies on PR merge triggers"
+```
+
+### Disabling Auto-Start
+
+Users can disable auto-start by:
+1. Deleting `.github/workflows/claudestep-auto-start.yml`
+2. Disabling the workflow in GitHub Actions settings
+3. Manually triggering tasks via Actions > ClaudeStep > Run workflow
+
+**Note:** Disabling only affects the first task trigger. Subsequent tasks continue to auto-trigger on PR merge.
+
+### Integration with Main Action
+
+The auto-start workflow is **completely additive**:
+- Does not modify existing ClaudeStep action
+- Does not change PR merge trigger behavior
+- Can be removed without breaking existing functionality
+- Uses same `claudestep.yml` workflow as manual triggers
+
+**Rollback Plan:**
+- Delete `.github/workflows/claudestep-auto-start.yml`
+- Existing manual triggers continue to work
+- No breaking changes to ClaudeStep action itself
 
 ---
 

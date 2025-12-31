@@ -155,11 +155,25 @@ git commit -m "Add ClaudeStep configuration for my-refactor"
 git push origin main
 ```
 
-**Workflow:** Create spec files → Merge to base branch → Run ClaudeStep
+**That's it!** The first task will automatically start within a few minutes.
 
-If you attempt to run ClaudeStep without spec files in your base branch, you'll receive a clear error message indicating which files are missing.
+#### Auto-Start Feature
 
-#### Trigger Initial Workflow
+When you push a new `spec.md` file to your base branch, ClaudeStep automatically detects it and starts the first task for you. No manual triggering needed!
+
+**What happens automatically:**
+1. You merge your spec to main branch
+2. ClaudeStep detects the new project (no existing PRs)
+3. The first task automatically starts
+4. A PR is created for task 1
+5. When you merge that PR, task 2 automatically starts
+6. The process continues until all tasks are complete
+
+**Note:** Auto-trigger only happens for new projects (no existing PRs). For existing projects, tasks trigger when the previous PR merges.
+
+#### Manual Triggering (Optional)
+
+If you prefer to manually trigger the first task, or if auto-start didn't work:
 
 1. Go to Actions > ClaudeStep > Run workflow
 2. Wait ~2-5 minutes
@@ -170,6 +184,27 @@ Future PRs will trigger automatically on merge.
 ### Step 6: Review & Iterate
 
 Review the generated PR, verify it follows your spec, and make any needed fixes. When satisfied, merge it. The workflow will automatically create the next PR.
+
+## Troubleshooting
+
+### First Task Doesn't Auto-Start
+
+If the first task doesn't automatically start after pushing your spec to main:
+
+1. **Check the workflow run**: Go to Actions > ClaudeStep Auto-Start and verify it ran
+2. **Review the summary**: The workflow provides a summary showing which projects were detected and whether they were triggered
+3. **Verify it's a new project**: Auto-start only works for projects with no existing ClaudeStep PRs
+4. **Check for errors**: Look at the workflow logs for any error messages
+5. **Manual trigger**: As a fallback, you can always manually trigger via Actions > ClaudeStep > Run workflow
+
+### Disable Auto-Start
+
+The auto-start feature is enabled by default for all new projects. If you prefer manual control, you can:
+
+1. Delete or disable the `.github/workflows/claudestep-auto-start.yml` workflow file
+2. Manually trigger tasks using Actions > ClaudeStep > Run workflow
+
+Note: Disabling auto-start only affects the first task. Subsequent tasks will still auto-trigger when you merge PRs.
 
 ## Modifying Tasks
 

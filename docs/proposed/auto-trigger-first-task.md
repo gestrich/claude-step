@@ -398,7 +398,7 @@ concurrency:
 
 ---
 
-- [ ] Phase 7: Update documentation
+- [x] Phase 7: Update documentation
 
 **Objective**: Document the auto-start feature for users.
 
@@ -454,6 +454,38 @@ concurrency:
 - Clear documentation of auto-start feature
 - Users understand they don't need manual steps
 - Troubleshooting guide available for issues
+
+**Status**: ✅ Completed
+- Updated README.md with auto-start feature explanation in "Step 5: Run & Test" section
+  - Added "Auto-Start Feature" subsection explaining what happens automatically
+  - Added "Manual Triggering (Optional)" subsection as fallback
+  - Simplified the user experience - push to main and that's it!
+- Added "Troubleshooting" section to README.md with:
+  - "First Task Doesn't Auto-Start" - 5-step troubleshooting guide
+  - "Disable Auto-Start" - Clear instructions for users who prefer manual control
+- Updated docs/architecture/architecture.md with comprehensive auto-start documentation:
+  - Added "Auto-Start Workflow" to action organization list
+  - Created dedicated "Auto-Start Workflow" section with:
+    - Overview and workflow trigger configuration
+    - Detection flow diagram showing all steps
+    - New vs existing project detection logic with code examples
+    - Edge cases handled (7 scenarios documented)
+    - User experience flows for new and existing projects
+    - Disabling auto-start instructions
+    - Integration with main action and rollback plan
+- Created docs/user-guides/getting-started.md (new comprehensive guide):
+  - Quick start guide with 4 simple steps
+  - "What Happens Automatically" section with timeline example
+  - Extensive troubleshooting section covering:
+    - First task doesn't auto-start (5 detailed checks)
+    - Spec files not found
+    - Workflow permissions issues
+    - Claude Code GitHub App not installed
+    - API rate limits
+  - Disabling auto-start (2 options documented)
+  - Next steps for customization and scaling
+- All documentation is consistent and cross-referenced
+- Users have clear path from setup to production with troubleshooting support
 
 ---
 
