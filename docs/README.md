@@ -31,10 +31,10 @@ General patterns, conventions, and architectural principles:
 
 **Start here if you're** contributing to ClaudeStep and need to understand the overall architecture and coding conventions.
 
-### [Specs](specs/) - Implementation Notes
+### Implementation Specs
 Ephemeral documentation for planning and tracking implementation work:
-- **[active/](specs/active/)** - Current implementation specs being worked on
-- **[archive/](specs/archive/)** - Completed implementation specs for historical reference
+- **[proposed/](proposed/)** - Current implementation specs being worked on
+- **[completed/](completed/)** - Completed implementation specs for historical reference
 
 **Start here if you're** looking for detailed implementation history or need to reference how something was built.
 
@@ -50,6 +50,6 @@ When adding new documentation:
 1. **User guides** go in `feature-guides/` - focus on how to use features
 2. **Feature technical docs** go in `feature-architecture/` - focus on how features are implemented
 3. **General patterns** go in `general-architecture/` - focus on reusable patterns across the codebase
-4. **Implementation specs** go in `specs/active/` - temporary planning docs that get archived when complete
+4. **Implementation specs** go in `proposed/` - temporary planning docs that get archived to `completed/` when done
 
 See the README in each directory for more specific guidance.

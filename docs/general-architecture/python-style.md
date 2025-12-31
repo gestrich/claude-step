@@ -1202,6 +1202,6 @@ When working with datetimes:
 
 ## Related Documentation
 
-- See [docs/specs/archive/2025-12-30-reorganize-service-methods.md](../specs/archive/2025-12-30-reorganize-service-methods.md) for the history of applying these principles to the codebase
-- See [docs/specs/active/2025-12-27-projectrefactor.md](../specs/active/2025-12-27-projectrefactor.md) for the plan to introduce Project, ProjectConfiguration, and SpecContent domain models
-- See [docs/specs/active/2025-12-27-refactor-statistics-service-architecture.md](../specs/active/2025-12-27-refactor-statistics-service-architecture.md) for the complete StatisticsService refactoring process
+- See [docs/completed/2025-12-30-reorganize-service-methods.md](../completed/2025-12-30-reorganize-service-methods.md) for the history of applying these principles to the codebase
+- See [docs/proposed/2025-12-27-projectrefactor.md](../proposed/2025-12-27-projectrefactor.md) for the plan to introduce Project, ProjectConfiguration, and SpecContent domain models
+- See [docs/proposed/2025-12-27-refactor-statistics-service-architecture.md](../proposed/2025-12-27-refactor-statistics-service-architecture.md) for the complete StatisticsService refactoring process

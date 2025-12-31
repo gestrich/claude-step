@@ -488,4 +488,4 @@ After running the tests successfully:
 - Fixtures: `tests/e2e/conftest.py`
 - E2E workflow: `.github/workflows/e2e-test.yml` (on main branch)
 - Test-specific workflow: `.github/workflows/claudestep-test.yml` (written to e2e-test branch)
-- Implementation plan: `docs/specs/archive/2025-12-28-e2e-test-isolation.md`
+- Implementation plan: `docs/completed/2025-12-28-e2e-test-isolation.md`
