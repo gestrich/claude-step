@@ -83,10 +83,16 @@ Test projects are created here during test runs and cleaned up afterwards.
             ["git", "add", "claude-step/"],
             cwd=self.repo_root, check=True
         )
-        subprocess.run(
-            ["git", "commit", "-m", "Create test workspace directory"],
-            cwd=self.repo_root, check=True
+        # Only commit if there are staged changes (directory may already exist)
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--quiet"],
+            cwd=self.repo_root, capture_output=True
         )
+        if result.returncode != 0:  # There are staged changes
+            subprocess.run(
+                ["git", "commit", "-m", "Create test workspace directory"],
+                cwd=self.repo_root, check=True
+            )
 
     def push_test_branch(self) -> None:
         """Push the test branch to remote."""
