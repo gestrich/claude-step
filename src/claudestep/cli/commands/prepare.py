@@ -79,13 +79,13 @@ def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
         # Create Project domain model
         project = Project(detected_project)
 
-        # Validate spec files exist in base branch before proceeding
-        base_branch = os.environ.get("BASE_BRANCH", "main")
-        print(f"Validating spec files exist in branch '{base_branch}'...")
+        # Get default base branch from environment (workflow provides this)
+        default_base_branch = os.environ.get("BASE_BRANCH", "main")
+        print(f"Validating spec files exist in branch '{default_base_branch}'...")
 
-        # Check if spec.md exists
-        spec_exists = file_exists_in_branch(repo, base_branch, project.spec_path)
-        config_exists = file_exists_in_branch(repo, base_branch, project.config_path)
+        # Check if spec.md exists (use default branch to locate config files)
+        spec_exists = file_exists_in_branch(repo, default_base_branch, project.spec_path)
+        config_exists = file_exists_in_branch(repo, default_base_branch, project.config_path)
 
         if not spec_exists or not config_exists:
             missing_files = []
@@ -94,24 +94,31 @@ def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             if not config_exists:
                 missing_files.append(f"  - {project.config_path}")
 
-            error_msg = f"""Error: Spec files not found in branch '{base_branch}'
+            error_msg = f"""Error: Spec files not found in branch '{default_base_branch}'
 Required files:
 {chr(10).join(missing_files)}
 
-Please merge your spec files to the '{base_branch}' branch before running ClaudeStep."""
+Please merge your spec files to the '{default_base_branch}' branch before running ClaudeStep."""
             gh.set_error(error_msg)
             return 1
 
-        print(f"✅ Spec files validated in branch '{base_branch}'")
+        print(f"✅ Spec files validated in branch '{default_base_branch}'")
 
         # === STEP 2: Load and Validate Configuration ===
         print("\n=== Step 2/6: Loading configuration ===")
 
-        # Load configuration using ProjectRepository
-        config = project_repository.load_configuration(project, base_branch)
+        # Load configuration using ProjectRepository (use default branch to fetch config)
+        config = project_repository.load_configuration(project, default_base_branch)
         if not config:
-            gh.set_error(f"Failed to load configuration file from branch '{base_branch}'")
+            gh.set_error(f"Failed to load configuration file from branch '{default_base_branch}'")
             return 1
+
+        # Resolve actual base branch (config override or default)
+        base_branch = config.get_base_branch(default_base_branch)
+        if base_branch != default_base_branch:
+            print(f"Base branch: {base_branch} (overridden from default: {default_base_branch})")
+        else:
+            print(f"Base branch: {base_branch}")
 
         slack_webhook_url = os.environ.get("SLACK_WEBHOOK_URL", "")  # From action input
         label = os.environ.get("PR_LABEL", "claudestep")  # From action input, defaults to "claudestep"
@@ -123,9 +130,9 @@ Please merge your spec files to the '{base_branch}' branch before running Claude
         ensure_label_exists(label, gh)
 
         # Load and validate spec using ProjectRepository
-        spec = project_repository.load_spec(project, base_branch)
+        spec = project_repository.load_spec(project, default_base_branch)
         if not spec:
-            gh.set_error(f"Failed to load spec file from branch '{base_branch}'")
+            gh.set_error(f"Failed to load spec file from branch '{default_base_branch}'")
             return 1
 
         validate_spec_format_from_string(spec.content, project.spec_path)
@@ -248,6 +255,7 @@ Now complete the task '{task}' following all the details and instructions in the
         gh.write_output("config_path", project.config_path)
         gh.write_output("spec_path", project.spec_path)
         gh.write_output("pr_template_path", project.pr_template_path)
+        gh.write_output("base_branch", base_branch)
         gh.write_output("label", label)
         gh.write_output("reviewers_json", json.dumps([{"username": r.username, "maxOpenPRs": r.max_open_prs} for r in config.reviewers]))
         gh.write_output("slack_webhook_url", slack_webhook_url)

@@ -67,7 +67,7 @@ Add `baseBranch` field support to the `ProjectConfiguration` domain model. Per a
 
 **Completed:** All changes implemented and 7 new unit tests added. All 599 unit tests pass.
 
-- [ ] Phase 2: Update prepare command to use resolved base branch
+- [x] Phase 2: Update prepare command to use resolved base branch
 
 The `prepare` command currently reads `BASE_BRANCH` directly from environment. Update to use project configuration's base branch if set.
 
@@ -102,6 +102,21 @@ print(f"Base branch: {base_branch} (default: {default_base_branch})")
 - Add test for project with `baseBranch` override
 - Add test for project without `baseBranch` (uses default)
 - Verify correct base branch flows through to PR creation
+
+**Completed:** Updated prepare command to:
+1. Read `default_base_branch` from environment variable `BASE_BRANCH`
+2. Use `default_base_branch` to load config files (spec.md and configuration.yml)
+3. Call `config.get_base_branch(default_base_branch)` to resolve final base branch
+4. Print informative message when base branch is overridden vs using default
+5. Output resolved `base_branch` for downstream workflow steps
+
+Added 4 new integration tests in `tests/integration/cli/commands/test_prepare.py`:
+- `test_prepare_uses_config_base_branch_when_set`
+- `test_prepare_uses_default_base_branch_when_config_not_set`
+- `test_prepare_uses_default_branch_to_load_config_files`
+- `test_prepare_outputs_base_branch_for_downstream_steps`
+
+All 599 unit tests and 133 integration tests pass.
 
 - [ ] Phase 3: Fix auto-start for completed projects
 
