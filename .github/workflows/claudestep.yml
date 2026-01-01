@@ -32,8 +32,10 @@ on:
         type: string
         default: 'e2e-test-project'
 
-  pull_request:
-    types: [closed]
+  push:
+    branches:
+      - main
+      - main-e2e
 
 permissions:
   contents: write       # Commit and push changes

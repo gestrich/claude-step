@@ -68,7 +68,7 @@ jobs:
   - Added new `TestClaudeStepWorkflowYAML` and `TestSimplifiedWorkflowEventHandling` test classes
 - All 791 unit/integration tests pass
 
-- [ ] Phase 2: Simplify triggers and workflow_dispatch inputs
+- [x] Phase 2: Simplify triggers and workflow_dispatch inputs
 
 **Change triggers from `pull_request:closed` to `push`:**
 
@@ -111,6 +111,13 @@ on:
 **Removed workflow_dispatch inputs:**
 - `base_branch` - resolved from project's `configuration.yml` or defaults to the branch the workflow runs on
 - `checkout_ref` - determined automatically by the action based on event type
+
+**Completed:** 2026-01-01
+
+**Technical notes:**
+- Changed trigger from `pull_request: types: [closed]` to `push: branches: [main, main-e2e]`
+- The `base_branch` and `checkout_ref` workflow_dispatch inputs were already removed in Phase 1
+- All 791 unit/integration tests pass
 
 - [ ] Phase 3: Update header comments
 
