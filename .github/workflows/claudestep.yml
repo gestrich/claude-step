@@ -1,7 +1,17 @@
-# ClaudeStep workflow - supports both production (main) and E2E (main-e2e) branches
-# - For production: Creates PRs targeting 'main' branch
-# - For E2E tests: Creates PRs targeting 'main-e2e' branch
-# Triggered by: workflow_dispatch (manual) or pull_request close events
+# ClaudeStep workflow - Generic workflow that works on ANY branch
+#
+# This workflow is branch-agnostic and adapts to any branch without configuration.
+#
+# Base branch inference:
+# - PR merge event: Uses github.base_ref (the branch the PR was merged INTO)
+# - workflow_dispatch: Uses base_branch input if provided, otherwise uses checkout_ref
+# - Auto-start trigger: Auto-start workflow provides explicit base_branch
+#
+# When a spec is pushed to 'main', PRs target 'main'.
+# When a spec is pushed to 'main-e2e', PRs target 'main-e2e'.
+# Works on any branch: feature branches, test branches, etc.
+#
+# Triggered by: workflow_dispatch (manual/auto-start) or pull_request close events
 
 name: ClaudeStep
 
@@ -13,9 +23,9 @@ on:
         required: true
         default: 'e2e-test-project'
       base_branch:
-        description: 'Base branch for pull requests'
+        description: 'Base branch for pull requests (optional - inferred from checkout_ref if not provided)'
         required: false
-        default: 'main'
+        # No default - will be inferred from checkout_ref if not provided
       checkout_ref:
         description: 'Branch/ref to checkout (defaults to main)'
         required: false
@@ -35,13 +45,24 @@ jobs:
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
-      - name: Determine project and checkout ref
+      - name: Determine project and base branch
         id: project
         run: |
+          echo "Event type: ${{ github.event_name }}"
+
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             # Use manual inputs
             PROJECT="${{ github.event.inputs.project_name }}"
-            BASE_BRANCH="${{ github.event.inputs.base_branch || 'main' }}"
+
+            # Infer base branch: use input if provided, otherwise use checkout_ref
+            if [ -n "${{ github.event.inputs.base_branch }}" ]; then
+              BASE_BRANCH="${{ github.event.inputs.base_branch }}"
+              echo "Using explicit base_branch input: $BASE_BRANCH"
+            else
+              BASE_BRANCH="${{ github.event.inputs.checkout_ref || 'main' }}"
+              echo "Inferring base_branch from checkout_ref: $BASE_BRANCH"
+            fi
+
             CHECKOUT_REF="${{ github.event.inputs.checkout_ref || 'main' }}"
           elif [ "${{ github.event_name }}" = "pull_request" ]; then
             # Only run for PRs with claudestep label
@@ -53,15 +74,32 @@ jobs:
             # Extract from branch name: claude-step-{project}-{index}
             BRANCH="${{ github.head_ref }}"
             PROJECT=$(echo "$BRANCH" | sed -E 's/^claude-step-([^-]+)-[0-9]+$/\1/')
-            # Use the base branch from the PR
+            # Use the base branch from the PR (branch the PR was merged INTO)
             BASE_BRANCH="${{ github.base_ref }}"
             # Checkout the base branch after merge
             CHECKOUT_REF="${{ github.base_ref }}"
+            echo "Using base_branch from PR merge: $BASE_BRANCH"
           fi
+
           echo "name=$PROJECT" >> $GITHUB_OUTPUT
           echo "base_branch=$BASE_BRANCH" >> $GITHUB_OUTPUT
           echo "checkout_ref=$CHECKOUT_REF" >> $GITHUB_OUTPUT
-          echo "Determined project: $PROJECT, base_branch: $BASE_BRANCH, checkout_ref: $CHECKOUT_REF"
+          echo "Determined: project=$PROJECT, base=$BASE_BRANCH, checkout=$CHECKOUT_REF"
+
+      - name: Validate base branch
+        if: steps.project.outputs.skip != 'true'
+        run: |
+          if [ -z "${{ steps.project.outputs.base_branch }}" ]; then
+            echo "❌ ERROR: Base branch could not be determined"
+            echo "Event: ${{ github.event_name }}"
+            echo "Inputs: base_branch='${{ github.event.inputs.base_branch }}', checkout_ref='${{ github.event.inputs.checkout_ref }}'"
+            echo ""
+            echo "For manual triggers, provide either:"
+            echo "  - base_branch input (explicit base branch)"
+            echo "  - checkout_ref input (will be used as base branch)"
+            exit 1
+          fi
+          echo "✓ Base branch validated: ${{ steps.project.outputs.base_branch }}"
 
       - name: Checkout repository
         if: steps.project.outputs.skip != 'true'

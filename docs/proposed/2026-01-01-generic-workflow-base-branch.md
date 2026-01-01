@@ -698,7 +698,7 @@ Successfully updated the auto-start workflow to be fully generic and work on any
 
 ---
 
-- [ ] Phase 4: Update main ClaudeStep workflow
+- [x] Phase 4: Update main ClaudeStep workflow
 
 **Goal**: Make ClaudeStep workflow derive base branch from event context.
 
@@ -777,6 +777,73 @@ Successfully updated the auto-start workflow to be fully generic and work on any
    ```
 
 **Expected outcome**: ClaudeStep workflow infers base branch from PR merge events or uses checkout_ref as fallback.
+
+---
+
+### Phase 4 Completion Results
+
+**Completed**: 2026-01-01
+
+#### Implementation Summary
+
+Successfully updated the main ClaudeStep workflow to be fully generic and infer base branch from event context:
+
+1. **Updated workflow header comments** (.github/workflows/claudestep.yml:1-14):
+   - Changed from hardcoded "supports main and main-e2e" to "Generic workflow that works on ANY branch"
+   - Added clear documentation of base branch inference rules for each event type
+   - Explains branch-agnostic behavior
+
+2. **Removed base_branch default** (.github/workflows/claudestep.yml:25-28):
+   - Changed from `default: 'main'` to no default (commented out)
+   - Updated description to explain inference behavior
+   - Allows proper inference from checkout_ref when not explicitly provided
+
+3. **Updated "Determine project and base branch" step** (.github/workflows/claudestep.yml:48-87):
+   - Renamed from "Determine project and checkout ref" to reflect new responsibility
+   - Added event type logging for debugging
+   - Implemented inference logic for workflow_dispatch:
+     - If `base_branch` input provided → use it (explicit override)
+     - Else use `checkout_ref` (inferred base branch)
+   - PR merge path already correctly uses `github.base_ref`
+   - Added clear logging showing which inference path was taken
+
+4. **Added validation step** (.github/workflows/claudestep.yml:89-102):
+   - New "Validate base branch" step ensures base_branch is set
+   - Fails fast with clear error message if not determined
+   - Provides actionable guidance for fixing manual trigger issues
+   - Logs validated base branch for confirmation
+
+#### Technical Notes
+
+- **Inference priority for workflow_dispatch**:
+  1. Explicit `base_branch` input (if provided)
+  2. Fallback to `checkout_ref` (defaults to 'main')
+  3. Would fail validation if neither set (though checkout_ref has default)
+
+- **PR merge path**: Already correctly implemented
+  - Uses `github.base_ref` (branch PR merged INTO)
+  - No changes needed to this path
+
+- **Backwards compatibility**: ✅ Fully maintained
+  - Auto-start provides explicit `base_branch` → works unchanged
+  - Manual triggers default `checkout_ref='main'` → infers `base_branch='main'`
+  - PR merges use `github.base_ref` → works unchanged
+  - New capability: can target any branch by setting checkout_ref
+
+- **Build validation**: ✅ All 706 unit and integration tests pass
+  - No regressions introduced
+  - Workflow logic changes don't affect test suite
+
+#### Success Criteria Met
+
+✅ Removed hardcoded `base_branch` default from workflow inputs
+✅ Implemented base branch inference from event context
+✅ Added validation step with clear error messages
+✅ Added debug logging for derived values
+✅ Updated step name to reflect new responsibility
+✅ All tests pass
+✅ Backwards compatible with existing usage
+✅ Documentation in workflow comments explains generic behavior
 
 ---
 
