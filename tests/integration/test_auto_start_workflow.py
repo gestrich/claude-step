@@ -1,13 +1,6 @@
-"""Integration tests for ClaudeStep Auto-Start workflow.
+"""Integration tests for ClaudeStep workflows.
 
-This module tests the bash script logic used in the auto-start workflow without
-requiring actual GitHub Actions to run. It validates:
-- Project name extraction from spec file paths
-- Detection of added/modified vs deleted spec files
-- YAML syntax and structure validation
-
-Note: Full E2E testing of the auto-start workflow requires manual testing
-since it involves GitHub Actions triggers and workflow_dispatch calls.
+This module tests workflow configuration and structure validation.
 """
 
 import pytest
@@ -95,20 +88,20 @@ class TestAutoStartWorkflowLogic:
         assert deleted_filter == "D", "Should detect Deleted files separately"
 
 
-class TestAutoStartWorkflowYAML:
-    """Tests for auto-start workflow YAML structure."""
+class TestClaudeStepWorkflowYAML:
+    """Tests for ClaudeStep workflow YAML structure (simplified workflow)."""
 
     def test_workflow_file_exists(self):
-        """Verify the auto-start workflow file exists."""
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep-auto-start.yml"
+        """Verify the ClaudeStep workflow file exists."""
+        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
         assert workflow_path.exists(), \
-            f"Auto-start workflow should exist at {workflow_path}"
+            f"ClaudeStep workflow should exist at {workflow_path}"
 
     def test_workflow_yaml_is_valid(self):
         """Verify the workflow YAML is syntactically valid."""
         import yaml
 
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep-auto-start.yml"
+        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
 
         with open(workflow_path) as f:
             workflow_data = yaml.safe_load(f)
@@ -120,76 +113,66 @@ class TestAutoStartWorkflowYAML:
         assert (True in workflow_data or "on" in workflow_data), "Workflow should have triggers"
         assert "jobs" in workflow_data, "Workflow should have jobs"
 
-    def test_workflow_has_required_triggers(self):
-        """Verify the workflow has the correct triggers configured."""
+    def test_workflow_uses_simplified_pattern(self):
+        """Verify the workflow uses the simplified pattern with github_event."""
         import yaml
 
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep-auto-start.yml"
-
-        with open(workflow_path) as f:
-            workflow_data = yaml.safe_load(f)
-
-        # YAML parses 'on:' as boolean True
-        triggers = workflow_data.get(True) or workflow_data.get("on")
-        assert triggers is not None, "Workflow should have triggers section"
-
-        # Should trigger on push to any branch (generic workflow)
-        assert "push" in triggers, "Workflow should trigger on push"
-        assert "**" in triggers["push"]["branches"], \
-            "Workflow should trigger on push to any branch"
-
-        # Should filter by spec.md paths
-        assert "paths" in triggers["push"], "Workflow should have path filters"
-        assert "claude-step/*/spec.md" in triggers["push"]["paths"], \
-            "Workflow should filter for spec.md files"
-
-    def test_workflow_has_concurrency_control(self):
-        """Verify the workflow has concurrency control to prevent race conditions."""
-        import yaml
-
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep-auto-start.yml"
-
-        with open(workflow_path) as f:
-            workflow_data = yaml.safe_load(f)
-
-        assert "concurrency" in workflow_data, "Workflow should have concurrency control"
-        concurrency = workflow_data["concurrency"]
-
-        assert "group" in concurrency, "Concurrency should have a group"
-        assert "${{ github.ref }}" in concurrency["group"], \
-            "Concurrency group should use github.ref"
-
-        # cancel-in-progress should be false to allow both runs to execute
-        # (they'll detect existing PRs and handle appropriately)
-        assert concurrency.get("cancel-in-progress") is False, \
-            "cancel-in-progress should be false to prevent race conditions"
-
-    def test_workflow_has_required_steps(self):
-        """Verify the workflow has all required steps."""
-        import yaml
-
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep-auto-start.yml"
+        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
 
         with open(workflow_path) as f:
             workflow_data = yaml.safe_load(f)
 
         jobs = workflow_data["jobs"]
-        assert "auto-start" in jobs, "Workflow should have auto-start job"
+        assert "run-claudestep" in jobs, "Workflow should have run-claudestep job"
 
-        steps = jobs["auto-start"]["steps"]
+        steps = jobs["run-claudestep"]["steps"]
+
+        # Should have a single step that uses the action
+        action_step = None
+        for step in steps:
+            if step.get("uses", "").startswith("./"):
+                action_step = step
+                break
+
+        assert action_step is not None, "Should have a step that uses the local action"
+
+        # Verify simplified inputs
+        with_block = action_step.get("with", {})
+        assert "github_event" in with_block, "Should pass github_event to action"
+        assert "event_name" in with_block, "Should pass event_name to action"
+
+    def test_workflow_has_no_complex_bash_steps(self):
+        """Verify the workflow doesn't have complex bash logic (simplified)."""
+        import yaml
+
+        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
+
+        with open(workflow_path) as f:
+            workflow_data = yaml.safe_load(f)
+
+        steps = workflow_data["jobs"]["run-claudestep"]["steps"]
+
+        # The simplified workflow should NOT have these steps
         step_names = [step.get("name", "") for step in steps]
 
-        required_steps = [
-            "Checkout repository",
-            "Setup Python",
-            "Install ClaudeStep",
-            "Detect and trigger auto-start",
-            "Generate summary",
-        ]
+        assert not any("Determine project" in name for name in step_names), \
+            "Simplified workflow should NOT have 'Determine project' step"
+        assert not any("Validate base branch" in name for name in step_names), \
+            "Simplified workflow should NOT have 'Validate base branch' step"
 
-        for required_step in required_steps:
-            assert any(required_step in name for name in step_names), \
-                f"Workflow should have step: {required_step}"
+    def test_workflow_has_required_secrets(self):
+        """Verify the workflow uses required secrets."""
+        import yaml
+
+        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
+
+        with open(workflow_path) as f:
+            content = f.read()
+
+        assert "secrets.ANTHROPIC_API_KEY" in content, \
+            "Workflow should use ANTHROPIC_API_KEY secret"
+        assert "secrets.GITHUB_TOKEN" in content, \
+            "Workflow should use GITHUB_TOKEN secret"
 
 
 @pytest.mark.integration
@@ -331,132 +314,15 @@ class TestClaudeStepBranchNameEdgeCases:
 
 
 @pytest.mark.integration
-class TestGenericWorkflowBaseBranchInference:
-    """Tests for generic workflow base branch inference.
+class TestSimplifiedWorkflowEventHandling:
+    """Tests for simplified workflow event handling.
 
-    Phase 8 validation: Ensure generic workflows correctly infer base branch
-    from event context for all trigger types.
+    The simplified workflow passes github_event and event_name to the action,
+    which handles all event parsing logic internally.
     """
 
-    def test_auto_start_uses_github_ref_name_for_base_branch(self):
-        """Verify auto-start workflow derives base branch from github.ref_name.
-
-        The auto-start workflow should:
-        - Push to 'main' → BASE_BRANCH='main'
-        - Push to 'main-e2e' → BASE_BRANCH='main-e2e'
-        - Push to 'feature/test' → BASE_BRANCH='feature/test'
-        """
-        import yaml
-
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep-auto-start.yml"
-
-        with open(workflow_path) as f:
-            workflow_data = yaml.safe_load(f)
-
-        # Find the auto-start step
-        steps = workflow_data["jobs"]["auto-start"]["steps"]
-        auto_start_step = None
-        for step in steps:
-            if step.get("name") == "Detect and trigger auto-start":
-                auto_start_step = step
-                break
-
-        assert auto_start_step is not None, "Should have 'Detect and trigger auto-start' step"
-
-        # Verify BASE_BRANCH uses github.ref_name
-        env = auto_start_step.get("env", {})
-        assert "BASE_BRANCH" in env, "Should have BASE_BRANCH env var"
-        assert env["BASE_BRANCH"] == "${{ github.ref_name }}", \
-            "BASE_BRANCH should derive from github.ref_name (the branch that was pushed to)"
-
-    def test_claudestep_workflow_infers_base_from_checkout_ref(self):
-        """Verify ClaudeStep workflow infers base branch from checkout_ref.
-
-        For workflow_dispatch events:
-        - If base_branch input provided → use it (explicit override)
-        - Else use checkout_ref (inferred base branch)
-
-        This ensures manual triggers work correctly:
-        - Trigger with checkout_ref='main-e2e' → BASE_BRANCH='main-e2e'
-        - Trigger with checkout_ref='feature/test' → BASE_BRANCH='feature/test'
-        """
-        import yaml
-
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
-
-        with open(workflow_path) as f:
-            workflow_data = yaml.safe_load(f)
-
-        # Find the "Determine project and base branch" step
-        steps = workflow_data["jobs"]["run-claudestep"]["steps"]
-        determine_step = None
-        for step in steps:
-            if "Determine project and base branch" in step.get("name", ""):
-                determine_step = step
-                break
-
-        assert determine_step is not None, "Should have 'Determine project and base branch' step"
-
-        # Verify the run script contains inference logic
-        run_script = determine_step.get("run", "")
-
-        # Should check for explicit base_branch input first
-        assert "github.event.inputs.base_branch" in run_script, \
-            "Should check for explicit base_branch input"
-
-        # Should fall back to checkout_ref
-        assert "github.event.inputs.checkout_ref" in run_script, \
-            "Should fall back to checkout_ref for base branch inference"
-
-        # Should have logging for inference path taken
-        assert "Inferring base_branch from checkout_ref" in run_script or \
-               "Using explicit base_branch input" in run_script, \
-            "Should log which inference path was taken"
-
-    def test_claudestep_workflow_uses_github_base_ref_for_pr_merge(self):
-        """Verify ClaudeStep workflow uses github.base_ref for PR merge events.
-
-        For pull_request events:
-        - BASE_BRANCH = github.base_ref (the branch the PR was merged INTO)
-
-        This ensures merge triggers work correctly:
-        - PR merged into 'main' → BASE_BRANCH='main'
-        - PR merged into 'main-e2e' → BASE_BRANCH='main-e2e'
-        """
-        import yaml
-
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
-
-        with open(workflow_path) as f:
-            workflow_data = yaml.safe_load(f)
-
-        # Find the "Determine project and base branch" step
-        steps = workflow_data["jobs"]["run-claudestep"]["steps"]
-        determine_step = None
-        for step in steps:
-            if "Determine project and base branch" in step.get("name", ""):
-                determine_step = step
-                break
-
-        assert determine_step is not None, "Should have 'Determine project and base branch' step"
-
-        # Verify the run script uses github.base_ref for PR events
-        run_script = determine_step.get("run", "")
-
-        # Should handle pull_request event type
-        assert "github.event_name" in run_script and "pull_request" in run_script, \
-            "Should handle pull_request event type"
-
-        # Should use github.base_ref for base branch
-        assert "github.base_ref" in run_script, \
-            "Should use github.base_ref for PR merge base branch"
-
-    def test_claudestep_workflow_has_base_branch_validation(self):
-        """Verify ClaudeStep workflow validates that base branch is set.
-
-        The workflow should fail fast with clear error if base branch
-        cannot be determined.
-        """
+    def test_workflow_passes_event_context_to_action(self):
+        """Verify workflow passes github event context to the action."""
         import yaml
 
         workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
@@ -466,32 +332,29 @@ class TestGenericWorkflowBaseBranchInference:
 
         steps = workflow_data["jobs"]["run-claudestep"]["steps"]
 
-        # Find the validation step
-        validation_step = None
+        # Find the action step
+        action_step = None
         for step in steps:
-            if "Validate base branch" in step.get("name", ""):
-                validation_step = step
+            if step.get("uses", "").startswith("./"):
+                action_step = step
                 break
 
-        assert validation_step is not None, "Should have 'Validate base branch' step"
+        assert action_step is not None, "Should have action step"
 
-        # Verify validation checks for empty base_branch
-        run_script = validation_step.get("run", "")
-        assert "steps.project.outputs.base_branch" in run_script, \
-            "Should check project step output for base_branch"
-        assert "exit 1" in run_script, \
-            "Should exit with error if base branch not determined"
+        with_block = action_step.get("with", {})
 
-        # Verify helpful error message
-        assert "ERROR" in run_script or "error" in run_script.lower(), \
-            "Should have clear error message"
+        # Should pass github_event
+        assert "github_event" in with_block, "Should pass github_event"
+        assert "toJson(github.event)" in with_block["github_event"], \
+            "Should pass github.event as JSON"
 
-    def test_claudestep_workflow_base_branch_has_no_default(self):
-        """Verify base_branch input has no default value.
+        # Should pass event_name
+        assert "event_name" in with_block, "Should pass event_name"
+        assert "github.event_name" in with_block["event_name"], \
+            "Should pass github.event_name"
 
-        The base_branch input should NOT have a default so it can be
-        properly inferred from checkout_ref when not provided.
-        """
+    def test_workflow_dispatch_passes_project_name(self):
+        """Verify workflow_dispatch input for project_name is passed to action."""
         import yaml
 
         workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
@@ -499,73 +362,28 @@ class TestGenericWorkflowBaseBranchInference:
         with open(workflow_path) as f:
             workflow_data = yaml.safe_load(f)
 
-        # YAML parses 'on:' as boolean True
+        # Check triggers
         triggers = workflow_data.get(True) or workflow_data.get("on")
+        assert "workflow_dispatch" in triggers, "Should have workflow_dispatch trigger"
+
         inputs = triggers["workflow_dispatch"]["inputs"]
+        assert "project_name" in inputs, "Should have project_name input"
 
-        # base_branch should exist but have no default
-        assert "base_branch" in inputs, "Should have base_branch input"
-        assert "default" not in inputs["base_branch"], \
-            "base_branch should NOT have a default value (allows inference from checkout_ref)"
+        # Check that project_name is passed to action
+        steps = workflow_data["jobs"]["run-claudestep"]["steps"]
+        action_step = None
+        for step in steps:
+            if step.get("uses", "").startswith("./"):
+                action_step = step
+                break
 
-        # checkout_ref should have a default for backwards compatibility
-        assert "checkout_ref" in inputs, "Should have checkout_ref input"
-        assert "default" in inputs["checkout_ref"], \
-            "checkout_ref SHOULD have a default for backwards compatibility"
-
-    def test_auto_start_workflow_triggers_on_any_branch(self):
-        """Verify auto-start workflow triggers on any branch.
-
-        The workflow should use '**' to trigger on pushes to ANY branch,
-        not just specific hardcoded branches like main and main-e2e.
-        """
-        import yaml
-
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep-auto-start.yml"
-
-        with open(workflow_path) as f:
-            workflow_data = yaml.safe_load(f)
-
-        # YAML parses 'on:' as boolean True
-        triggers = workflow_data.get(True) or workflow_data.get("on")
-
-        # Should trigger on push
-        assert "push" in triggers, "Should trigger on push"
-
-        # Should use '**' for any branch
-        assert "**" in triggers["push"]["branches"], \
-            "Should trigger on ANY branch using '**' pattern"
-
-        # Should NOT have hardcoded specific branches
-        branches = triggers["push"]["branches"]
-        assert "main" not in branches or "**" in branches, \
-            "Should not have hardcoded 'main' branch (use '**' instead)"
-        assert "main-e2e" not in branches or "**" in branches, \
-            "Should not have hardcoded 'main-e2e' branch (use '**' instead)"
+        with_block = action_step.get("with", {})
+        assert "project_name" in with_block, "Should pass project_name to action"
 
 
 @pytest.mark.integration
 class TestGenericWorkflowDocumentation:
-    """Tests for generic workflow documentation.
-
-    Phase 8 validation: Ensure workflows have proper documentation
-    explaining their branch-agnostic behavior.
-    """
-
-    def test_auto_start_has_generic_workflow_documentation(self):
-        """Verify auto-start workflow has documentation about generic behavior."""
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep-auto-start.yml"
-
-        with open(workflow_path) as f:
-            content = f.read()
-
-        # Should document generic behavior
-        assert "generic" in content.lower() or "ANY branch" in content, \
-            "Should document that workflow works on any branch"
-
-        # Should explain base branch derivation
-        assert "github.ref_name" in content, \
-            "Should explain that base branch comes from github.ref_name"
+    """Tests for generic workflow documentation."""
 
     def test_claudestep_has_generic_workflow_documentation(self):
         """Verify ClaudeStep workflow has documentation about generic behavior."""
@@ -578,26 +396,9 @@ class TestGenericWorkflowDocumentation:
         assert "generic" in content.lower() or "branch-agnostic" in content.lower(), \
             "Should document that workflow is branch-agnostic"
 
-        # Should document base branch inference rules
-        assert "PR merge" in content or "pull_request" in content.lower(), \
-            "Should document PR merge base branch inference"
-        assert "workflow_dispatch" in content, \
-            "Should document workflow_dispatch base branch inference"
-
     def test_claudestep_has_security_documentation(self):
         """Verify ClaudeStep workflow has security considerations documented."""
         workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
-
-        with open(workflow_path) as f:
-            content = f.read()
-
-        # Should document security considerations
-        assert "Security" in content or "security" in content, \
-            "Should have security considerations documented"
-
-    def test_auto_start_has_security_documentation(self):
-        """Verify auto-start workflow has security considerations documented."""
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep-auto-start.yml"
 
         with open(workflow_path) as f:
             content = f.read()
