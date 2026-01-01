@@ -241,7 +241,8 @@ ClaudeStep follows a **base branch source of truth** pattern where:
 
 - **Spec files** (`spec.md`, `configuration.yml`) must exist in the base branch (typically `main`)
 - **All operations** fetch spec files via GitHub API, never from filesystem
-- **PRs do not modify** spec files - they only contain code changes
+- **PRs do modify** spec files - they mark completed tasks as checked in `spec.md`
+- **Updated specs merge back** to the base branch, becoming the source of truth for the next workflow run
 - **Base branch is configurable** via `base_branch` input (defaults to `main`)
 
 ### Why Base Branch as Source of Truth?
@@ -330,9 +331,9 @@ git push origin main
 
 **Step 3**: Run ClaudeStep workflow:
 - Workflow fetches specs from base branch via API
-- Creates PR with code changes (does not modify specs)
+- Creates PR with code changes AND marks task as complete in spec.md
 - Users merge PR when ready
-- Next workflow run fetches updated specs from base branch
+- Next workflow run fetches updated specs (with completed task checked off) from base branch
 
 ### Error Handling
 
