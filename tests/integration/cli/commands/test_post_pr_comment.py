@@ -5,6 +5,7 @@ Tests for post_pr_comment.py - Unified PR comment posting command
 import os
 import subprocess
 import tempfile
+import json
 from unittest.mock import Mock, patch
 
 import pytest
@@ -110,18 +111,28 @@ class TestCmdPostPrComment:
         return mock
 
     @pytest.fixture
+    def create_execution_file(self, tmp_path):
+        """Helper to create execution files with cost data"""
+        def _create(cost: float):
+            if cost == 0.0 or not cost:
+                return ""
+            exec_file = tmp_path / f"exec_{cost}.json"
+            exec_file.write_text(json.dumps({"total_cost_usd": cost}))
+            return str(exec_file)
+        return _create
+
+    @pytest.fixture
     def base_env_vars(self):
         """Fixture providing standard environment variables"""
         return {
             "PR_NUMBER": "42",
-            "MAIN_COST": "0.123456",
-            "SUMMARY_COST": "0.045678",
-            "TOTAL_COST": "0.169134",
+            "MAIN_EXECUTION_FILE": "",
+            "SUMMARY_EXECUTION_FILE": "",
             "GITHUB_REPOSITORY": "owner/repo",
             "GITHUB_RUN_ID": "12345"
         }
 
-    def test_cmd_post_pr_comment_posts_combined_comment_with_summary(self, mock_gh_actions, base_env_vars):
+    def test_cmd_post_pr_comment_posts_combined_comment_with_summary(self, mock_gh_actions, base_env_vars, create_execution_file, tmp_path):
         """Should post unified comment when summary file exists"""
         # Arrange
         with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
@@ -147,22 +158,25 @@ class TestCmdPostPrComment:
                             gh=mock_gh_actions,
                             pr_number="42",
                             summary_file_path=summary_file,
-                            main_cost=0.123456,
-                            summary_cost=0.045678,
-                            total_cost=0.169134,
+                            main_execution_file=create_execution_file(0.123456),
+                            summary_execution_file=create_execution_file(0.045678),
                             repo="owner/repo",
                             run_id="12345"
                         )
 
             # Assert
             assert result == 0
-            mock_gh_actions.write_output.assert_called_once_with("comment_posted", "true")
+            # Function now outputs 4 values: main_cost, summary_cost, total_cost, comment_posted
+            assert mock_gh_actions.write_output.call_count == 4
+            # Verify the last call is comment_posted
+            last_call = mock_gh_actions.write_output.call_args_list[-1]
+            assert last_call[0] == ("comment_posted", "true")
             mock_run.assert_called_once()
         finally:
             # Clean up real summary file
             os.unlink(summary_file)
 
-    def test_cmd_post_pr_comment_writes_combined_content_to_temp_file(self, mock_gh_actions, base_env_vars):
+    def test_cmd_post_pr_comment_writes_combined_content_to_temp_file(self, mock_gh_actions, base_env_vars, create_execution_file, tmp_path):
         """Should write properly formatted markdown with summary and cost"""
         # Arrange
         with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
@@ -192,9 +206,8 @@ class TestCmdPostPrComment:
                             gh=mock_gh_actions,
                             pr_number="42",
                             summary_file_path=summary_file,
-                            main_cost=0.123456,
-                            summary_cost=0.045678,
-                            total_cost=0.169134,
+                            main_execution_file=create_execution_file(0.123456),
+                            summary_execution_file=create_execution_file(0.045678),
                             repo="owner/repo",
                             run_id="12345"
                         )
@@ -211,7 +224,7 @@ class TestCmdPostPrComment:
         finally:
             os.unlink(summary_file)
 
-    def test_cmd_post_pr_comment_posts_cost_only_when_summary_missing(self, mock_gh_actions, base_env_vars):
+    def test_cmd_post_pr_comment_posts_cost_only_when_summary_missing(self, mock_gh_actions, base_env_vars, create_execution_file, tmp_path):
         """Should post cost-only comment when summary file doesn't exist"""
         # Arrange
         written_content = []
@@ -235,9 +248,8 @@ class TestCmdPostPrComment:
                         gh=mock_gh_actions,
                         pr_number="42",
                         summary_file_path="/nonexistent/file.md",
-                        main_cost=0.123456,
-                        summary_cost=0.045678,
-                        total_cost=0.169134,
+                        main_execution_file=create_execution_file(0.123456),
+                        summary_execution_file=create_execution_file(0.045678),
                         repo="owner/repo",
                         run_id="12345"
                     )
@@ -249,7 +261,7 @@ class TestCmdPostPrComment:
         assert "## 💰 Cost Breakdown" in content
         assert content.startswith("## 💰 Cost Breakdown")
 
-    def test_cmd_post_pr_comment_posts_cost_only_when_summary_empty(self, mock_gh_actions, base_env_vars):
+    def test_cmd_post_pr_comment_posts_cost_only_when_summary_empty(self, mock_gh_actions, base_env_vars, create_execution_file, tmp_path):
         """Should post cost-only comment when summary file is empty"""
         # Arrange
         with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
@@ -278,9 +290,8 @@ class TestCmdPostPrComment:
                             gh=mock_gh_actions,
                             pr_number="42",
                             summary_file_path=summary_file,
-                            main_cost=0.123456,
-                            summary_cost=0.045678,
-                            total_cost=0.169134,
+                            main_execution_file=create_execution_file(0.123456),
+                            summary_execution_file=create_execution_file(0.045678),
                             repo="owner/repo",
                             run_id="12345"
                         )
@@ -293,16 +304,15 @@ class TestCmdPostPrComment:
         finally:
             os.unlink(summary_file)
 
-    def test_cmd_post_pr_comment_skips_when_no_pr_number(self, mock_gh_actions):
+    def test_cmd_post_pr_comment_skips_when_no_pr_number(self, mock_gh_actions, create_execution_file, tmp_path):
         """Should skip posting and return success when PR_NUMBER is not set"""
         # Act
         result = cmd_post_pr_comment(
             gh=mock_gh_actions,
             pr_number="",
             summary_file_path="",
-            main_cost=0.0,
-            summary_cost=0.0,
-            total_cost=0.0,
+            main_execution_file=create_execution_file(0.0),
+            summary_execution_file=create_execution_file(0.0),
             repo="owner/repo",
             run_id="12345"
         )
@@ -312,16 +322,15 @@ class TestCmdPostPrComment:
         mock_gh_actions.write_output.assert_called_once_with("comment_posted", "false")
         mock_gh_actions.set_error.assert_not_called()
 
-    def test_cmd_post_pr_comment_skips_when_pr_number_is_empty(self, mock_gh_actions):
+    def test_cmd_post_pr_comment_skips_when_pr_number_is_empty(self, mock_gh_actions, create_execution_file, tmp_path):
         """Should skip posting when PR_NUMBER is whitespace only"""
         # Act
         result = cmd_post_pr_comment(
             gh=mock_gh_actions,
             pr_number="   ",
             summary_file_path="",
-            main_cost=0.0,
-            summary_cost=0.0,
-            total_cost=0.0,
+            main_execution_file=create_execution_file(0.0),
+            summary_execution_file=create_execution_file(0.0),
             repo="owner/repo",
             run_id="12345"
         )
@@ -330,16 +339,15 @@ class TestCmdPostPrComment:
         assert result == 0
         mock_gh_actions.write_output.assert_called_once_with("comment_posted", "false")
 
-    def test_cmd_post_pr_comment_fails_when_repository_missing(self, mock_gh_actions):
+    def test_cmd_post_pr_comment_fails_when_repository_missing(self, mock_gh_actions, create_execution_file, tmp_path):
         """Should return error when GITHUB_REPOSITORY is not set"""
         # Act
         result = cmd_post_pr_comment(
             gh=mock_gh_actions,
             pr_number="42",
             summary_file_path="",
-            main_cost=0.0,
-            summary_cost=0.0,
-            total_cost=0.0,
+            main_execution_file=create_execution_file(0.0),
+            summary_execution_file=create_execution_file(0.0),
             repo="",
             run_id="12345"
         )
@@ -348,16 +356,15 @@ class TestCmdPostPrComment:
         assert result == 1
         mock_gh_actions.set_error.assert_called_once_with("GITHUB_REPOSITORY environment variable is required")
 
-    def test_cmd_post_pr_comment_fails_when_run_id_missing(self, mock_gh_actions):
+    def test_cmd_post_pr_comment_fails_when_run_id_missing(self, mock_gh_actions, create_execution_file, tmp_path):
         """Should return error when GITHUB_RUN_ID is not set"""
         # Act
         result = cmd_post_pr_comment(
             gh=mock_gh_actions,
             pr_number="42",
             summary_file_path="",
-            main_cost=0.0,
-            summary_cost=0.0,
-            total_cost=0.0,
+            main_execution_file=create_execution_file(0.0),
+            summary_execution_file=create_execution_file(0.0),
             repo="owner/repo",
             run_id=""
         )
@@ -366,7 +373,7 @@ class TestCmdPostPrComment:
         assert result == 1
         mock_gh_actions.set_error.assert_called_once_with("GITHUB_RUN_ID environment variable is required")
 
-    def test_cmd_post_pr_comment_handles_zero_cost_values(self, mock_gh_actions):
+    def test_cmd_post_pr_comment_handles_zero_cost_values(self, mock_gh_actions, create_execution_file, tmp_path):
         """Should handle zero cost values correctly"""
         # Arrange
         written_content = []
@@ -390,9 +397,8 @@ class TestCmdPostPrComment:
                         gh=mock_gh_actions,
                         pr_number="42",
                         summary_file_path="",
-                        main_cost=0.0,
-                        summary_cost=0.0,
-                        total_cost=0.0,
+                        main_execution_file=create_execution_file(0.0),
+                        summary_execution_file=create_execution_file(0.0),
                         repo="owner/repo",
                         run_id="12345"
                     )
@@ -402,7 +408,7 @@ class TestCmdPostPrComment:
         content = written_content[0]
         assert "$0.000000" in content
 
-    def test_cmd_post_pr_comment_uses_provided_cost_values(self, mock_gh_actions):
+    def test_cmd_post_pr_comment_uses_provided_cost_values(self, mock_gh_actions, create_execution_file, tmp_path):
         """Should use provided cost values in output"""
         # Arrange
         written_content = []
@@ -426,9 +432,8 @@ class TestCmdPostPrComment:
                         gh=mock_gh_actions,
                         pr_number="42",
                         summary_file_path="",
-                        main_cost=0.123,
-                        summary_cost=0.456,
-                        total_cost=0.579,
+                        main_execution_file=create_execution_file(0.123),
+                        summary_execution_file=create_execution_file(0.456),
                         repo="owner/repo",
                         run_id="12345"
                     )
@@ -440,7 +445,7 @@ class TestCmdPostPrComment:
         assert "$0.456000" in content
         assert "$0.579000" in content
 
-    def test_cmd_post_pr_comment_handles_subprocess_error(self, mock_gh_actions):
+    def test_cmd_post_pr_comment_handles_subprocess_error(self, mock_gh_actions, create_execution_file, tmp_path):
         """Should return error when gh CLI command fails"""
         # Arrange
         with patch('subprocess.run') as mock_run:
@@ -464,9 +469,8 @@ class TestCmdPostPrComment:
                         gh=mock_gh_actions,
                         pr_number="42",
                         summary_file_path="",
-                        main_cost=0.123456,
-                        summary_cost=0.045678,
-                        total_cost=0.169134,
+                        main_execution_file=create_execution_file(0.123456),
+                        summary_execution_file=create_execution_file(0.045678),
                         repo="owner/repo",
                         run_id="12345"
                     )
@@ -479,7 +483,7 @@ class TestCmdPostPrComment:
         assert "API error: not found" in error_message
         mock_unlink.assert_called_once()
 
-    def test_cmd_post_pr_comment_cleans_up_temp_file_on_success(self, mock_gh_actions):
+    def test_cmd_post_pr_comment_cleans_up_temp_file_on_success(self, mock_gh_actions, create_execution_file, tmp_path):
         """Should delete temporary file after successful comment posting"""
         # Arrange
         temp_file_path = "/tmp/test_cleanup.md"
@@ -499,9 +503,8 @@ class TestCmdPostPrComment:
                         gh=mock_gh_actions,
                         pr_number="42",
                         summary_file_path="",
-                        main_cost=0.123456,
-                        summary_cost=0.045678,
-                        total_cost=0.169134,
+                        main_execution_file=create_execution_file(0.123456),
+                        summary_execution_file=create_execution_file(0.045678),
                         repo="owner/repo",
                         run_id="12345"
                     )
@@ -509,7 +512,7 @@ class TestCmdPostPrComment:
         # Assert
         mock_unlink.assert_called_once_with(temp_file_path)
 
-    def test_cmd_post_pr_comment_cleans_up_temp_file_on_error(self, mock_gh_actions):
+    def test_cmd_post_pr_comment_cleans_up_temp_file_on_error(self, mock_gh_actions, create_execution_file, tmp_path):
         """Should delete temporary file even when comment posting fails"""
         # Arrange
         temp_file_path = "/tmp/test_cleanup_error.md"
@@ -529,9 +532,8 @@ class TestCmdPostPrComment:
                         gh=mock_gh_actions,
                         pr_number="42",
                         summary_file_path="",
-                        main_cost=0.123456,
-                        summary_cost=0.045678,
-                        total_cost=0.169134,
+                        main_execution_file=create_execution_file(0.123456),
+                        summary_execution_file=create_execution_file(0.045678),
                         repo="owner/repo",
                         run_id="12345"
                     )
@@ -539,7 +541,7 @@ class TestCmdPostPrComment:
         # Assert
         mock_unlink.assert_called_once_with(temp_file_path)
 
-    def test_cmd_post_pr_comment_handles_summary_file_read_error(self, mock_gh_actions):
+    def test_cmd_post_pr_comment_handles_summary_file_read_error(self, mock_gh_actions, create_execution_file, tmp_path):
         """Should continue with cost-only comment when summary file read fails"""
         # Arrange
         written_content = []
@@ -565,9 +567,8 @@ class TestCmdPostPrComment:
                                 gh=mock_gh_actions,
                                 pr_number="42",
                                 summary_file_path="/tmp/protected_file.md",
-                                main_cost=0.123456,
-                                summary_cost=0.045678,
-                                total_cost=0.169134,
+                                main_execution_file=create_execution_file(0.123456),
+                                summary_execution_file=create_execution_file(0.045678),
                                 repo="owner/repo",
                                 run_id="12345"
                             )
@@ -578,7 +579,7 @@ class TestCmdPostPrComment:
         assert "## AI-Generated Summary" not in content
         assert "## 💰 Cost Breakdown" in content
 
-    def test_cmd_post_pr_comment_strips_whitespace_from_pr_number(self, mock_gh_actions):
+    def test_cmd_post_pr_comment_strips_whitespace_from_pr_number(self, mock_gh_actions, create_execution_file, tmp_path):
         """Should handle PR number correctly when passed with whitespace"""
         # Note: whitespace stripping now happens in __main__.py adapter layer
         with patch('subprocess.run') as mock_run:
@@ -596,9 +597,8 @@ class TestCmdPostPrComment:
                         gh=mock_gh_actions,
                         pr_number="42",  # Already stripped in adapter
                         summary_file_path="",
-                        main_cost=0.123456,
-                        summary_cost=0.045678,
-                        total_cost=0.169134,
+                        main_execution_file=create_execution_file(0.123456),
+                        summary_execution_file=create_execution_file(0.045678),
                         repo="owner/repo",
                         run_id="12345"
                     )
@@ -608,7 +608,7 @@ class TestCmdPostPrComment:
         call_args = mock_run.call_args[0][0]
         assert "42" in call_args
 
-    def test_cmd_post_pr_comment_calculates_total_cost_from_components(self, mock_gh_actions):
+    def test_cmd_post_pr_comment_calculates_total_cost_from_components(self, mock_gh_actions, create_execution_file, tmp_path):
         """Should calculate total_cost from main_cost + summary_cost in domain model"""
         # Arrange
         written_content = []
@@ -632,9 +632,9 @@ class TestCmdPostPrComment:
                         gh=mock_gh_actions,
                         pr_number="42",
                         summary_file_path="",
-                        main_cost=0.123,
-                        summary_cost=0.456,
-                        total_cost=0.999,  # Passed but not used - domain model calculates it
+                        main_execution_file=create_execution_file(0.123),
+                        summary_execution_file=create_execution_file(0.456),
+                        # Passed but not used - domain model calculates it
                         repo="owner/repo",
                         run_id="12345"
                     )

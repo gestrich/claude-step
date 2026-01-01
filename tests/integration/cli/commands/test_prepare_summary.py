@@ -40,14 +40,12 @@ Generate a summary of the changes.
             repo="owner/repo",
             run_id="456789",
             action_path=str(tmp_path),
-            main_execution_file="",
-            summary_execution_file=""
         )
 
         # Assertions
         assert exit_code == 0
-        # Now writes 5 outputs: summary_prompt, main_cost, summary_cost, total_cost, summary_file
-        assert gh.write_output.call_count == 5
+        # Now writes 2 outputs: summary_prompt, summary_file
+        assert gh.write_output.call_count == 2
 
         # Verify output contains substituted values (first call is summary_prompt)
         call_args_list = gh.write_output.call_args_list
@@ -61,11 +59,8 @@ Generate a summary of the changes.
         assert "{PR_NUMBER}" not in prompt
         assert "{WORKFLOW_URL}" not in prompt
 
-        # Verify cost outputs
-        assert call_args_list[1][0][0] == "main_cost"
-        assert call_args_list[2][0][0] == "summary_cost"
-        assert call_args_list[3][0][0] == "total_cost"
-        assert call_args_list[4][0][0] == "summary_file"
+        # Verify summary_file output
+        assert call_args_list[1][0][0] == "summary_file"
 
     def test_prepare_summary_without_pr_number(self):
         """Test prepare_summary gracefully skips when no PR number"""
@@ -78,8 +73,6 @@ Generate a summary of the changes.
             repo="owner/repo",
             run_id="123",
             action_path="/tmp",
-            main_execution_file="",
-            summary_execution_file=""
         )
 
         # Should exit successfully without error
@@ -101,8 +94,6 @@ Generate a summary of the changes.
             repo="owner/repo",
             run_id="456",
             action_path="/tmp",
-            main_execution_file="",
-            summary_execution_file=""
         )
 
         # Should fail
@@ -122,8 +113,6 @@ Generate a summary of the changes.
             repo="",
             run_id="",
             action_path="/tmp",
-            main_execution_file="",
-            summary_execution_file=""
         )
 
         # Should fail
@@ -143,8 +132,6 @@ Generate a summary of the changes.
             repo="owner/repo",
             run_id="456",
             action_path="/nonexistent/path",
-            main_execution_file="",
-            summary_execution_file=""
         )
 
         # Should fail
@@ -174,8 +161,6 @@ URL: {WORKFLOW_URL}
             repo="test/repo",
             run_id="111222",
             action_path=str(tmp_path),
-            main_execution_file="",
-            summary_execution_file=""
         )
 
         assert exit_code == 0
@@ -204,8 +189,6 @@ URL: {WORKFLOW_URL}
             repo="owner/repo",
             run_id="789",
             action_path=str(tmp_path),
-            main_execution_file="",
-            summary_execution_file=""
         )
 
         assert exit_code == 0
@@ -233,8 +216,6 @@ URL: {WORKFLOW_URL}
             repo="myorg/myrepo",
             run_id="987654321",
             action_path=str(tmp_path),
-            main_execution_file="",
-            summary_execution_file=""
         )
 
         assert exit_code == 0
@@ -263,8 +244,6 @@ URL: {WORKFLOW_URL}
             repo="owner/repo",
             run_id="123",
             action_path=str(tmp_path),
-            main_execution_file="",
-            summary_execution_file=""
         )
 
         # Should fail gracefully
