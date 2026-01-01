@@ -305,7 +305,7 @@ def cmd_parse_event(
   - Output consistency verification
 - All 797 unit/integration tests pass
 
-- [ ] Phase 5: Create simplified example workflow
+- [x] Phase 5: Create simplified example workflow
 
 Create an example workflow file showing the simplified usage.
 
@@ -344,6 +344,19 @@ jobs:
 **Update documentation:**
 - Update README.md with new simplified setup
 - Document migration path from old workflow to new
+
+**Completed:**
+- Created `examples/claudestep-simplified.yml` with the simplified workflow example
+- Created missing `src/claudestep/domain/github_event.py` module (required by Phase 4 but not committed)
+- Added 33 unit tests for `GitHubEventContext` class in `tests/unit/domain/test_github_event.py`
+- Updated README.md with:
+  - Simplified workflow as "Option A (Recommended)" in Step 3
+  - Standard workflow as "Option B" for backward compatibility
+  - New inputs table entries: `github_event`, `event_name`, `default_base_branch`
+  - New outputs table entries: `skipped`, `skip_reason`, `project_name`, `base_branch`
+  - New "Migrating to Simplified Workflow" section with step-by-step guide
+  - Updated Examples section to include simplified workflow
+- All 775 unit/integration tests pass
 
 - [ ] Phase 6: Validation
 

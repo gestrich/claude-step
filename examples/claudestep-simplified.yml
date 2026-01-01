@@ -1,0 +1,49 @@
+# ClaudeStep Simplified Workflow
+#
+# This simplified workflow handles all event types automatically by passing
+# the GitHub event context to the action. The action determines:
+# - Whether to execute or skip (based on labels, merge state, etc.)
+# - Which ref to checkout
+# - The project name (from branch pattern or input)
+# - The base branch for PR creation
+#
+# Compare to the standard workflow which requires ~100 lines of bash logic.
+
+name: ClaudeStep
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: 'Project name (folder under claude-step/)'
+        required: true
+        type: string
+  pull_request:
+    types: [closed]
+  push:
+    paths:
+      - 'claude-step/*/spec.md'
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  run-claudestep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: gestrich/claude-step@v2
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Pass event context - action handles the rest
+          github_event: ${{ toJson(github.event) }}
+          event_name: ${{ github.event_name }}
+          # For workflow_dispatch: project name from input
+          # For pull_request/push: project extracted from branch name
+          project_name: ${{ github.event.inputs.project_name || '' }}
+          # Optional: customize the PR label (default: claudestep)
+          # pr_label: 'claudestep'
+          # Optional: Slack notifications
+          # slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}

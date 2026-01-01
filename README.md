@@ -81,15 +81,64 @@ Use `{{TASK_DESCRIPTION}}` to insert the step description. If no template exists
 
 ### Step 3: Add Workflow
 
-Create `.github/workflows/claude-step.yml`:
+Create `.github/workflows/claude-step.yml`. You have two options:
+
+**Option A: Simplified Workflow (Recommended)**
+
+The simplified workflow passes event context to the action, which handles all the logic internally:
+
+```yaml
+name: ClaudeStep
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: 'Project name (folder under claude-step/)'
+        required: true
+        type: string
+  pull_request:
+    types: [closed]
+  push:
+    paths:
+      - 'claude-step/*/spec.md'
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  run-claudestep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: gestrich/claude-step@v2
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_event: ${{ toJson(github.event) }}
+          event_name: ${{ github.event_name }}
+          project_name: ${{ github.event.inputs.project_name || '' }}
+          # slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+```
+
+This workflow:
+- Automatically detects the project from branch names (for merged PRs)
+- Handles all event types (workflow_dispatch, pull_request, push)
+- Skips non-ClaudeStep PRs automatically
+- Requires only ~20 lines instead of ~100
+
+**Option B: Standard Workflow**
+
+For more control, use the standard workflow with explicit project name:
 
 ```yaml
 name: ClaudeStep
 
 on:
   pull_request:
-    types: [closed]    # Triggers on merge or close
-  workflow_dispatch:   # Manual trigger
+    types: [closed]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -106,10 +155,10 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           project_name: 'my-refactor'
-          # slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}  # Uncomment if you set SLACK_WEBHOOK_URL in GitHub secrets
+          # slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
 ```
 
-Note: Triggers on both merged and closed PRs. To prevent a closed PR from reopening, mark its step as complete in spec.md first.
+Note: The standard workflow triggers on both merged and closed PRs. To prevent a closed PR from reopening, mark its step as complete in spec.md first.
 
 ### Step 4: Configure GitHub
 
@@ -300,19 +349,26 @@ jobs:
 |-------|----------|---------|-------------|
 | `anthropic_api_key` | Y | - | Anthropic API key for Claude Code |
 | `github_token` | Y | `${{ github.token }}` | GitHub token for PR operations |
-| `project_name` | Y | - | Project folder name under `/claude-step` |
+| `project_name` | Conditional | - | Project folder name under `/claude-step`. Required unless using simplified workflow with `github_event` |
+| `github_event` | N | - | GitHub event payload for simplified workflow (pass `${{ toJson(github.event) }}`) |
+| `event_name` | N | - | GitHub event name for simplified workflow (pass `${{ github.event_name }}`) |
 | `claude_model` | N | `claude-sonnet-4-5` | Claude model to use (e.g., claude-3-haiku-20240307, claude-sonnet-4-5, claude-opus-4-5) |
 | `claude_allowed_tools` | N | `Write,Read,Bash,Edit` | Comma-separated list of tools Claude can use |
 | `base_branch` | N | (inferred) | Base branch where spec files exist and PRs will target. Automatically inferred from workflow context (PR merge or checkout_ref). Spec files are fetched from this branch via GitHub API. |
+| `default_base_branch` | N | `main` | Default base branch if not determined from event context (simplified workflow only) |
 | `working_directory` | N | `.` | Working directory |
 | `add_pr_summary` | N | `true` | Add AI-generated summary comment to PR |
 | `slack_webhook_url` | N | - | Slack webhook URL for PR notifications |
-| `pr_label` | N | `claude-step` | Label to apply to ClaudeStep PRs |
+| `pr_label` | N | `claudestep` | Label to apply to ClaudeStep PRs |
 
 ### Outputs
 
 | Output | Description |
 |--------|-------------|
+| `skipped` | Whether execution was skipped (no claudestep label, PR not merged, etc.) |
+| `skip_reason` | Reason for skipping if skipped |
+| `project_name` | Detected/resolved project name |
+| `base_branch` | Resolved base branch |
 | `pr_number` | Number of created PR (empty if none) |
 | `pr_url` | URL of created PR (empty if none) |
 | `reviewer` | Assigned reviewer username |
@@ -422,8 +478,27 @@ This ensures all PRs must pass the test suite (493 tests, 85% coverage minimum) 
 
 ## Examples
 
+- [Simplified Workflow](examples/claudestep-simplified.yml) - Recommended, handles all events automatically
 - [Basic Example](examples/basic/workflow.yml) - Single project, scheduled trigger
 - [Advanced Example](examples/advanced/workflow.yml) - Multi-project with all triggers
+
+## Migrating to Simplified Workflow
+
+If you're currently using the standard workflow and want to switch to the simplified version:
+
+1. **Update your workflow file** to use the simplified format (see Step 3 above)
+2. **Remove custom bash logic** for determining project name and base branch - the action handles this automatically
+3. **Update action version** from `@v1` to `@v2`
+4. **Add new inputs**:
+   - `github_event: ${{ toJson(github.event) }}`
+   - `event_name: ${{ github.event_name }}`
+5. **Make project_name conditional**: Only needed for `workflow_dispatch`, extracted from branch for `pull_request`
+
+The simplified workflow automatically:
+- Skips PRs without the `claudestep` label
+- Skips closed (not merged) PRs
+- Extracts project name from branch pattern `claude-step-{project}-{hash}`
+- Determines the base branch from the event context
 
 ## Contributing
 
