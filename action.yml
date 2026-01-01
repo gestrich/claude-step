@@ -114,16 +114,51 @@ runs:
       shell: bash
       run: pip install PyYAML
 
+    # Event parsing and checkout (simplified workflow)
+    # These steps are only active when github_event is provided
+    - name: Parse event and determine action
+      id: parse
+      if: inputs.github_event != ''
+      shell: bash
+      env:
+        EVENT_NAME: ${{ inputs.event_name }}
+        EVENT_JSON: ${{ inputs.github_event }}
+        PROJECT_NAME: ${{ inputs.project_name }}
+        DEFAULT_BASE_BRANCH: ${{ inputs.default_base_branch }}
+        PR_LABEL: ${{ inputs.pr_label }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
+        python3 -m claudestep parse-event
+
+    - name: Log skip reason
+      if: inputs.github_event != '' && steps.parse.outputs.skip == 'true'
+      shell: bash
+      run: |
+        echo "::notice::Skipping ClaudeStep: ${{ steps.parse.outputs.skip_reason }}"
+        echo "## ⏭️ Skipped" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Reason:** ${{ steps.parse.outputs.skip_reason }}" >> $GITHUB_STEP_SUMMARY
+
+    - name: Checkout repository
+      if: inputs.github_event != '' && steps.parse.outputs.skip != 'true'
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ steps.parse.outputs.checkout_ref }}
+        fetch-depth: 0
+
     - name: Prepare for Claude Code execution
       id: prepare
+      if: inputs.github_event == '' || steps.parse.outputs.skip != 'true'
       shell: bash
       working-directory: ${{ inputs.working_directory }}
       env:
         GH_TOKEN: ${{ inputs.github_token }}
-        PROJECT_NAME: ${{ inputs.project_name }}
-        MERGED_PR_NUMBER: ${{ inputs.merged_pr_number }}
+        # Use parsed values when available (simplified workflow), otherwise fall back to direct inputs
+        PROJECT_NAME: ${{ steps.parse.outputs.project_name || inputs.project_name }}
+        MERGED_PR_NUMBER: ${{ steps.parse.outputs.merged_pr_number || inputs.merged_pr_number }}
         GITHUB_REPOSITORY: ${{ github.repository }}
-        BASE_BRANCH: ${{ inputs.base_branch }}
+        BASE_BRANCH: ${{ steps.parse.outputs.base_branch || inputs.base_branch }}
         ACTION_PATH: ${{ github.action_path }}
         SLACK_WEBHOOK_URL: ${{ inputs.slack_webhook_url }}
         PR_LABEL: ${{ inputs.pr_label }}
@@ -156,7 +191,7 @@ runs:
 
     - name: Finalize and create PR
       id: finalize
-      if: always()
+      if: always() && (inputs.github_event == '' || steps.parse.outputs.skip != 'true')
       shell: bash
       working-directory: ${{ inputs.working_directory }}
       env:
@@ -172,7 +207,7 @@ runs:
         PR_TEMPLATE_PATH: ${{ steps.prepare.outputs.pr_template_path }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         GITHUB_RUN_ID: ${{ github.run_id }}
-        BASE_BRANCH: ${{ inputs.base_branch }}
+        BASE_BRANCH: ${{ steps.parse.outputs.base_branch || inputs.base_branch }}
         HAS_CAPACITY: ${{ steps.prepare.outputs.has_capacity }}
         HAS_TASK: ${{ steps.prepare.outputs.has_task }}
         ACTION_PATH: ${{ github.action_path }}

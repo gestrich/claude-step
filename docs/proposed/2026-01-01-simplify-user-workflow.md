@@ -185,7 +185,7 @@ class GitHubEventContext:
 - 40 comprehensive unit tests covering all parsing scenarios, skip logic, and edge cases
 - All 776 tests pass
 
-- [ ] Phase 3: Update action.yml to handle checkout and event parsing
+- [x] Phase 3: Update action.yml to handle checkout and event parsing
 
 Modify `action.yml` to:
 1. Parse the event context using new Python module
@@ -229,6 +229,18 @@ runs:
 **New CLI command**: `python3 -m claudestep parse-event`
 - Parses event JSON
 - Outputs: skip, skip_reason, checkout_ref, project_name, base_branch
+
+**Completed:** Updated `action.yml` with:
+- New `parse` step (id: `parse`) that runs `python3 -m claudestep parse-event` when `github_event` is provided
+- Environment variables: `EVENT_NAME`, `EVENT_JSON`, `PROJECT_NAME`, `DEFAULT_BASE_BRANCH`, `PR_LABEL`
+- New `Log skip reason` step that outputs a GitHub notice and step summary when skipping
+- New `Checkout repository` step using `actions/checkout@v4` with parsed `checkout_ref`
+- Updated `prepare` step with conditional execution (`if: inputs.github_event == '' || steps.parse.outputs.skip != 'true'`)
+- Updated `prepare` step environment to use parsed values with fallback: `PROJECT_NAME`, `MERGED_PR_NUMBER`, `BASE_BRANCH`
+- Updated `finalize` step with skip-aware conditional and parsed `BASE_BRANCH`
+- All steps gracefully handle both simplified workflow (with `github_event`) and legacy workflow (without)
+- All 776 unit/integration tests pass
+- Note: Phase 4 will implement the actual `parse-event` CLI command that this step invokes
 
 - [ ] Phase 4: Add parse-event CLI command
 
