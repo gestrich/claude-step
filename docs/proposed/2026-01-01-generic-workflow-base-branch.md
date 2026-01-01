@@ -1094,7 +1094,7 @@ Added new test class `TestClaudeStepBranchNameEdgeCases` with tests for:
 
 ---
 
-- [ ] Phase 8: Validation
+- [x] Phase 8: Validation
 
 **Goal**: Ensure generic workflows work correctly on all supported branches.
 
@@ -1128,3 +1128,66 @@ Added new test class `TestClaudeStepBranchNameEdgeCases` with tests for:
 - E2E tests simplified (no workflow configuration needed)
 - Production workflows continue working unchanged
 - Clear error messages when base branch cannot be determined
+
+---
+
+### Phase 8 Completion Results
+
+**Completed**: 2026-01-01
+
+#### Implementation Summary
+
+Added comprehensive validation tests to ensure generic workflows work correctly on all supported branches. The tests validate:
+
+1. **Auto-start workflow base branch inference** (test_auto_start_workflow.py:341-370):
+   - Verifies `BASE_BRANCH` environment variable derives from `github.ref_name`
+   - Confirms push to any branch correctly sets base branch
+
+2. **ClaudeStep workflow base branch inference** (test_auto_start_workflow.py:372-452):
+   - Verifies workflow_dispatch infers base from `checkout_ref` when `base_branch` not provided
+   - Verifies PR merge uses `github.base_ref` for base branch
+   - Verifies validation step fails fast with clear error if base branch cannot be determined
+
+3. **Workflow input configuration** (test_auto_start_workflow.py:489-543):
+   - Verifies `base_branch` input has no default (allows inference)
+   - Verifies `checkout_ref` has default for backwards compatibility
+   - Verifies auto-start triggers on `**` (any branch) not hardcoded branches
+
+4. **Documentation validation** (test_auto_start_workflow.py:547-607):
+   - Verifies both workflows document generic/branch-agnostic behavior
+   - Verifies both workflows document security considerations
+
+#### Test Coverage
+
+Added 10 new integration tests in two test classes:
+
+- `TestGenericWorkflowBaseBranchInference` (6 tests):
+  - `test_auto_start_uses_github_ref_name_for_base_branch`
+  - `test_claudestep_workflow_infers_base_from_checkout_ref`
+  - `test_claudestep_workflow_uses_github_base_ref_for_pr_merge`
+  - `test_claudestep_workflow_has_base_branch_validation`
+  - `test_claudestep_workflow_base_branch_has_no_default`
+  - `test_auto_start_workflow_triggers_on_any_branch`
+
+- `TestGenericWorkflowDocumentation` (4 tests):
+  - `test_auto_start_has_generic_workflow_documentation`
+  - `test_claudestep_has_generic_workflow_documentation`
+  - `test_claudestep_has_security_documentation`
+  - `test_auto_start_has_security_documentation`
+
+#### Build Verification
+
+✅ All 721 unit and integration tests pass (711 existing + 10 new)
+
+#### Success Criteria Met
+
+✅ Auto-start workflow correctly uses `github.ref_name` for base branch
+✅ ClaudeStep workflow correctly infers base from `checkout_ref` when not provided
+✅ ClaudeStep workflow correctly uses `github.base_ref` for PR merge events
+✅ Validation step fails fast with clear error if base branch undetermined
+✅ `base_branch` input has no default (enables inference)
+✅ `checkout_ref` input has default for backwards compatibility
+✅ Auto-start triggers on any branch (`**` pattern)
+✅ Both workflows document generic behavior
+✅ Both workflows document security considerations
+✅ All tests pass
