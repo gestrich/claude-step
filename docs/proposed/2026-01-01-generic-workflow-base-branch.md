@@ -254,7 +254,7 @@ This architectural principle makes the base branch detection even more critical 
 
 ---
 
-- [ ] Phase 2: Design generic base branch inference
+- [x] Phase 2: Design generic base branch inference
 
 **Goal**: Design how workflows will infer base branch from GitHub event context.
 
@@ -287,6 +287,309 @@ This architectural principle makes the base branch detection even more critical 
    - Document when manual override is appropriate
 
 **Expected outcome**: Clear rules for inferring base branch from any GitHub event.
+
+---
+
+### Phase 2 Design Results
+
+**Completed**: 2026-01-01
+
+#### 1. Base Branch Inference Rules
+
+The design establishes clear inference rules for each workflow trigger type:
+
+##### Auto-Start Workflow (Push Event)
+
+**Trigger Context:**
+- Event: `push`
+- Triggered when: Spec file (`claude-step/*/spec.md`) is pushed to any branch
+
+**Inference Rule:**
+```yaml
+BASE_BRANCH: ${{ github.ref_name }}
+```
+
+**Rationale:**
+- `github.ref_name` contains the branch that received the push
+- This is the branch where the spec file now lives
+- PRs should target this same branch (where the spec was pushed)
+- Already implemented correctly in current workflow
+
+**Examples:**
+- Push to `main` → `BASE_BRANCH = "main"`
+- Push to `main-e2e` → `BASE_BRANCH = "main-e2e"`
+- Push to `feature/new-thing` → `BASE_BRANCH = "feature/new-thing"`
+
+##### ClaudeStep Workflow (workflow_dispatch Event)
+
+**Trigger Context:**
+- Event: `workflow_dispatch`
+- Triggered when: Auto-start calls this workflow, or user manually triggers it
+
+**Inference Rule (Priority Order):**
+```yaml
+1. If inputs.base_branch is provided → use it (explicit override)
+2. Else use inputs.checkout_ref (the branch being checked out)
+3. Else fail with clear error (no valid inference possible)
+```
+
+**Implementation Logic:**
+```yaml
+if [ -n "${{ github.event.inputs.base_branch }}" ]; then
+  BASE_BRANCH="${{ github.event.inputs.base_branch }}"
+elif [ -n "${{ github.event.inputs.checkout_ref }}" ]; then
+  BASE_BRANCH="${{ github.event.inputs.checkout_ref }}"
+else
+  echo "ERROR: Cannot determine base branch - no base_branch or checkout_ref provided"
+  exit 1
+fi
+```
+
+**Rationale:**
+- Auto-start always provides explicit `base_branch` (from `github.ref_name`)
+- Manual triggers can provide explicit `base_branch` for testing
+- Fallback to `checkout_ref` makes sense: if checking out `main-e2e`, PRs should target `main-e2e`
+- Fail fast if neither is available (prevents silent failures)
+
+**Examples:**
+- Auto-start call with `base_branch=main-e2e` → `BASE_BRANCH = "main-e2e"`
+- Manual trigger with `base_branch=main` → `BASE_BRANCH = "main"`
+- Manual trigger with `checkout_ref=main-e2e`, no base_branch → `BASE_BRANCH = "main-e2e"`
+- Manual trigger with neither → ERROR (fail fast)
+
+##### ClaudeStep Workflow (pull_request Event)
+
+**Trigger Context:**
+- Event: `pull_request` with `types: [closed]`
+- Triggered when: PR with "claudestep" label is merged
+
+**Inference Rule:**
+```yaml
+BASE_BRANCH: ${{ github.base_ref }}
+```
+
+**Rationale:**
+- `github.base_ref` contains the branch the PR was merged INTO
+- This is the branch where merged changes now live
+- Next PR should target this same branch
+- Already implemented correctly in current workflow
+
+**Examples:**
+- PR merges into `main` → `BASE_BRANCH = "main"`
+- PR merges into `main-e2e` → `BASE_BRANCH = "main-e2e"`
+- PR merges into `feature/test` → `BASE_BRANCH = "feature/test"`
+
+#### 2. Validation Logic Design
+
+**Validation Requirements:**
+
+1. **Always validate before ClaudeStep execution:**
+   - Add validation step in workflow after base branch determination
+   - Check that `BASE_BRANCH` is set and non-empty
+   - Fail immediately if not set (don't proceed to ClaudeStep commands)
+
+2. **Clear error messages:**
+   - Explain what went wrong ("Base branch could not be determined")
+   - Provide context about the event type
+   - Suggest how to fix (e.g., "Provide base_branch input when manually triggering")
+
+3. **Debug logging:**
+   - Log the event type (`github.event_name`)
+   - Log all inputs used for inference
+   - Log the final derived `BASE_BRANCH`
+   - Include this in existing "Determine project and checkout ref" step
+
+**Implementation Pattern:**
+
+```yaml
+- name: Determine project and base branch
+  id: project
+  run: |
+    echo "Event type: ${{ github.event_name }}"
+
+    # ... inference logic ...
+
+    # Log derived values for debugging
+    echo "Determined: project=$PROJECT, base=$BASE_BRANCH, checkout=$CHECKOUT_REF"
+
+    # Set outputs
+    echo "name=$PROJECT" >> $GITHUB_OUTPUT
+    echo "base_branch=$BASE_BRANCH" >> $GITHUB_OUTPUT
+    echo "checkout_ref=$CHECKOUT_REF" >> $GITHUB_OUTPUT
+
+- name: Validate base branch
+  if: steps.project.outputs.skip != 'true'
+  run: |
+    if [ -z "${{ steps.project.outputs.base_branch }}" ]; then
+      echo "❌ ERROR: Base branch could not be determined"
+      echo "Event: ${{ github.event_name }}"
+      echo "Inputs: base_branch='${{ github.event.inputs.base_branch }}', checkout_ref='${{ github.event.inputs.checkout_ref }}'"
+      echo ""
+      echo "For manual triggers, provide either:"
+      echo "  - base_branch input (explicit base branch)"
+      echo "  - checkout_ref input (will be used as base branch)"
+      exit 1
+    fi
+    echo "✓ Base branch determined: ${{ steps.project.outputs.base_branch }}"
+```
+
+**Benefits:**
+- Fails fast with clear errors (before wasting time on ClaudeStep setup)
+- Provides actionable guidance for fixing the issue
+- Logs all context needed for debugging
+- Prevents silent failures or incorrect base branch usage
+
+#### 3. Workflow Parameter Strategy
+
+**Current State:**
+```yaml
+inputs:
+  base_branch:
+    required: false
+    default: 'main'  # ❌ Hardcoded default
+  checkout_ref:
+    required: false
+    default: 'main'  # ❌ Hardcoded default
+```
+
+**New Strategy:**
+
+```yaml
+inputs:
+  project_name:
+    description: 'Project name in claude-step directory'
+    required: true
+    default: 'e2e-test-project'
+
+  base_branch:
+    description: 'Base branch for PRs (optional - inferred from checkout_ref if not provided)'
+    required: false
+    # NO DEFAULT - will be inferred from checkout_ref
+
+  checkout_ref:
+    description: 'Branch to checkout (required for workflow_dispatch)'
+    required: false
+    default: 'main'  # Keep this default for backwards compatibility
+```
+
+**Rationale:**
+
+1. **Remove `base_branch` default:**
+   - Allows inference logic to work properly
+   - Forces explicit override if needed (no accidental defaults)
+   - Better aligns with "infer from context" principle
+
+2. **Keep `checkout_ref` default:**
+   - Backwards compatibility: existing manual triggers default to `main`
+   - Reasonable default: most manual testing is on `main`
+   - Serves as fallback for base branch inference
+
+3. **Update descriptions:**
+   - Clarify that `base_branch` is optional
+   - Explain that `base_branch` will be inferred from `checkout_ref`
+   - Help users understand when to provide explicit values
+
+**Usage Patterns:**
+
+| Trigger Type | base_branch | checkout_ref | Result |
+|-------------|-------------|--------------|--------|
+| Auto-start | Provided by auto-start | Provided by auto-start | Uses provided `base_branch` |
+| Manual (testing on main) | Not provided | Not provided (defaults to 'main') | Uses `checkout_ref` → `BASE_BRANCH = "main"` |
+| Manual (testing on main-e2e) | Not provided | 'main-e2e' | Uses `checkout_ref` → `BASE_BRANCH = "main-e2e"` |
+| Manual (explicit override) | 'feature/test' | 'main' | Uses explicit override → `BASE_BRANCH = "feature/test"` |
+
+**When to Provide Explicit `base_branch`:**
+- Testing PR targeting different from checkout branch
+- Debugging base branch inference issues
+- Advanced testing scenarios
+- Never needed for normal operation (auto-start or PR merge triggers)
+
+#### 4. Complete Inference Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ GitHub Event                                                    │
+└────┬─────────────────────────┬───────────────────┬──────────────┘
+     │                         │                   │
+     ▼                         ▼                   ▼
+┌─────────────┐      ┌──────────────────┐   ┌──────────────┐
+│ push event  │      │ workflow_dispatch│   │ pull_request │
+│ (to branch) │      │ (manual/auto)    │   │ (PR merge)   │
+└─────┬───────┘      └────────┬─────────┘   └──────┬───────┘
+      │                       │                     │
+      │ github.ref_name       │ inputs.base_branch  │ github.base_ref
+      │                       │ || inputs.checkout_ref
+      │                       │ || ERROR            │
+      │                       │                     │
+      ▼                       ▼                     ▼
+┌──────────────────────────────────────────────────────────────┐
+│ BASE_BRANCH = <derived value>                               │
+└────┬─────────────────────────────────────────────────────────┘
+     │
+     ▼
+┌──────────────────┐
+│ Validation Step  │  ← Ensures BASE_BRANCH is set
+│ - Is it set?     │  ← Logs derived value
+│ - Log for debug  │  ← Fails fast if missing
+└────┬─────────────┘
+     │
+     ▼
+┌────────────────────────────────────────────────────────────┐
+│ ClaudeStep Execution                                       │
+│ - Fetch spec from: get_file_from_branch(repo, BASE_BRANCH)│
+│ - Create PR targeting: BASE_BRANCH                        │
+└────────────────────────────────────────────────────────────┘
+```
+
+#### 5. Architectural Principles
+
+**Source of Truth:**
+- Base branch is derived from **GitHub event context**, not configuration
+- Event context reflects the actual workflow execution environment
+- Configuration (inputs) only provides **optional overrides**, not defaults
+
+**Fail Fast Principle:**
+- If base branch cannot be determined, fail immediately
+- Don't proceed with potentially incorrect base branch
+- Provide clear error message and guidance
+
+**Branch Agnostic Design:**
+- Workflows work on ANY branch without modification
+- No hardcoded branch names in inference logic
+- Branch name extracted from event context at runtime
+
+**Backwards Compatibility:**
+- Existing production usage on `main` continues working
+- Existing E2E testing on `main-e2e` continues working
+- New capability: any branch works without configuration changes
+
+#### 6. Implementation Checklist
+
+To implement this design in Phase 4 (Update main ClaudeStep workflow):
+
+- [ ] Update `claudestep.yml` input definitions (remove `base_branch` default)
+- [ ] Update "Determine project and checkout ref" step with new inference logic
+- [ ] Add "Validate base branch" step with clear error messages
+- [ ] Add debug logging for all derived values
+- [ ] Update step name to "Determine project and base branch" (reflects new responsibility)
+- [ ] Test all three trigger types (push, workflow_dispatch, pull_request)
+- [ ] Update workflow comments to document inference behavior
+
+#### 7. Success Criteria
+
+Phase 2 design is complete when:
+
+- ✅ Clear inference rules defined for all trigger types
+- ✅ Validation logic designed to fail fast with clear errors
+- ✅ Workflow parameter strategy updated (remove hardcoded defaults)
+- ✅ Implementation checklist ready for Phase 4
+- ✅ Design documented in this spec file
+
+**Next Steps:**
+- Phase 3 already completed (auto-start workflow updated)
+- Phase 4: Implement this design in `claudestep.yml`
+- Phase 5: Add documentation
+- Phases 6-8: Handle edge cases and validation
 
 ---
 
