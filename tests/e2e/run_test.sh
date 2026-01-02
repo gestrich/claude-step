@@ -11,19 +11,17 @@
 # - ANTHROPIC_API_KEY configured as a repository secret
 #
 # Usage:
-#   ./tests/e2e/run_test.sh [branch-name]
-#
-# Arguments:
-#   branch-name  (optional) Branch or ref to run tests from. Defaults to current branch.
+#   ./tests/e2e/run_test.sh
 #
 # The script will:
 # 1. Check prerequisites (gh CLI authentication)
-# 2. Trigger the e2e-test.yml workflow on GitHub for the specified or current branch
-# 3. Monitor the workflow execution and stream logs to the terminal
-# 4. Report success/failure with proper exit codes
+# 2. Force push current HEAD to main-e2e branch (ensures fresh test infrastructure)
+# 3. Trigger the e2e-test.yml workflow on main-e2e
+# 4. Monitor the workflow execution and stream logs to the terminal
+# 5. Report success/failure with proper exit codes
 #
 # Note: Tests run via pytest on GitHub's runners. You do NOT need Python or pytest
-# installed locally. All git operations happen remotely on the ephemeral e2e-test branch.
+# installed locally. All git operations happen remotely on the ephemeral main-e2e branch.
 
 set -e  # Exit on error
 
@@ -32,6 +30,9 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
+
+# E2E test branch name
+E2E_BRANCH="main-e2e"
 
 echo "========================================"
 echo "ClaudeStep E2E Test Runner"
@@ -57,26 +58,25 @@ if ! gh auth status &> /dev/null; then
 fi
 echo -e "${GREEN}✓${NC} GitHub CLI is authenticated"
 
-# Determine which branch to test
-if [ -n "$1" ]; then
-    # Use the branch provided as argument
-    TARGET_BRANCH="$1"
-    echo "Testing specified branch: ${TARGET_BRANCH}"
+# Get current HEAD info
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+CURRENT_SHA=$(git rev-parse --short HEAD)
+echo -e "${GREEN}✓${NC} Current branch: ${CURRENT_BRANCH} (${CURRENT_SHA})"
 
-    # Validate that the branch exists on remote
-    echo "Validating branch exists on remote..."
-    if ! git ls-remote --heads origin "${TARGET_BRANCH}" | grep -q "${TARGET_BRANCH}"; then
-        echo -e "${RED}ERROR: Branch '${TARGET_BRANCH}' does not exist on remote${NC}"
-        echo "Available branches:"
-        git branch -r | grep -v '\->' | sed 's/origin\///' | head -10
-        exit 1
-    fi
-    echo -e "${GREEN}✓${NC} Branch exists on remote: ${TARGET_BRANCH}"
-else
-    # Use current branch
-    TARGET_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-    echo -e "${GREEN}✓${NC} Current branch: ${TARGET_BRANCH}"
+# Force push HEAD to main-e2e
+echo ""
+echo "========================================"
+echo "Pushing to ${E2E_BRANCH}"
+echo "========================================"
+echo ""
+echo "Force pushing HEAD to ${E2E_BRANCH}..."
+git push origin HEAD:${E2E_BRANCH} --force
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}✗${NC} Failed to push to ${E2E_BRANCH}"
+    exit 1
 fi
+echo -e "${GREEN}✓${NC} Pushed ${CURRENT_BRANCH} (${CURRENT_SHA}) to ${E2E_BRANCH}"
 
 # Trigger the workflow
 echo ""
@@ -84,13 +84,13 @@ echo "========================================"
 echo "Triggering E2E Tests on GitHub"
 echo "========================================"
 echo ""
-echo "Branch: ${TARGET_BRANCH}"
+echo "Branch: ${E2E_BRANCH}"
 echo "Workflow: e2e-test.yml"
 echo ""
 
-# Trigger the e2e-test.yml workflow on the target branch
+# Trigger the e2e-test.yml workflow on main-e2e
 echo "Triggering workflow..."
-gh workflow run e2e-test.yml --ref "${TARGET_BRANCH}"
+gh workflow run e2e-test.yml --ref "${E2E_BRANCH}"
 
 if [ $? -ne 0 ]; then
     echo ""
@@ -107,7 +107,7 @@ echo "Waiting for workflow run to start..."
 sleep 5
 
 # Get the most recent workflow run ID for this workflow and branch
-RUN_ID=$(gh run list --workflow=e2e-test.yml --branch="${TARGET_BRANCH}" --limit=1 --json databaseId --jq '.[0].databaseId')
+RUN_ID=$(gh run list --workflow=e2e-test.yml --branch="${E2E_BRANCH}" --limit=1 --json databaseId --jq '.[0].databaseId')
 
 if [ -z "$RUN_ID" ]; then
     echo -e "${YELLOW}Warning: Could not find workflow run ID${NC}"
