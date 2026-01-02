@@ -34,7 +34,7 @@ To prevent test pollution of the main branch, ClaudeStep uses an **ephemeral tes
 - Used for all test execution (commits, pushes, PRs)
 - **Deleted after successful tests** or left for debugging on failure
 
-> **Note:** ClaudeStep workflows are generic and work on ANY branch automatically. When specs are pushed to `main-e2e`, the workflows automatically target `main-e2e` for PRs without any configuration. This eliminates the need for test-specific workflows.
+> **Note:** ClaudeStep workflows are generic and work on ANY branch automatically. Workflows automatically target the correct branch for PRs without any configuration. This eliminates the need for test-specific workflows.
 
 ### Test Branch Lifecycle
 
@@ -50,7 +50,7 @@ Each E2E test run follows this lifecycle:
    - Tests run and operate on the `main-e2e` branch
    - Test projects are created in `claude-step/e2e-test-*`
    - PRs are created with `main-e2e` as base branch
-   - Production workflows (`claudestep-auto-start.yml`, `claudestep.yml`) automatically adapt to `main-e2e`
+   - Production workflows automatically adapt to `main-e2e`
 
 3. **Cleanup Phase**:
    - On success: Delete `main-e2e` branch completely
@@ -82,12 +82,11 @@ The key innovation is that the `claude-step` repository tests itself:
 
 1. **E2E Test Workflow** (`.github/workflows/e2e-test.yml`) sets up ephemeral `main-e2e` branch
 2. **Tests create** temporary projects in `claude-step/e2e-test-{id}/` on the `main-e2e` branch
-3. **Pushing specs** triggers the production `claudestep-auto-start.yml` workflow on `main-e2e` branch
-4. **Auto-start workflow** triggers `claudestep.yml` which runs the action using `uses: ./` (current repository)
-5. **Action creates PRs** in the same repository for the test project tasks (base branch: `main-e2e`)
-6. **Tests verify** the PRs were created correctly with summaries
-7. **Tests clean up** all test resources (projects, PRs, branches)
-8. **E2E Test Workflow** deletes the ephemeral `main-e2e` branch (on success)
+3. **Tests trigger** the ClaudeStep workflow via `workflow_dispatch` or PR merge
+4. **Action creates PRs** in the same repository for the test project tasks (base branch: `main-e2e`)
+5. **Tests verify** the PRs were created correctly with summaries
+6. **Tests clean up** all test resources (projects, PRs, branches)
+7. **E2E Test Workflow** deletes the ephemeral `main-e2e` branch (on success)
 
 ## Prerequisites
 

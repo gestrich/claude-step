@@ -450,89 +450,39 @@ Please merge your spec files to the 'main' branch before running ClaudeStep.
 └─────────────────────────────────────────┘
 ```
 
-## Auto-Start Workflow
+## Workflow Triggers
 
-### Overview
+### Supported Triggers
 
-The ClaudeStep Auto-Start workflow (`.github/workflows/claudestep-auto-start.yml`) detects new projects when spec.md files are pushed and outputs the project list for processing. The workflow does not trigger other workflows directly - instead, it passes project information that the run-claudestep job consumes to process projects sequentially. This eliminates the need for PAT tokens or GitHub App authentication.
+ClaudeStep workflows support two trigger modes:
 
-### Workflow Trigger
+1. **`workflow_dispatch`**: Manual trigger with project name input
+2. **`pull_request: types: [closed]`**: Automatic continuation after PR merge
 
 ```yaml
 on:
-  push:
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: 'Project name (folder under claude-step/)'
+        required: true
+        type: string
+
+  pull_request:
+    types: [closed]
     branches:
       - main
-    paths:
-      - 'claude-step/*/spec.md'
-
-concurrency:
-  group: claudestep-auto-start-${{ github.ref }}
-  cancel-in-progress: false
 ```
 
-**Key Design:**
-- Triggers on any push to main that modifies spec.md files
-- Uses concurrency control to prevent race conditions
-- Both concurrent runs execute (they'll detect existing PRs and skip appropriately)
+### How PR Merge Triggers Work
 
-### Python-First Implementation
+When a ClaudeStep PR is merged:
+1. The `pull_request: types: [closed]` event fires
+2. ClaudeStep checks if the PR has the `claudestep` label
+3. ClaudeStep verifies the PR was merged (not just closed)
+4. If both conditions are met, the next task is triggered
 
-Following ClaudeStep's **Python-first architecture**, the auto-start workflow delegates all business logic to Python services, with YAML acting as a lightweight wrapper.
-
-**YAML Workflow** (`.github/workflows/claudestep-auto-start.yml`):
-```yaml
-steps:
-  - name: Setup Python
-    uses: actions/setup-python@v5
-    with:
-      python-version: '3.11'
-
-  - name: Install ClaudeStep
-    run: pip install -e .
-
-  - name: Detect projects
-    id: auto_start
-    run: python3 -m claudestep auto-start
-    env:
-      GITHUB_REPOSITORY: ${{ github.repository }}
-      BASE_BRANCH: ${{ github.ref_name }}
-      REF_BEFORE: ${{ github.event.before }}
-      REF_AFTER: ${{ github.sha }}
-      GH_TOKEN: ${{ github.token }}
-      AUTO_START_ENABLED: ${{ vars.CLAUDESTEP_AUTO_START_ENABLED != 'false' }}
-
-  - name: Generate summary
-    if: always()
-    run: |
-      # Summary uses projects_to_trigger and project_count outputs
-      # The run-claudestep job processes these projects sequentially
-```
-
-**Outputs:**
-- `projects_to_trigger`: Space-separated list of project names to process
-- `project_count`: Number of projects detected
-
-### Disabling Auto-Start
-
-Users can disable auto-start using the `CLAUDESTEP_AUTO_START_ENABLED` repository variable:
-
-**Via GitHub UI:**
-1. Navigate to repository Settings > Secrets and variables > Actions > Variables
-2. Add a new repository variable: `CLAUDESTEP_AUTO_START_ENABLED`
-3. Set value to `false`
-
-**Behavior:**
-- When `CLAUDESTEP_AUTO_START_ENABLED` is set to `'false'`, the auto-start workflow still runs but skips triggering any workflows
-- The workflow generates a summary explaining that auto-start is disabled
-- Default behavior (if variable is not set or set to any other value): auto-start is enabled
-
-**Alternative methods:**
-1. Deleting `.github/workflows/claudestep-auto-start.yml`
-2. Disabling the workflow in GitHub Actions settings
-3. Manually triggering tasks via Actions > ClaudeStep > Run workflow
-
-**Note:** Disabling only affects the first task trigger. Subsequent tasks continue to auto-trigger on PR merge.
+**Note:** The `claude-code-action` does not support `push` events. The first task for a new project must be triggered manually via `workflow_dispatch`.
 
 ## Summary
 

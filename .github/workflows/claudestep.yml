@@ -2,7 +2,7 @@
 #
 # This workflow handles all event types automatically by passing the GitHub
 # event context to the action. The action determines:
-# - Whether to execute or skip
+# - Whether to execute or skip (checks for claudestep label and merged state)
 # - Which ref to checkout
 # - The project name (from branch pattern or input)
 # - The base branch for PR creation (from project config or default)
@@ -11,7 +11,10 @@
 # - workflow_dispatch: Manual trigger with project_name input
 # - pull_request (closed): Continues processing after PR merge
 #
-# Note: PRs must have the 'claudestep' label and be merged to trigger processing.
+# Note: Label filtering is done inside the action (not at workflow level) because
+# GitHub Actions pull_request triggers don't support label filters. The action
+# checks that PRs have the 'claudestep' label and were merged before processing.
+#
 # Security: workflow_dispatch requires repository write access.
 
 name: ClaudeStep

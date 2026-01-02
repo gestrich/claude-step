@@ -51,49 +51,65 @@ git commit -m "Add ClaudeStep project: my-refactor"
 git push origin main
 ```
 
-**That's it!** The first task will automatically start within a few minutes.
+> **Note:** ClaudeStep workflows work on **any branch**. Push your spec to whichever branch you want PRs to target (typically `main` for production, or a test branch like `main-e2e` for testing). The workflows automatically adapt to the branch.
 
-> **Note:** ClaudeStep workflows work on **any branch**. Push your spec to whichever branch you want PRs to target (typically `main` for production, or a test branch like `main-e2e` for testing). The workflows automatically adapt to the branch you push to.
+### 5. Start ClaudeStep
+
+You have two options to start ClaudeStep for a new project:
+
+**Option 1: Add spec via PR with `claudestep` label (Recommended)**
+
+Instead of pushing directly to main, create a PR that adds your spec files:
+
+```bash
+git checkout -b add-my-refactor-spec
+git add claude-step/my-refactor/
+git commit -m "Add ClaudeStep project: my-refactor"
+git push origin add-my-refactor-spec
+```
+
+Then:
+1. Create a PR from your branch
+2. Add the `claudestep` label to the PR
+3. Merge the PR
+
+This will automatically trigger ClaudeStep to create the first task PR, starting the chain of automated PRs.
+
+**Option 2: Manual trigger**
+
+If you pushed directly to main:
+
+1. Go to **Actions** > **ClaudeStep** > **Run workflow**
+2. Enter your project name (e.g., `my-refactor`)
+3. Click **Run workflow**
+4. Wait ~2-5 minutes for the first PR to be created
 
 ---
 
 ## What Happens Automatically
 
-### Auto-Start Workflow
+### After the First PR
 
-When you push a new `spec.md` file to any branch, ClaudeStep automatically:
+Once the first PR is created:
 
-1. **Detects the new project** (no existing PRs found)
-2. **Triggers the ClaudeStep workflow** for your project
-3. **Creates a PR for the first task** within 2-5 minutes
-4. **Assigns the PR** to an available reviewer
-
-The PR will automatically target the same branch where you pushed the spec file. For example:
-- Push to `main` → PRs target `main`
-- Push to `main-e2e` → PRs target `main-e2e`
-- Push to `feature/test` → PRs target `feature/test`
-
-### Subsequent Tasks
-
-After the first task:
-
-1. **You review and merge** the PR when ready
+1. **You review and merge** the PR when ready (ensure it has the `claudestep` label)
 2. **ClaudeStep detects the merge** automatically
 3. **Creates the next PR** for the second task
 4. **Process continues** until all tasks are complete
 
+**Note:** PRs must have the `claudestep` label and be merged (not just closed) to trigger the next task.
+
 ### Example Timeline
 
 ```
-0:00 - You push spec.md to your branch (e.g., main)
-0:01 - Auto-start workflow detects new project
+0:00 - You manually trigger ClaudeStep for your project
 0:02 - ClaudeStep workflow starts
-0:05 - PR #1 created for first task (targeting your branch)
+0:05 - PR #1 created for first task
 ...
 You merge PR #1
 ...
-0:10 - ClaudeStep detects merge
-0:12 - PR #2 created for second task (targeting same branch)
+0:10 - ClaudeStep detects merge (PR had claudestep label)
+0:12 - PR #2 created for second task
 ...
 (continues for all tasks)
 ```
@@ -102,66 +118,40 @@ You merge PR #1
 
 ## Troubleshooting
 
-### First Task Doesn't Auto-Start
+### First Task Not Starting
 
-If the first task doesn't automatically start after pushing your spec:
+If the first task doesn't start after adding your spec:
 
-#### 1. Check the Auto-Start Workflow Run
+**If you added spec via PR:** Make sure the PR had the `claudestep` label before merging. If not, use manual trigger.
 
-- Go to **Actions** > **ClaudeStep Auto-Start**
-- Verify the workflow ran after your push
-- Check if any errors occurred
-
-#### 2. Review the Workflow Summary
-
-The auto-start workflow provides a summary showing:
-- Which projects had spec.md changes
-- Whether they were detected as new or existing
-- Which projects had auto-trigger initiated
-
-**Example Summary:**
-```
-Projects with spec.md changes:
-- my-refactor
-
-Auto-triggered for new projects:
-- ✅ my-refactor (first task will be started)
-```
-
-#### 3. Verify It's a New Project
-
-Auto-start only works for **new projects** (no existing ClaudeStep PRs).
-
-**Check for existing PRs:**
-1. Go to **Pull Requests**
-2. Filter by label: `claudestep`
-3. Look for PRs with branches matching `claude-step-my-refactor-*`
-
-**If PRs exist:**
-- Your project is not "new" (has existing PRs)
-- Auto-start will skip it
-- Use PR merge triggers instead (merge a PR to get the next one)
-
-**If no PRs exist:**
-- Your project should have been auto-triggered
-- Check workflow logs for errors
-
-#### 4. Check Workflow Logs
-
-If auto-start ran but didn't trigger:
-1. Go to **Actions** > **ClaudeStep Auto-Start** > latest run
-2. Check the "Trigger ClaudeStep for new projects" step
-3. Look for error messages (API failures, permissions issues, etc.)
-
-#### 5. Manual Trigger (Fallback)
-
-As a fallback, you can always manually trigger:
+**Manual trigger fallback:**
 1. Go to **Actions** > **ClaudeStep** > **Run workflow**
 2. Select your branch (usually `main`)
 3. Enter your project name (e.g., `my-refactor`)
 4. Click **Run workflow**
 
-This will start the first task manually, and subsequent tasks will auto-trigger on PR merge.
+Subsequent tasks will auto-trigger when you merge PRs with the `claudestep` label.
+
+### PR Merge Doesn't Trigger Next Task
+
+If merging a PR doesn't trigger the next task:
+
+#### 1. Check the Label
+
+Ensure the PR has the `claudestep` label. PRs created by ClaudeStep automatically get this label.
+
+#### 2. Verify It Was Merged
+
+The PR must be **merged**, not just closed. Closing without merging won't trigger the next task.
+
+#### 3. Check Workflow Logs
+
+1. Go to **Actions** > **ClaudeStep** > latest run
+2. Look for error messages or skip reasons
+3. Common issues:
+   - Missing `claudestep` label
+   - PR was closed without merging
+   - API failures or permission issues
 
 ### Spec Files Not Found
 
@@ -225,35 +215,6 @@ Error: GitHub API rate limit exceeded
   - Reducing the number of concurrent projects
   - Spacing out spec merges
   - Using GitHub Enterprise (higher rate limits)
-
----
-
-## Disabling Auto-Start
-
-If you prefer manual control over when tasks start:
-
-### Option 1: Delete the Auto-Start Workflow
-
-```bash
-rm .github/workflows/claudestep-auto-start.yml
-git commit -m "Disable auto-start workflow"
-git push origin main
-```
-
-### Option 2: Disable in GitHub Settings
-
-1. Go to **Actions** > **Workflows**
-2. Click **ClaudeStep Auto-Start**
-3. Click **⋯** (menu) > **Disable workflow**
-
-**Note:** Disabling auto-start only affects the first task. Subsequent tasks will still auto-trigger when you merge PRs.
-
-### Manual Triggering After Disabling
-
-To start the first task manually:
-1. Go to **Actions** > **ClaudeStep** > **Run workflow**
-2. Enter your project name
-3. Click **Run workflow**
 
 ---
 

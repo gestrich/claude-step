@@ -97,7 +97,8 @@ on:
         description: 'Project name (folder under claude-step/)'
         required: true
         type: string
-  push:
+  pull_request:
+    types: [closed]
     branches:
       - main
 
@@ -121,9 +122,9 @@ jobs:
 ```
 
 This workflow:
-- Triggers on push events (including PR merges) and manual dispatch
+- Triggers on PR close events (continues after merge) and manual dispatch
+- PRs must have the `claudestep` label and be merged to trigger processing
 - Automatically detects the project from ClaudeStep branch names
-- Skips pushes that aren't from ClaudeStep branches
 - Requires only ~20 lines instead of ~100
 
 **Option B: Standard Workflow**
@@ -202,33 +203,42 @@ git commit -m "Add ClaudeStep configuration for my-refactor"
 git push origin main
 ```
 
-**That's it!** The first task will automatically start within a few minutes.
+> **Note:** ClaudeStep workflows are **branch-agnostic** and work on any branch. Push your spec to whichever branch you want PRs to target. The workflows automatically detect the base branch and create PRs targeting that same branch.
 
-> **Note:** ClaudeStep workflows are **branch-agnostic** and work on any branch. Push your spec to whichever branch you want PRs to target. The workflows automatically detect the base branch from the push event and create PRs targeting that same branch.
+#### Starting ClaudeStep
 
-#### Auto-Start Feature
+You have two options to start ClaudeStep for a new project:
 
-When you push a new `spec.md` file to any branch, ClaudeStep automatically detects it and starts the first task for you. No manual triggering needed!
+**Option 1: Add spec via PR with `claudestep` label (Recommended)**
 
-**What happens automatically:**
-1. You push your spec to a branch (e.g., `main` or `main-e2e`)
-2. ClaudeStep detects the new project (no existing PRs)
-3. The first task automatically starts
-4. A PR is created for task 1 (targeting the same branch where you pushed the spec)
-5. When you merge that PR, task 2 automatically starts
-6. The process continues until all tasks are complete
+Create a PR that adds your spec files, add the `claudestep` label to the PR, then merge it. This will automatically trigger ClaudeStep to create the first task PR.
 
-**Note:** Auto-trigger only happens for new projects (no existing PRs). For existing projects, tasks trigger when the previous PR merges.
+```bash
+git checkout -b add-my-refactor-spec
+git add claude-step/my-refactor/
+git commit -m "Add ClaudeStep project: my-refactor"
+git push origin add-my-refactor-spec
+# Create PR, add 'claudestep' label, then merge
+```
 
-#### Manual Triggering (Optional)
+**Option 2: Manual trigger**
 
-If you prefer to manually trigger the first task, or if auto-start didn't work:
+If you pushed directly to main, manually trigger the first task:
 
 1. Go to Actions > ClaudeStep > Run workflow
-2. Wait ~2-5 minutes
-3. Check for new PR
+2. Enter your project name (e.g., `my-refactor`)
+3. Wait ~2-5 minutes
+4. Check for new PR
 
-Future PRs will trigger automatically on merge.
+#### Automatic Continuation
+
+After the first PR is created:
+1. Review and merge the PR (it will have the `claudestep` label)
+2. ClaudeStep detects the merge and automatically starts the next task
+3. A new PR is created for task 2
+4. The process continues until all tasks are complete
+
+**Note:** PRs must have the `claudestep` label and be merged (not just closed) to trigger the next task.
 
 ### Step 6: Review & Iterate
 
@@ -236,24 +246,24 @@ Review the generated PR, verify it follows your spec, and make any needed fixes.
 
 ## Troubleshooting
 
-### First Task Doesn't Auto-Start
+### First Task: Use Manual Trigger
 
-If the first task doesn't automatically start after pushing your spec:
+The first task for a new project must be manually triggered:
 
-1. **Check the workflow run**: Go to Actions > ClaudeStep and verify the push event triggered a run
-2. **Review the summary**: The workflow provides a summary showing what action was taken
-3. **Verify it's a new project**: Auto-start only works for projects with no existing ClaudeStep PRs
-4. **Check for errors**: Look at the workflow logs for any error messages
-5. **Manual trigger**: As a fallback, you can always manually trigger via Actions > ClaudeStep > Run workflow
+1. Go to Actions > ClaudeStep > Run workflow
+2. Enter your project name
+3. Click "Run workflow"
 
-### Disable Auto-Start
+Subsequent tasks trigger automatically when you merge PRs with the `claudestep` label.
 
-The auto-start feature is enabled by default for all new projects. If you prefer manual control, you can:
+### PR Merge Doesn't Trigger Next Task
 
-1. Remove the `push` trigger from your workflow file
-2. Manually trigger tasks using Actions > ClaudeStep > Run workflow
+If merging a PR doesn't trigger the next task:
 
-Note: Disabling auto-start only affects the first task. Subsequent tasks will still auto-trigger when you merge PRs (since merging creates a push event).
+1. **Check the label**: Ensure the PR has the `claudestep` label
+2. **Verify it was merged**: The PR must be merged, not just closed
+3. **Check workflow run**: Go to Actions > ClaudeStep and verify a run was triggered
+4. **Review the logs**: Look at the workflow logs for any error messages
 
 ## Modifying Tasks
 
@@ -485,15 +495,15 @@ If you're currently using the standard workflow and want to switch to the simpli
 1. **Update your workflow file** to use the simplified format (see Step 3 above)
 2. **Remove custom bash logic** for determining project name and base branch - the action handles this automatically
 3. **Update action version** from `@v1` to `@v2`
-4. **Change trigger** from `pull_request: types: [closed]` to `push: branches: [main]`
+4. **Use `pull_request: types: [closed]`** trigger for automatic continuation after PR merges
 5. **Add new inputs**:
    - `github_event: ${{ toJson(github.event) }}`
    - `event_name: ${{ github.event_name }}`
-6. **Make project_name conditional**: Only needed for `workflow_dispatch`, extracted from branch name for `push` events
+6. **Make project_name conditional**: Only needed for `workflow_dispatch`, extracted from branch name for PR events
 
 The simplified workflow automatically:
 - Extracts project name from branch pattern `claude-step-{project}-{hash}`
-- Skips pushes that aren't from ClaudeStep branches
+- Checks that PRs have the `claudestep` label and were merged
 - Determines the base branch from the event context
 
 ## Contributing
