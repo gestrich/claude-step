@@ -19,16 +19,7 @@ This guide walks you through setting up your first ClaudeStep project and unders
 mkdir -p claude-step/my-refactor
 ```
 
-### 2. Create `claude-step/my-refactor/configuration.yml`
-
-```yaml
-reviewers:
-  - username: YOUR_GITHUB_USERNAME
-    maxOpenPRs: 1
-# baseBranch: main  # Optional: override if targeting a branch other than workflow default
-```
-
-### 3. Create `claude-step/my-refactor/spec.md`
+### 2. Create `claude-step/my-refactor/spec.md`
 
 ```markdown
 # My Refactoring Project
@@ -42,6 +33,21 @@ Include patterns to follow, code examples, and edge cases.
 - [ ] First step to refactor
 - [ ] Second step to refactor
 - [ ] Third step to refactor
+```
+
+That's all you need! Without a configuration file, ClaudeStep uses sensible defaults:
+- PRs are created without an assignee
+- Maximum 1 open PR per project
+
+### 3. (Optional) Add Reviewers
+
+For automatic reviewer assignment, create `claude-step/my-refactor/configuration.yml`:
+
+```yaml
+reviewers:
+  - username: YOUR_GITHUB_USERNAME
+    maxOpenPRs: 1
+# baseBranch: main  # Optional: override if targeting a branch other than workflow default
 ```
 
 ### 4. Push to Your Base Branch
@@ -154,25 +160,24 @@ The PR must be **merged**, not just closed. Closing without merging won't trigge
    - PR was closed without merging
    - API failures or permission issues
 
-### Spec Files Not Found
+### Spec File Not Found
 
 **Error Message:**
 ```
-Error: Spec files not found in branch 'main'
-Required files:
+Error: spec.md not found in branch 'main'
+Required file:
   - claude-step/my-refactor/spec.md
-  - claude-step/my-refactor/configuration.yml
 
-Please merge your spec files to the 'main' branch before running ClaudeStep.
+Please merge your spec.md file to the 'main' branch before running ClaudeStep.
 ```
 
 **Solution:**
-1. Verify files exist in your repository: `ls claude-step/my-refactor/`
-2. Ensure files are committed: `git status`
+1. Verify spec.md exists in your repository: `ls claude-step/my-refactor/spec.md`
+2. Ensure file is committed: `git status`
 3. Push to your base branch: `git push origin main` (or whatever branch you're using)
 4. Wait for auto-start workflow to run again
 
-> **Note:** The error message shows the branch ClaudeStep is looking in. Ensure your spec files are in that branch.
+> **Note:** The configuration.yml file is optional. Only spec.md is required for a project.
 
 ### Workflow Permissions Issues
 

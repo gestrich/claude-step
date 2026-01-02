@@ -83,35 +83,29 @@ def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
         default_base_branch = os.environ.get("BASE_BRANCH", "main")
         print(f"Validating spec files exist in branch '{default_base_branch}'...")
 
-        # Check if spec.md exists (use default branch to locate config files)
+        # Check if spec.md exists (required) and configuration.yml (optional)
         spec_exists = file_exists_in_branch(repo, default_base_branch, project.spec_path)
         config_exists = file_exists_in_branch(repo, default_base_branch, project.config_path)
 
-        if not spec_exists or not config_exists:
-            missing_files = []
-            if not spec_exists:
-                missing_files.append(f"  - {project.spec_path}")
-            if not config_exists:
-                missing_files.append(f"  - {project.config_path}")
+        if not spec_exists:
+            error_msg = f"""Error: spec.md not found in branch '{default_base_branch}'
+Required file:
+  - {project.spec_path}
 
-            error_msg = f"""Error: Spec files not found in branch '{default_base_branch}'
-Required files:
-{chr(10).join(missing_files)}
-
-Please merge your spec files to the '{default_base_branch}' branch before running ClaudeStep."""
+Please merge your spec.md file to the '{default_base_branch}' branch before running ClaudeStep."""
             gh.set_error(error_msg)
             return 1
 
-        print(f"✅ Spec files validated in branch '{default_base_branch}'")
+        if config_exists:
+            print(f"✅ Spec files validated in branch '{default_base_branch}'")
+        else:
+            print(f"✅ spec.md validated in branch '{default_base_branch}' (using default configuration)")
 
         # === STEP 2: Load and Validate Configuration ===
         print("\n=== Step 2/6: Loading configuration ===")
 
-        # Load configuration using ProjectRepository (use default branch to fetch config)
+        # Load configuration using ProjectRepository (returns default if not found)
         config = project_repository.load_configuration(project, default_base_branch)
-        if not config:
-            gh.set_error(f"Failed to load configuration file from branch '{default_base_branch}'")
-            return 1
 
         # Resolve actual base branch (config override or default)
         base_branch = config.get_base_branch(default_base_branch)
@@ -122,9 +116,6 @@ Please merge your spec files to the '{default_base_branch}' branch before runnin
 
         slack_webhook_url = os.environ.get("SLACK_WEBHOOK_URL", "")  # From action input
         label = os.environ.get("PR_LABEL", "claudestep")  # From action input, defaults to "claudestep"
-
-        if not config.reviewers:
-            raise ConfigurationError("Missing required field: reviewers")
 
         # Ensure label exists
         ensure_label_exists(label, gh)
@@ -137,7 +128,10 @@ Please merge your spec files to the '{default_base_branch}' branch before runnin
 
         validate_spec_format_from_string(spec.content, project.spec_path)
 
-        print(f"✅ Configuration loaded: label={label}, reviewers={len(config.reviewers)}")
+        if config.reviewers:
+            print(f"✅ Configuration loaded: label={label}, reviewers={len(config.reviewers)}")
+        else:
+            print(f"✅ Configuration loaded: label={label}, no reviewers (using project-level capacity)")
 
         # === STEP 3: Check Reviewer Capacity ===
         print("\n=== Step 3/6: Checking reviewer capacity ===")
@@ -148,15 +142,23 @@ Please merge your spec files to the '{default_base_branch}' branch before runnin
         gh.write_step_summary(summary)
         print("\n" + summary)
 
-        if not selected_reviewer:
+        # Check capacity - note that selected_reviewer can be None with capacity available
+        # (when no reviewers are configured, we use project-level capacity)
+        if capacity_result.all_at_capacity:
             gh.write_output("has_capacity", "false")
             gh.write_output("reviewer", "")
-            gh.set_notice("All reviewers at capacity, skipping PR creation")
+            if config.reviewers:
+                gh.set_notice("All reviewers at capacity, skipping PR creation")
+            else:
+                gh.set_notice("Project at capacity (1 open PR limit), skipping PR creation")
             return 0  # Not an error, just no capacity
 
         gh.write_output("has_capacity", "true")
-        gh.write_output("reviewer", selected_reviewer)
-        print(f"✅ Selected reviewer: {selected_reviewer}")
+        gh.write_output("reviewer", selected_reviewer or "")  # Empty string if no reviewer
+        if selected_reviewer:
+            print(f"✅ Selected reviewer: {selected_reviewer}")
+        else:
+            print("✅ Capacity available (no reviewer - PR will be created without assignee)")
 
         # === STEP 4: Find Next Task ===
         print("\n=== Step 4/6: Finding next task ===")

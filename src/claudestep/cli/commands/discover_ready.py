@@ -9,11 +9,9 @@ import json
 import os
 
 from claudestep.cli.commands.discover import find_all_projects
-from claudestep.domain.config import load_config, validate_spec_format
+from claudestep.domain.config import validate_spec_format
 from claudestep.domain.project import Project
 from claudestep.infrastructure.github.actions import GitHubActionsHelper
-from claudestep.infrastructure.repositories.project_repository import ProjectRepository
-from claudestep.services.core.project_service import ProjectService
 from claudestep.services.core.reviewer_service import ReviewerService
 from claudestep.services.core.task_service import TaskService
 
@@ -23,6 +21,14 @@ def check_project_ready(project_name: str, repo: str) -> bool:
 
     This function instantiates services and coordinates their operations but
     does not implement business logic directly. Follows Service Layer pattern.
+
+    A project is ready if:
+    1. spec.md exists (required)
+    2. Spec format is valid (contains checklist items)
+    3. Has capacity (reviewer capacity OR project-level capacity if no reviewers)
+    4. Has available tasks
+
+    Configuration is optional - projects without configuration.yml use default settings.
 
     Args:
         project_name: Name of the project to check
@@ -35,24 +41,9 @@ def check_project_ready(project_name: str, repo: str) -> bool:
         # Create Project domain model
         project = Project(project_name)
 
-        # Check if files exist
-        if not os.path.exists(project.config_path):
-            print(f"  ⏭️  No configuration file found")
-            return False
-
+        # Check if spec.md exists (required)
         if not os.path.exists(project.spec_path):
             print(f"  ⏭️  No spec.md found")
-            return False
-
-        # Initialize infrastructure
-        project_repository = ProjectRepository(repo)
-
-        # Load and validate configuration
-        config = load_config(project.config_path)
-        reviewers = config.get("reviewers", [])
-
-        if not reviewers:
-            print(f"  ⏭️  No reviewers configured")
             return False
 
         # Validate spec format
@@ -65,12 +56,14 @@ def check_project_ready(project_name: str, repo: str) -> bool:
         # Use single 'claudestep' label for all projects
         label = "claudestep"
 
-        # Load configuration using repository (for type-safe access)
-        from claudestep.domain.config import load_config_from_string
-        with open(project.config_path, 'r') as f:
-            config_content = f.read()
+        # Load configuration (optional - uses defaults if not found)
         from claudestep.domain.project_configuration import ProjectConfiguration
-        project_config = ProjectConfiguration.from_yaml_string(project, config_content)
+        if os.path.exists(project.config_path):
+            with open(project.config_path, 'r') as f:
+                config_content = f.read()
+            project_config = ProjectConfiguration.from_yaml_string(project, config_content)
+        else:
+            project_config = ProjectConfiguration.default(project)
 
         # Initialize services
         from claudestep.services.core.pr_service import PRService
@@ -78,11 +71,16 @@ def check_project_ready(project_name: str, repo: str) -> bool:
         reviewer_service = ReviewerService(repo, pr_service)
         task_service = TaskService(repo, pr_service)
 
-        # Check reviewer capacity
-        selected_reviewer, capacity_result = reviewer_service.find_available_reviewer(project_config, label, project_name)
+        # Check capacity (reviewer capacity OR project-level capacity if no reviewers)
+        _, capacity_result = reviewer_service.find_available_reviewer(
+            project_config, label, project_name
+        )
 
-        if not selected_reviewer:
-            print(f"  ⏭️  No reviewer capacity")
+        if capacity_result.all_at_capacity:
+            if project_config.reviewers:
+                print(f"  ⏭️  No reviewer capacity")
+            else:
+                print(f"  ⏭️  Project at capacity (1 open PR limit)")
             return False
 
         # Load spec and check for available tasks
@@ -102,13 +100,14 @@ def check_project_ready(project_name: str, repo: str) -> bool:
         # Get stats for logging
         uncompleted = spec.pending_tasks
 
-        # Get capacity info
-        summary = capacity_result.format_summary()
-        # Extract open PRs count from summary (it's in the format)
-        open_prs = sum(r['openPRs'] for r in capacity_result.reviewer_status)
-        max_prs = sum(r['maxPRs'] for r in capacity_result.reviewer_status)
+        # Get capacity info from result
+        open_prs = sum(r['open_count'] for r in capacity_result.reviewers_status)
+        max_prs = sum(r['max_prs'] for r in capacity_result.reviewers_status)
 
-        print(f"  ✅ Ready for work ({open_prs}/{max_prs} PRs, {uncompleted} tasks remaining)")
+        if project_config.reviewers:
+            print(f"  ✅ Ready for work ({open_prs}/{max_prs} PRs, {uncompleted} tasks remaining)")
+        else:
+            print(f"  ✅ Ready for work (no reviewers, {uncompleted} tasks remaining)")
         return True
 
     except Exception as e:

@@ -13,20 +13,20 @@ from claudestep.cli.commands.discover import find_all_projects, main
 class TestFindAllProjects:
     """Test suite for find_all_projects functionality"""
 
-    def test_find_projects_returns_projects_with_config(self, tmp_path):
-        """Should return projects that have configuration.yml files"""
+    def test_find_projects_returns_projects_with_spec(self, tmp_path):
+        """Should return projects that have spec.md files"""
         # Arrange
         base_dir = tmp_path / "claude-step"
         base_dir.mkdir()
 
-        # Create valid projects with configuration.yml
+        # Create valid projects with spec.md
         project1 = base_dir / "project1"
         project1.mkdir()
-        (project1 / "configuration.yml").write_text("reviewers: []")
+        (project1 / "spec.md").write_text("- [ ] Task 1")
 
         project2 = base_dir / "project2"
         project2.mkdir()
-        (project2 / "configuration.yml").write_text("reviewers: []")
+        (project2 / "spec.md").write_text("- [ ] Task 1")
 
         # Act
         result = find_all_projects(str(base_dir))
@@ -36,18 +36,18 @@ class TestFindAllProjects:
         assert "project1" in result
         assert "project2" in result
 
-    def test_find_projects_excludes_dirs_without_config(self, tmp_path):
-        """Should exclude directories that don't have configuration.yml"""
+    def test_find_projects_excludes_dirs_without_spec(self, tmp_path):
+        """Should exclude directories that don't have spec.md"""
         # Arrange
         base_dir = tmp_path / "claude-step"
         base_dir.mkdir()
 
-        # Valid project
+        # Valid project with spec.md
         valid_project = base_dir / "valid-project"
         valid_project.mkdir()
-        (valid_project / "configuration.yml").write_text("reviewers: []")
+        (valid_project / "spec.md").write_text("- [ ] Task 1")
 
-        # Invalid project - missing configuration.yml
+        # Invalid project - missing spec.md
         invalid_project = base_dir / "invalid-project"
         invalid_project.mkdir()
 
@@ -68,10 +68,10 @@ class TestFindAllProjects:
         # Create a file (not a directory)
         (base_dir / "README.md").write_text("readme content")
 
-        # Create valid project
+        # Create valid project with spec.md
         project = base_dir / "project"
         project.mkdir()
-        (project / "configuration.yml").write_text("reviewers: []")
+        (project / "spec.md").write_text("- [ ] Task 1")
 
         # Act
         result = find_all_projects(str(base_dir))
@@ -90,7 +90,7 @@ class TestFindAllProjects:
         for name in ["zebra", "alpha", "beta"]:
             project = base_dir / name
             project.mkdir()
-            (project / "configuration.yml").write_text("reviewers: []")
+            (project / "spec.md").write_text("- [ ] Task 1")
 
         # Act
         result = find_all_projects(str(base_dir))
@@ -132,7 +132,7 @@ class TestFindAllProjects:
 
         project = base_dir / "test-project"
         project.mkdir()
-        (project / "configuration.yml").write_text("reviewers: []")
+        (project / "spec.md").write_text("- [ ] Task 1")
 
         # Act (no base_dir argument)
         result = find_all_projects()
@@ -148,7 +148,7 @@ class TestFindAllProjects:
 
         project = custom_dir / "test-project"
         project.mkdir()
-        (project / "configuration.yml").write_text("reviewers: []")
+        (project / "spec.md").write_text("- [ ] Task 1")
 
         monkeypatch.setenv("CLAUDESTEP_PROJECT_DIR", str(custom_dir))
 
@@ -169,7 +169,7 @@ class TestFindAllProjects:
 
         project = arg_dir / "test-project"
         project.mkdir()
-        (project / "configuration.yml").write_text("reviewers: []")
+        (project / "spec.md").write_text("- [ ] Task 1")
 
         monkeypatch.setenv("CLAUDESTEP_PROJECT_DIR", str(env_dir))
 
@@ -180,7 +180,7 @@ class TestFindAllProjects:
         assert "test-project" in result
 
     def test_find_projects_handles_nested_files(self, tmp_path):
-        """Should only check for configuration.yml in immediate subdirectories"""
+        """Should only check for spec.md in immediate subdirectories"""
         # Arrange
         base_dir = tmp_path / "claude-step"
         base_dir.mkdir()
@@ -188,12 +188,12 @@ class TestFindAllProjects:
         # Valid project at top level
         project = base_dir / "project"
         project.mkdir()
-        (project / "configuration.yml").write_text("reviewers: []")
+        (project / "spec.md").write_text("- [ ] Task 1")
 
-        # Nested directory with config should not be found
+        # Nested directory with spec should not be found
         nested = project / "nested"
         nested.mkdir()
-        (nested / "configuration.yml").write_text("reviewers: []")
+        (nested / "spec.md").write_text("- [ ] Task 1")
 
         # Act
         result = find_all_projects(str(base_dir))
@@ -210,7 +210,7 @@ class TestFindAllProjects:
 
         project = base_dir / "test-project"
         project.mkdir()
-        (project / "configuration.yml").write_text("reviewers: []")
+        (project / "spec.md").write_text("- [ ] Task 1")
 
         # Act
         find_all_projects(str(base_dir))
@@ -232,11 +232,11 @@ class TestMain:
 
         project1 = base_dir / "alpha"
         project1.mkdir()
-        (project1 / "configuration.yml").write_text("reviewers: []")
+        (project1 / "spec.md").write_text("- [ ] Task 1")
 
         project2 = base_dir / "beta"
         project2.mkdir()
-        (project2 / "configuration.yml").write_text("reviewers: []")
+        (project2 / "spec.md").write_text("- [ ] Task 1")
 
         # Mock GitHubActionsHelper
         with patch("claudestep.cli.commands.discover.GitHubActionsHelper") as mock_gh_class:
@@ -288,7 +288,7 @@ class TestMain:
 
         project = base_dir / "test-project"
         project.mkdir()
-        (project / "configuration.yml").write_text("reviewers: []")
+        (project / "spec.md").write_text("- [ ] Task 1")
 
         # Mock GitHubActionsHelper
         with patch("claudestep.cli.commands.discover.GitHubActionsHelper") as mock_gh_class:
@@ -317,7 +317,7 @@ class TestMain:
         for name in ["project-a", "project-b"]:
             project = base_dir / name
             project.mkdir()
-            (project / "configuration.yml").write_text("reviewers: []")
+            (project / "spec.md").write_text("- [ ] Task 1")
 
         # Mock GitHubActionsHelper
         with patch("claudestep.cli.commands.discover.GitHubActionsHelper") as mock_gh_class:
@@ -342,7 +342,7 @@ class TestMain:
         for i in range(3):
             project = base_dir / f"project{i}"
             project.mkdir()
-            (project / "configuration.yml").write_text("reviewers: []")
+            (project / "spec.md").write_text("- [ ] Task 1")
 
         # Mock GitHubActionsHelper
         with patch("claudestep.cli.commands.discover.GitHubActionsHelper") as mock_gh_class:

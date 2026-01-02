@@ -20,15 +20,46 @@ class ProjectRepository:
 
     def load_configuration(
         self, project: Project, base_branch: str = "main"
-    ) -> Optional[ProjectConfiguration]:
+    ) -> ProjectConfiguration:
         """Load and parse project configuration from GitHub
+
+        If configuration.yml doesn't exist, returns default configuration
+        (no reviewers, no base branch override). This allows projects to work
+        with sensible defaults without requiring a configuration file.
 
         Args:
             project: Project domain model
             base_branch: Branch to fetch from
 
         Returns:
-            Parsed ProjectConfiguration or None if not found
+            Parsed ProjectConfiguration or default configuration if not found
+
+        Raises:
+            GitHubAPIError: If GitHub API fails
+            ConfigurationError: If configuration is invalid
+        """
+        from claudestep.infrastructure.github.operations import get_file_from_branch
+
+        config_content = get_file_from_branch(self.repo, base_branch, project.config_path)
+        if not config_content:
+            return ProjectConfiguration.default(project)
+
+        return ProjectConfiguration.from_yaml_string(project, config_content)
+
+    def load_configuration_if_exists(
+        self, project: Project, base_branch: str = "main"
+    ) -> Optional[ProjectConfiguration]:
+        """Load configuration only if it exists, returning None otherwise.
+
+        Use this method when you need to distinguish between projects with
+        and without configuration files.
+
+        Args:
+            project: Project domain model
+            base_branch: Branch to fetch from
+
+        Returns:
+            Parsed ProjectConfiguration or None if file doesn't exist
 
         Raises:
             GitHubAPIError: If GitHub API fails
@@ -70,21 +101,24 @@ class ProjectRepository:
     ) -> Optional[Tuple[Project, ProjectConfiguration, SpecContent]]:
         """Load complete project data (config + spec)
 
+        Configuration is optional - if not found, uses default configuration.
+        Spec is required - if not found, returns None.
+
         Args:
             project_name: Name of the project
             base_branch: Branch to fetch from
 
         Returns:
-            Tuple of (Project, ProjectConfiguration, SpecContent) or None if not found
+            Tuple of (Project, ProjectConfiguration, SpecContent) or None if spec not found
         """
         project = Project(project_name)
 
-        config = self.load_configuration(project, base_branch)
-        if not config:
-            return None
-
+        # Spec is required for a valid project
         spec = self.load_spec(project, base_branch)
         if not spec:
             return None
+
+        # Config is optional - uses defaults if not found
+        config = self.load_configuration(project, base_branch)
 
         return project, config, spec

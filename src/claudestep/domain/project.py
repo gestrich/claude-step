@@ -73,6 +73,9 @@ class Project:
     def find_all(cls, base_dir: str = "claude-step") -> List['Project']:
         """Factory: Discover all projects in a directory
 
+        Projects are identified by the presence of spec.md file (not configuration.yml).
+        This allows projects to exist without a configuration file, using sensible defaults.
+
         Args:
             base_dir: Directory to scan for projects. Defaults to 'claude-step'
 
@@ -86,8 +89,9 @@ class Project:
         for entry in os.listdir(base_dir):
             project_path = os.path.join(base_dir, entry)
             if os.path.isdir(project_path):
-                config_yml = os.path.join(project_path, "configuration.yml")
-                if os.path.exists(config_yml):
+                # Discover projects by spec.md, not configuration.yml
+                spec_md = os.path.join(project_path, "spec.md")
+                if os.path.exists(spec_md):
                     projects.append(cls(entry))
 
         return sorted(projects, key=lambda p: p.name)

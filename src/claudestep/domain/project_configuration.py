@@ -40,6 +40,10 @@ class Reviewer:
         }
 
 
+# Default global PR limit when no reviewers are configured
+DEFAULT_PROJECT_PR_LIMIT = 1
+
+
 @dataclass
 class ProjectConfiguration:
     """Domain model for parsed project configuration"""
@@ -47,6 +51,26 @@ class ProjectConfiguration:
     project: Project
     reviewers: List[Reviewer]
     base_branch: Optional[str] = None  # Optional override for target base branch
+
+    @classmethod
+    def default(cls, project: Project) -> 'ProjectConfiguration':
+        """Factory: Create default configuration when no config file exists.
+
+        Default configuration:
+        - No reviewers (PRs created without assignee)
+        - No base branch override (uses workflow default)
+
+        Args:
+            project: Project domain model
+
+        Returns:
+            ProjectConfiguration with sensible defaults
+        """
+        return cls(
+            project=project,
+            reviewers=[],
+            base_branch=None
+        )
 
     @classmethod
     def from_yaml_string(cls, project: Project, yaml_content: str) -> 'ProjectConfiguration':

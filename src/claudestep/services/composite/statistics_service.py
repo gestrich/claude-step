@@ -79,14 +79,15 @@ class StatisticsService:
                 # Extract project name from path using Project domain model
                 project = Project.from_config_path(config_path)
 
+                # load_configuration returns default config if file not found
                 config = self._load_project_config(project.name, base_branch)
-                if config is None:
-                    print(f"Error: Configuration file not found in branch '{base_branch}'")
-                    return report
 
                 reviewers = config.get_reviewer_usernames()
                 project_configs.append(config)
                 all_reviewers.update(reviewers)
+
+                if not reviewers:
+                    print("  (no reviewers configured - using default config)")
 
             except Exception as e:
                 print(f"Error loading config: {e}")
@@ -111,10 +112,8 @@ class StatisticsService:
 
             for project_name in project_names:
                 try:
+                    # load_configuration returns default config if file not found
                     config = self._load_project_config(project_name, base_branch)
-                    if config is None:
-                        print(f"Warning: Configuration file not found for project {project_name} in branch '{base_branch}', skipping")
-                        continue
 
                     reviewers = config.get_reviewer_usernames()
                     project_configs.append(config)
@@ -148,6 +147,8 @@ class StatisticsService:
                     report.add_team_member(stats)
             except Exception as e:
                 print(f"Error collecting team member stats: {e}")
+        else:
+            print("No reviewers configured - skipping team member statistics")
 
         return report
 

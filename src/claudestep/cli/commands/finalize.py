@@ -61,8 +61,12 @@ def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
 
         # Check if we should skip (no capacity or no task)
         if has_capacity != "true":
-            gh.write_step_summary("⏸️ **Status**: All reviewers at capacity")
-            print("⏸️ All reviewers at capacity - skipping")
+            if reviewer:
+                gh.write_step_summary("⏸️ **Status**: All reviewers at capacity")
+                print("⏸️ All reviewers at capacity - skipping")
+            else:
+                gh.write_step_summary("⏸️ **Status**: Project at capacity (1 open PR limit)")
+                print("⏸️ Project at capacity - skipping")
             return 0
 
         if has_task != "true":
@@ -70,8 +74,8 @@ def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             print("✅ All tasks complete or in progress - skipping")
             return 0
 
-        # Validate required environment variables
-        if not all([branch_name, task, task_index, reviewer, project, spec_path, gh_token, github_repository]):
+        # Validate required environment variables (reviewer is optional)
+        if not all([branch_name, task, task_index, project, spec_path, gh_token, github_repository]):
             raise ConfigurationError("Missing required environment variables")
 
         # === STEP 1: Commit Any Uncommitted Changes ===
@@ -192,15 +196,19 @@ def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             pr_body_file = f.name
 
         try:
-            pr_url = run_gh_command([
+            # Build PR creation command (assignee is optional)
+            pr_create_args = [
                 "pr", "create",
                 "--title", f"ClaudeStep: {task}",
                 "--body-file", pr_body_file,
                 "--label", label,
-                "--assignee", reviewer,
                 "--head", branch_name,
                 "--base", base_branch
-            ])
+            ]
+            if reviewer:
+                pr_create_args.extend(["--assignee", reviewer])
+
+            pr_url = run_gh_command(pr_create_args)
         finally:
             # Clean up temp file
             if os.path.exists(pr_body_file):
@@ -229,7 +237,10 @@ def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
         gh.write_step_summary("✅ **Status**: PR created successfully")
         gh.write_step_summary("")
         gh.write_step_summary(f"- **PR**: #{pr_number}")
-        gh.write_step_summary(f"- **Reviewer**: {reviewer}")
+        if reviewer:
+            gh.write_step_summary(f"- **Reviewer**: {reviewer}")
+        else:
+            gh.write_step_summary("- **Reviewer**: (none assigned)")
         gh.write_step_summary(f"- **Task**: {task}")
 
         print("\n✅ Finalization complete")

@@ -55,8 +55,8 @@ reviewers:
         )
 
     @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
-    def test_load_configuration_returns_none_when_file_not_found(self, mock_get_file):
-        """Should return None when configuration file doesn't exist"""
+    def test_load_configuration_returns_default_when_file_not_found(self, mock_get_file):
+        """Should return default config when configuration file doesn't exist"""
         # Arrange
         repo = ProjectRepository("owner/repo")
         project = Project("my-project")
@@ -65,8 +65,11 @@ reviewers:
         # Act
         config = repo.load_configuration(project, "main")
 
-        # Assert
-        assert config is None
+        # Assert - returns default config, not None
+        assert config is not None
+        assert config.project == project
+        assert config.reviewers == []
+        assert config.base_branch is None
         mock_get_file.assert_called_once_with(
             "owner/repo",
             "main",
@@ -128,6 +131,45 @@ reviewers:
         # Assert
         assert config is not None
         assert config.reviewers == []
+
+
+class TestProjectRepositoryLoadConfigurationIfExists:
+    """Test suite for ProjectRepository.load_configuration_if_exists method"""
+
+    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    def test_load_configuration_if_exists_returns_config_when_found(self, mock_get_file):
+        """Should return parsed config when file exists"""
+        # Arrange
+        repo = ProjectRepository("owner/repo")
+        project = Project("my-project")
+        yaml_content = """
+reviewers:
+  - username: alice
+    maxOpenPRs: 2
+"""
+        mock_get_file.return_value = yaml_content
+
+        # Act
+        config = repo.load_configuration_if_exists(project, "main")
+
+        # Assert
+        assert config is not None
+        assert len(config.reviewers) == 1
+        assert config.reviewers[0].username == "alice"
+
+    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    def test_load_configuration_if_exists_returns_none_when_not_found(self, mock_get_file):
+        """Should return None when file doesn't exist"""
+        # Arrange
+        repo = ProjectRepository("owner/repo")
+        project = Project("my-project")
+        mock_get_file.return_value = None
+
+        # Act
+        config = repo.load_configuration_if_exists(project, "main")
+
+        # Assert
+        assert config is None
 
 
 class TestProjectRepositoryLoadSpec:
@@ -295,17 +337,30 @@ class TestProjectRepositoryLoadProjectFull:
         assert spec.completed_tasks == 1
 
     @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
-    def test_load_project_full_returns_none_when_config_missing(self, mock_get_file):
-        """Should return None when configuration file is missing"""
+    def test_load_project_full_uses_default_config_when_config_missing(self, mock_get_file):
+        """Should use default config when configuration file is missing"""
         # Arrange
         repo = ProjectRepository("owner/repo")
-        mock_get_file.return_value = None  # Config not found
+
+        # Mock: spec exists, config doesn't
+        def side_effect(repo_name, branch, path):
+            if "spec.md" in path:
+                return "- [ ] Task 1\n- [x] Task 2"
+            return None  # Config not found
+
+        mock_get_file.side_effect = side_effect
 
         # Act
         result = repo.load_project_full("my-project", "main")
 
-        # Assert
-        assert result is None
+        # Assert - returns project with default config
+        assert result is not None
+        project, config, spec = result
+
+        assert project.name == "my-project"
+        assert config.reviewers == []  # Default config has no reviewers
+        assert config.base_branch is None
+        assert spec.total_tasks == 2
 
     @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
     def test_load_project_full_returns_none_when_spec_missing(self, mock_get_file):

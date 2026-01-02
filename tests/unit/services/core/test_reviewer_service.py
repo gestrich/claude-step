@@ -268,13 +268,16 @@ class TestFindAvailableReviewer:
         assert pr_info["task_hash"] is not None
         assert pr_info["task_description"] == "Update authentication flow"
 
-    def test_find_reviewer_with_empty_reviewers_list(self, reviewer_service, mock_pr_service):
-        """Should handle empty reviewers list gracefully"""
+    def test_find_reviewer_with_empty_reviewers_list_uses_project_capacity(
+        self, reviewer_service, mock_pr_service
+    ):
+        """Should use project-level capacity when no reviewers configured"""
         # Arrange
         config_dict = ConfigBuilder().with_no_reviewers().build()
         config = config_dict_to_project_configuration(config_dict)
 
-        mock_pr_service.get_reviewer_prs_for_project.return_value = []
+        # No open PRs for project - should have capacity
+        mock_pr_service.get_open_prs_for_project.return_value = []
 
         # Act
         selected, result = reviewer_service.find_available_reviewer(
@@ -282,10 +285,13 @@ class TestFindAvailableReviewer:
         )
 
         # Assert
-        assert selected is None
+        assert selected is None  # No reviewer assigned
         assert result.selected_reviewer is None
-        assert result.all_at_capacity is True  # Technically true - no one has capacity
-        assert len(result.reviewers_status) == 0
+        assert result.all_at_capacity is False  # Has capacity (0 < 1)
+        assert len(result.reviewers_status) == 1  # Virtual project entry
+        assert result.reviewers_status[0]["username"] == "(project: myproject)"
+        assert result.reviewers_status[0]["max_prs"] == 1
+        assert result.reviewers_status[0]["has_capacity"] is True
 
     def test_find_reviewer_calls_list_open_prs_with_correct_params(
         self, reviewers_config, reviewer_service, mock_pr_service
@@ -478,3 +484,103 @@ class TestFindAvailableReviewer:
             # Verify the service was called and repo is stored correctly
             assert service.repo == ""
             assert mock_pr_service.get_reviewer_prs_for_project.call_count == 3
+
+
+class TestFindAvailableReviewerNoReviewers:
+    """Test suite for find_available_reviewer with no reviewers configured (project capacity)"""
+
+    @pytest.fixture
+    def mock_env(self):
+        """Fixture providing GitHub environment variables"""
+        with patch.dict(os.environ, {"GITHUB_REPOSITORY": "owner/repo"}):
+            yield
+
+    @pytest.fixture
+    def mock_pr_service(self):
+        """Fixture providing mock PRService instance"""
+        return Mock(spec=PRService)
+
+    @pytest.fixture
+    def reviewer_service(self, mock_env, mock_pr_service):
+        """Fixture providing ReviewerService instance"""
+        return ReviewerService("owner/repo", mock_pr_service)
+
+    @pytest.fixture
+    def no_reviewer_config(self):
+        """Fixture providing configuration with no reviewers"""
+        project = Project("test-project")
+        return ProjectConfiguration.default(project)
+
+    def test_no_reviewers_with_capacity_available(
+        self, no_reviewer_config, reviewer_service, mock_pr_service
+    ):
+        """Should allow PR creation when project has no open PRs"""
+        # Arrange
+        mock_pr_service.get_open_prs_for_project.return_value = []
+
+        # Act
+        selected, result = reviewer_service.find_available_reviewer(
+            no_reviewer_config, "claudestep", "test-project"
+        )
+
+        # Assert
+        assert selected is None  # No reviewer assigned
+        assert result.selected_reviewer is None
+        assert result.all_at_capacity is False  # Has capacity
+
+    def test_no_reviewers_at_capacity(
+        self, no_reviewer_config, reviewer_service, mock_pr_service
+    ):
+        """Should block PR creation when project has open PR at limit"""
+        # Arrange - 1 open PR, limit is 1
+        mock_pr_service.get_open_prs_for_project.return_value = [
+            create_github_pr(101, None, "00000001", project="test-project")
+        ]
+
+        # Act
+        selected, result = reviewer_service.find_available_reviewer(
+            no_reviewer_config, "claudestep", "test-project"
+        )
+
+        # Assert
+        assert selected is None  # No reviewer
+        assert result.all_at_capacity is True  # At capacity
+
+    def test_no_reviewers_calls_get_open_prs_for_project(
+        self, no_reviewer_config, reviewer_service, mock_pr_service
+    ):
+        """Should call get_open_prs_for_project to check project capacity"""
+        # Arrange
+        mock_pr_service.get_open_prs_for_project.return_value = []
+
+        # Act
+        reviewer_service.find_available_reviewer(
+            no_reviewer_config, "claudestep", "test-project"
+        )
+
+        # Assert
+        mock_pr_service.get_open_prs_for_project.assert_called_once_with(
+            "test-project", label="claudestep"
+        )
+        # Should NOT call get_reviewer_prs_for_project since no reviewers
+        mock_pr_service.get_reviewer_prs_for_project.assert_not_called()
+
+    def test_no_reviewers_result_includes_project_info(
+        self, no_reviewer_config, reviewer_service, mock_pr_service
+    ):
+        """Should include project capacity info in result"""
+        # Arrange
+        mock_pr_service.get_open_prs_for_project.return_value = []
+
+        # Act
+        selected, result = reviewer_service.find_available_reviewer(
+            no_reviewer_config, "claudestep", "test-project"
+        )
+
+        # Assert
+        assert len(result.reviewers_status) == 1
+        project_status = result.reviewers_status[0]
+        assert project_status["username"] == "(project: test-project)"
+        assert project_status["max_prs"] == 1  # DEFAULT_PROJECT_PR_LIMIT
+        assert project_status["open_count"] == 0
+        assert project_status["has_capacity"] is True

@@ -103,6 +103,7 @@ class TestPrepareBaseBranchResolution:
             mock_reviewer_service = Mock()
             mock_capacity_result = Mock()
             mock_capacity_result.format_summary.return_value = "## Reviewer Capacity Check\n✅ reviewer1 (0/3)"
+            mock_capacity_result.all_at_capacity = False  # Has capacity
             mock_reviewer_service.find_available_reviewer.return_value = ("reviewer1", mock_capacity_result)
             mock_reviewer_service_class.return_value = mock_reviewer_service
 
@@ -163,6 +164,7 @@ class TestPrepareBaseBranchResolution:
             mock_reviewer_service = Mock()
             mock_capacity_result = Mock()
             mock_capacity_result.format_summary.return_value = "## Reviewer Capacity Check\n✅ reviewer1 (0/3)"
+            mock_capacity_result.all_at_capacity = False  # Has capacity
             mock_reviewer_service.find_available_reviewer.return_value = ("reviewer1", mock_capacity_result)
             mock_reviewer_service_class.return_value = mock_reviewer_service
 
@@ -224,6 +226,7 @@ class TestPrepareBaseBranchResolution:
             mock_reviewer_service = Mock()
             mock_capacity_result = Mock()
             mock_capacity_result.format_summary.return_value = "## Reviewer Capacity Check\n✅ reviewer1 (0/3)"
+            mock_capacity_result.all_at_capacity = False  # Has capacity
             mock_reviewer_service.find_available_reviewer.return_value = ("reviewer1", mock_capacity_result)
             mock_reviewer_service_class.return_value = mock_reviewer_service
 
@@ -293,6 +296,7 @@ class TestPrepareBaseBranchResolution:
             mock_reviewer_service = Mock()
             mock_capacity_result = Mock()
             mock_capacity_result.format_summary.return_value = "## Reviewer Capacity Check\n✅ reviewer1 (0/3)"
+            mock_capacity_result.all_at_capacity = False  # Has capacity
             mock_reviewer_service.find_available_reviewer.return_value = ("reviewer1", mock_capacity_result)
             mock_reviewer_service_class.return_value = mock_reviewer_service
 

@@ -205,11 +205,11 @@ class TestProjectFindAll:
         base_dir = tmp_path / "claude-step"
         base_dir.mkdir()
 
-        # Create valid projects
+        # Create valid projects (projects are discovered by spec.md)
         for project_name in ["project-a", "project-b", "project-c"]:
             project_dir = base_dir / project_name
             project_dir.mkdir()
-            (project_dir / "configuration.yml").write_text("reviewers: []")
+            (project_dir / "spec.md").write_text("- [ ] Task 1")
 
         # Act
         projects = Project.find_all(str(base_dir))
@@ -231,7 +231,7 @@ class TestProjectFindAll:
         for project_name in ["zebra", "alpha", "middle"]:
             project_dir = base_dir / project_name
             project_dir.mkdir()
-            (project_dir / "configuration.yml").write_text("reviewers: []")
+            (project_dir / "spec.md").write_text("- [ ] Task 1")
 
         # Act
         projects = Project.find_all(str(base_dir))
@@ -240,20 +240,69 @@ class TestProjectFindAll:
         assert len(projects) == 3
         assert [p.name for p in projects] == ["alpha", "middle", "zebra"]
 
-    def test_find_all_ignores_directories_without_config(self, tmp_path):
-        """Should ignore directories without configuration.yml"""
+    def test_find_all_ignores_directories_without_spec(self, tmp_path):
+        """Should ignore directories without spec.md"""
         # Arrange
         base_dir = tmp_path / "claude-step"
         base_dir.mkdir()
 
-        # Valid project
+        # Valid project (has spec.md)
         valid_project = base_dir / "valid-project"
         valid_project.mkdir()
-        (valid_project / "configuration.yml").write_text("reviewers: []")
+        (valid_project / "spec.md").write_text("- [ ] Task 1")
 
-        # Invalid projects (no config file)
+        # Invalid projects (no spec.md file)
         (base_dir / "invalid-project-1").mkdir()
         (base_dir / "invalid-project-2").mkdir()
+
+        # Act
+        projects = Project.find_all(str(base_dir))
+
+        # Assert
+        assert len(projects) == 1
+        assert projects[0].name == "valid-project"
+
+    def test_find_all_discovers_projects_without_config(self, tmp_path):
+        """Should discover projects that have spec.md but no configuration.yml"""
+        # Arrange
+        base_dir = tmp_path / "claude-step"
+        base_dir.mkdir()
+
+        # Project with spec.md only (no configuration.yml)
+        project_dir = base_dir / "spec-only-project"
+        project_dir.mkdir()
+        (project_dir / "spec.md").write_text("- [ ] Task 1")
+
+        # Project with both spec.md and configuration.yml
+        full_project_dir = base_dir / "full-project"
+        full_project_dir.mkdir()
+        (full_project_dir / "spec.md").write_text("- [ ] Task 1")
+        (full_project_dir / "configuration.yml").write_text("reviewers: []")
+
+        # Act
+        projects = Project.find_all(str(base_dir))
+
+        # Assert
+        assert len(projects) == 2
+        project_names = [p.name for p in projects]
+        assert "spec-only-project" in project_names
+        assert "full-project" in project_names
+
+    def test_find_all_ignores_directories_with_only_config(self, tmp_path):
+        """Should ignore directories that have configuration.yml but no spec.md"""
+        # Arrange
+        base_dir = tmp_path / "claude-step"
+        base_dir.mkdir()
+
+        # Directory with only configuration.yml (not a valid project)
+        config_only_dir = base_dir / "config-only"
+        config_only_dir.mkdir()
+        (config_only_dir / "configuration.yml").write_text("reviewers: []")
+
+        # Valid project with spec.md
+        valid_project = base_dir / "valid-project"
+        valid_project.mkdir()
+        (valid_project / "spec.md").write_text("- [ ] Task 1")
 
         # Act
         projects = Project.find_all(str(base_dir))
@@ -271,7 +320,7 @@ class TestProjectFindAll:
         # Create a valid project
         project_dir = base_dir / "my-project"
         project_dir.mkdir()
-        (project_dir / "configuration.yml").write_text("reviewers: []")
+        (project_dir / "spec.md").write_text("- [ ] Task 1")
 
         # Create some files that should be ignored
         (base_dir / "README.md").write_text("# Readme")
@@ -303,7 +352,7 @@ class TestProjectFindAll:
 
         project_dir = custom_dir / "my-project"
         project_dir.mkdir()
-        (project_dir / "configuration.yml").write_text("reviewers: []")
+        (project_dir / "spec.md").write_text("- [ ] Task 1")
 
         # Act
         projects = Project.find_all(str(custom_dir))

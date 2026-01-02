@@ -3,7 +3,97 @@
 import pytest
 
 from claudestep.domain.project import Project
-from claudestep.domain.project_configuration import Reviewer, ProjectConfiguration
+from claudestep.domain.project_configuration import (
+    Reviewer,
+    ProjectConfiguration,
+    DEFAULT_PROJECT_PR_LIMIT,
+)
+
+
+class TestDefaultProjectPRLimit:
+    """Test suite for DEFAULT_PROJECT_PR_LIMIT constant"""
+
+    def test_default_project_pr_limit_is_one(self):
+        """Should have default PR limit of 1 for projects without reviewers"""
+        assert DEFAULT_PROJECT_PR_LIMIT == 1
+
+
+class TestProjectConfigurationDefault:
+    """Test suite for ProjectConfiguration.default factory method"""
+
+    def test_default_creates_config_with_empty_reviewers(self):
+        """Should create config with empty reviewers list"""
+        # Arrange
+        project = Project("my-project")
+
+        # Act
+        config = ProjectConfiguration.default(project)
+
+        # Assert
+        assert config.reviewers == []
+
+    def test_default_creates_config_with_no_base_branch(self):
+        """Should create config with no base branch override"""
+        # Arrange
+        project = Project("my-project")
+
+        # Act
+        config = ProjectConfiguration.default(project)
+
+        # Assert
+        assert config.base_branch is None
+
+    def test_default_preserves_project_reference(self):
+        """Should preserve the project reference"""
+        # Arrange
+        project = Project("my-project")
+
+        # Act
+        config = ProjectConfiguration.default(project)
+
+        # Assert
+        assert config.project == project
+        assert config.project.name == "my-project"
+
+    def test_default_get_base_branch_returns_workflow_default(self):
+        """Default config should fall back to workflow's default base branch"""
+        # Arrange
+        project = Project("my-project")
+        config = ProjectConfiguration.default(project)
+
+        # Act
+        base_branch = config.get_base_branch("main")
+
+        # Assert
+        assert base_branch == "main"
+
+    def test_default_get_reviewer_usernames_returns_empty_list(self):
+        """Default config should return empty reviewer list"""
+        # Arrange
+        project = Project("my-project")
+        config = ProjectConfiguration.default(project)
+
+        # Act
+        usernames = config.get_reviewer_usernames()
+
+        # Assert
+        assert usernames == []
+
+    def test_default_to_dict_format(self):
+        """Default config should serialize correctly"""
+        # Arrange
+        project = Project("my-project")
+        config = ProjectConfiguration.default(project)
+
+        # Act
+        result = config.to_dict()
+
+        # Assert
+        assert result == {
+            "project": "my-project",
+            "reviewers": []
+        }
+        assert "baseBranch" not in result
 
 
 class TestReviewerInitialization:
