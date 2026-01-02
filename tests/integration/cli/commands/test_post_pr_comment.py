@@ -112,13 +112,28 @@ class TestCmdPostPrComment:
 
     @pytest.fixture
     def create_execution_file(self, tmp_path):
-        """Helper to create execution files with cost data"""
+        """Helper to create execution files with cost data.
+
+        Creates files with modelUsage so calculated_cost works.
+        Uses Haiku 3 rate ($0.25/MTok) and input tokens only.
+        """
         counter = [0]  # Use list for mutable closure
 
         def _create(cost: float):
             counter[0] += 1
             exec_file = tmp_path / f"exec_{counter[0]}_{cost}.json"
-            exec_file.write_text(json.dumps({"total_cost_usd": cost}))
+            # Calculate input tokens needed for target cost at Haiku 3 rate
+            # cost = input_tokens * 0.25 / 1_000_000
+            # input_tokens = cost * 4_000_000
+            input_tokens = int(cost * 4_000_000)
+            exec_file.write_text(json.dumps({
+                "total_cost_usd": cost,  # File cost (not used)
+                "modelUsage": {
+                    "claude-3-haiku-20240307": {
+                        "inputTokens": input_tokens,
+                    }
+                }
+            }))
             return str(exec_file)
         return _create
 

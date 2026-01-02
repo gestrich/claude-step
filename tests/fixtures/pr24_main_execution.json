@@ -1,0 +1,23 @@
+{
+  "total_cost_usd": 0.170020,
+  "modelUsage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 4271,
+      "outputTokens": 389,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 12299,
+      "costUSD": 0.02158975,
+      "webSearchRequests": 0,
+      "contextWindow": 200000
+    },
+    "claude-3-haiku-20240307": {
+      "inputTokens": 15,
+      "outputTokens": 426,
+      "cacheReadInputTokens": 90755,
+      "cacheCreationInputTokens": 30605,
+      "costUSD": 0.14843025,
+      "webSearchRequests": 0,
+      "contextWindow": 200000
+    }
+  }
+}

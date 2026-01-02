@@ -218,6 +218,176 @@ Optional parameters are acceptable only when they represent:
 - Configuration that should flow from the caller
 - Cases where `None` has ambiguous meaning
 
+## Fail Fast: Avoid Silent Failures
+
+### Principle: Treat Abnormal Cases as Errors, Not Empty Data
+
+When a value is missing, invalid, or unexpected, **raise an exception** rather than silently returning empty data structures or default values. Missing values are often errors that should be surfaced, not hidden.
+
+### Anti-Pattern (❌ Avoid)
+
+```python
+# BAD: Silently returning empty data when something is wrong
+def get_user_config(user_id: str) -> dict:
+    result = database.query(f"SELECT * FROM configs WHERE user_id = '{user_id}'")
+    if not result:
+        return {}  # ❌ Caller won't know if user doesn't exist or has no config
+
+def parse_task_list(content: str) -> list[Task]:
+    if not content:
+        return []  # ❌ Was the file empty, or did we fail to read it?
+
+def get_reviewer(pr_number: int) -> Optional[str]:
+    pr = api.get_pull_request(pr_number)
+    if pr is None:
+        return None  # ❌ Did PR not exist, or was there an API error?
+    return pr.get("reviewer")  # ❌ Returns None if key missing - is that valid?
+
+# BAD: Using .get() with defaults to mask missing required fields
+def process_config(config: dict) -> Settings:
+    return Settings(
+        timeout=config.get("timeout", 30),  # ❌ Is 30 the right default, or should timeout be required?
+        retries=config.get("retries", 3),   # ❌ Masks missing configuration
+        api_key=config.get("api_key", ""),  # ❌ Empty string will fail later with confusing error
+    )
+```
+
+**Problems with silent failures:**
+- **Hidden bugs**: Caller proceeds with empty/default data, causing failures elsewhere
+- **Difficult debugging**: Error surfaces far from the root cause
+- **Ambiguous meaning**: Can't distinguish "no data" from "error fetching data"
+- **False confidence**: Code appears to work but produces incorrect results
+- **Lost context**: By the time the error manifests, the original cause is unknown
+
+### Recommended Pattern (✅ Use This)
+
+```python
+# GOOD: Raise exceptions for abnormal cases
+def get_user_config(user_id: str) -> dict:
+    result = database.query(f"SELECT * FROM configs WHERE user_id = '{user_id}'")
+    if not result:
+        raise UserNotFoundError(f"No configuration found for user: {user_id}")
+    return result
+
+def parse_task_list(content: str) -> list[Task]:
+    if not content:
+        raise ValueError("Cannot parse empty content - file may be missing or unreadable")
+    # Parse and return tasks...
+
+def get_reviewer(pr_number: int) -> str:
+    pr = api.get_pull_request(pr_number)
+    if pr is None:
+        raise PullRequestNotFoundError(f"PR #{pr_number} not found")
+    if "reviewer" not in pr:
+        raise InvalidPRDataError(f"PR #{pr_number} has no reviewer assigned")
+    return pr["reviewer"]
+
+# GOOD: Validate required fields explicitly
+def process_config(config: dict) -> Settings:
+    required_fields = ["timeout", "retries", "api_key"]
+    missing = [f for f in required_fields if f not in config]
+    if missing:
+        raise ConfigurationError(f"Missing required config fields: {missing}")
+
+    if not config["api_key"]:
+        raise ConfigurationError("api_key cannot be empty")
+
+    return Settings(
+        timeout=config["timeout"],
+        retries=config["retries"],
+        api_key=config["api_key"],
+    )
+```
+
+### When Empty/Default Values Are Acceptable
+
+Empty or default values are appropriate only when they represent **valid business states**, not error conditions:
+
+```python
+# ✅ OK: Empty list means "no items match filter" (valid state)
+def find_open_tasks(tasks: list[Task]) -> list[Task]:
+    return [t for t in tasks if not t.is_completed]
+
+# ✅ OK: Optional field that genuinely may not exist
+def get_pr_description(pr: PullRequest) -> Optional[str]:
+    return pr.description  # None means "no description provided" - valid state
+
+# ✅ OK: Default for truly optional behavior
+def format_output(data: dict, include_timestamps: bool = False) -> str:
+    # include_timestamps is optional enhancement, False is sensible default
+    ...
+```
+
+### Distinguishing Valid Empty States from Errors
+
+Ask yourself: **"Would an empty result surprise the caller and cause problems downstream?"**
+
+| Scenario | Empty/Default OK? | Recommended Approach |
+|----------|------------------|---------------------|
+| Query returns no matching records | ✅ Yes | Return empty list |
+| Required config file is missing | ❌ No | Raise `FileNotFoundError` |
+| API call fails | ❌ No | Raise exception with details |
+| Optional field not provided | ✅ Yes | Return `None` or default |
+| Required field missing from response | ❌ No | Raise `ValueError` |
+| User has no assigned tasks | ✅ Yes | Return empty list |
+| User account doesn't exist | ❌ No | Raise `UserNotFoundError` |
+
+### Benefits of Fail-Fast
+
+✅ **Immediate feedback**: Errors caught at the source, not downstream
+
+✅ **Clear error messages**: Exception describes exactly what went wrong
+
+✅ **Easier debugging**: Stack trace points to the actual problem
+
+✅ **Explicit contracts**: Function signature and behavior are unambiguous
+
+✅ **No hidden state**: Caller always knows if operation succeeded
+
+✅ **Prevents data corruption**: Invalid states don't propagate through the system
+
+### Custom Exception Classes
+
+Define specific exceptions to make error handling clear:
+
+```python
+# domain/exceptions.py
+class ClaudeStepError(Exception):
+    """Base exception for ClaudeStep errors."""
+    pass
+
+class ConfigurationError(ClaudeStepError):
+    """Raised when configuration is invalid or missing."""
+    pass
+
+class ProjectNotFoundError(ClaudeStepError):
+    """Raised when a project doesn't exist."""
+    pass
+
+class TaskNotFoundError(ClaudeStepError):
+    """Raised when a task doesn't exist."""
+    pass
+
+# Usage
+def get_project(name: str) -> Project:
+    project = self.repository.find_by_name(name)
+    if project is None:
+        raise ProjectNotFoundError(f"Project '{name}' not found")
+    return project
+```
+
+### Checklist
+
+When writing code that handles potentially missing data:
+
+- [ ] Would an empty result indicate an error or a valid state?
+- [ ] Will the caller be able to proceed meaningfully with empty/default data?
+- [ ] Could this silent failure cause problems downstream?
+- [ ] Is the default value truly sensible, or just convenient?
+- [ ] Would I want to know immediately if this value was missing?
+
+**When in doubt, raise an exception.** It's easier to catch and handle an exception than to debug silent failures.
+
 ## Configuration Defaults and Flow
 
 ### Principle: Configuration Should Flow Downward, Avoid Defaults

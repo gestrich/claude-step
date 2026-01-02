@@ -7,7 +7,14 @@ from pathlib import Path
 
 import pytest
 
-from claudestep.domain.cost_breakdown import CostBreakdown, ExecutionUsage, ModelUsage
+from claudestep.domain.cost_breakdown import (
+    CostBreakdown,
+    ExecutionUsage,
+    MODEL_RATES,
+    ModelUsage,
+    UnknownModelError,
+    get_rate_for_model,
+)
 
 
 class TestCostBreakdownConstruction:
@@ -49,14 +56,31 @@ class TestCostBreakdownFromExecutionFiles:
     """Test suite for CostBreakdown.from_execution_files() class method"""
 
     def test_from_execution_files_with_valid_files(self):
-        """Should parse costs from valid execution files"""
+        """Should parse and calculate costs from valid execution files"""
         # Arrange
         with tempfile.TemporaryDirectory() as tmpdir:
             main_file = Path(tmpdir) / "main.json"
             summary_file = Path(tmpdir) / "summary.json"
 
-            main_file.write_text(json.dumps({"total_cost_usd": 1.5}))
-            summary_file.write_text(json.dumps({"total_cost_usd": 0.5}))
+            # Files with modelUsage so calculated_cost works
+            # 1M input tokens at Haiku rate $0.25/MTok = $0.25
+            main_file.write_text(json.dumps({
+                "total_cost_usd": 1.5,  # File cost (ignored)
+                "modelUsage": {
+                    "claude-3-haiku-20240307": {
+                        "inputTokens": 1_000_000,
+                    }
+                }
+            }))
+            # 500k input tokens at Haiku rate = $0.125
+            summary_file.write_text(json.dumps({
+                "total_cost_usd": 0.5,  # File cost (ignored)
+                "modelUsage": {
+                    "claude-3-haiku-20240307": {
+                        "inputTokens": 500_000,
+                    }
+                }
+            }))
 
             # Act
             breakdown = CostBreakdown.from_execution_files(
@@ -64,10 +88,10 @@ class TestCostBreakdownFromExecutionFiles:
                 str(summary_file)
             )
 
-            # Assert
-            assert breakdown.main_cost == 1.5
-            assert breakdown.summary_cost == 0.5
-            assert breakdown.total_cost == 2.0
+            # Assert - uses calculated_cost, not file's total_cost_usd
+            assert breakdown.main_cost == pytest.approx(0.25)
+            assert breakdown.summary_cost == pytest.approx(0.125)
+            assert breakdown.total_cost == pytest.approx(0.375)
 
     def test_from_execution_files_raises_on_missing_files(self):
         """Should raise FileNotFoundError when files don't exist"""
@@ -93,12 +117,32 @@ class TestCostBreakdownFromExecutionFiles:
 
             # List with multiple entries - should use the last one with cost
             main_file.write_text(json.dumps([
-                {"total_cost_usd": 0.5},
-                {"total_cost_usd": 1.5},  # This should be used
+                {
+                    "total_cost_usd": 0.5,
+                    "modelUsage": {
+                        "claude-3-haiku-20240307": {"inputTokens": 100_000}
+                    }
+                },
+                {
+                    "total_cost_usd": 1.5,  # Last one with cost is used
+                    "modelUsage": {
+                        "claude-3-haiku-20240307": {"inputTokens": 1_000_000}  # $0.25
+                    }
+                },
             ]))
             summary_file.write_text(json.dumps([
-                {"total_cost_usd": 0.3},
-                {"total_cost_usd": 0.7},  # This should be used
+                {
+                    "total_cost_usd": 0.3,
+                    "modelUsage": {
+                        "claude-3-haiku-20240307": {"inputTokens": 100_000}
+                    }
+                },
+                {
+                    "total_cost_usd": 0.7,  # Last one with cost is used
+                    "modelUsage": {
+                        "claude-3-haiku-20240307": {"inputTokens": 400_000}  # $0.10
+                    }
+                },
             ]))
 
             # Act
@@ -107,9 +151,9 @@ class TestCostBreakdownFromExecutionFiles:
                 str(summary_file)
             )
 
-            # Assert
-            assert breakdown.main_cost == 1.5
-            assert breakdown.summary_cost == 0.7
+            # Assert - uses calculated_cost from modelUsage
+            assert breakdown.main_cost == pytest.approx(0.25)
+            assert breakdown.summary_cost == pytest.approx(0.10)
 
 
 class TestModelUsage:
@@ -696,9 +740,9 @@ class TestCostBreakdownWithTokens:
             summary_file = Path(tmpdir) / "summary.json"
 
             main_file.write_text(json.dumps({
-                "total_cost_usd": 1.5,
+                "total_cost_usd": 1.5,  # File cost (ignored)
                 "modelUsage": {
-                    "claude-haiku": {
+                    "claude-3-haiku-20240307": {
                         "inputTokens": 1000,
                         "outputTokens": 500,
                         "cacheReadInputTokens": 2000,
@@ -707,9 +751,9 @@ class TestCostBreakdownWithTokens:
                 },
             }))
             summary_file.write_text(json.dumps({
-                "total_cost_usd": 0.5,
+                "total_cost_usd": 0.5,  # File cost (ignored)
                 "modelUsage": {
-                    "claude-haiku": {
+                    "claude-3-haiku-20240307": {
                         "inputTokens": 200,
                         "outputTokens": 100,
                         "cacheReadInputTokens": 400,
@@ -724,23 +768,27 @@ class TestCostBreakdownWithTokens:
                 str(summary_file)
             )
 
-            # Assert
-            assert breakdown.main_cost == 1.5
-            assert breakdown.summary_cost == 0.5
+            # Assert - costs are calculated, not from file
+            # Main: (1000*0.25 + 500*1.25 + 300*0.3125 + 2000*0.025) / 1M
+            #     = (250 + 625 + 93.75 + 50) / 1M = 0.00101875
+            # Summary: (200*0.25 + 100*1.25 + 50*0.3125 + 400*0.025) / 1M
+            #        = (50 + 125 + 15.625 + 10) / 1M = 0.000200625
+            assert breakdown.main_cost == pytest.approx(0.00101875)
+            assert breakdown.summary_cost == pytest.approx(0.000200625)
             # Tokens should be summed from both files
             assert breakdown.input_tokens == 1000 + 200
             assert breakdown.output_tokens == 500 + 100
             assert breakdown.cache_read_tokens == 2000 + 400
             assert breakdown.cache_write_tokens == 300 + 50
 
-    def test_from_execution_files_backward_compatible_without_model_usage(self):
-        """Should work with execution files that don't have modelUsage (backward compat)"""
+    def test_from_execution_files_without_model_usage_returns_zero_cost(self):
+        """Should return zero cost when modelUsage is missing"""
         # Arrange
         with tempfile.TemporaryDirectory() as tmpdir:
             main_file = Path(tmpdir) / "main.json"
             summary_file = Path(tmpdir) / "summary.json"
 
-            # Files without modelUsage (old format)
+            # Files without modelUsage - no tokens means no calculated cost
             main_file.write_text(json.dumps({"total_cost_usd": 1.5}))
             summary_file.write_text(json.dumps({"total_cost_usd": 0.5}))
 
@@ -750,9 +798,9 @@ class TestCostBreakdownWithTokens:
                 str(summary_file)
             )
 
-            # Assert
-            assert breakdown.main_cost == 1.5
-            assert breakdown.summary_cost == 0.5
+            # Assert - calculated_cost is 0 when no modelUsage
+            assert breakdown.main_cost == 0.0
+            assert breakdown.summary_cost == 0.0
             # Tokens should be zero
             assert breakdown.input_tokens == 0
             assert breakdown.output_tokens == 0
@@ -776,3 +824,326 @@ class TestCostBreakdownWithTokens:
 
         # Assert
         assert total == 100 + 50 + 200 + 30
+
+
+class TestGetRateForModel:
+    """Test suite for get_rate_for_model() function"""
+
+    def test_haiku_3_rate(self):
+        """Should return Haiku 3 rate for claude-3-haiku models"""
+        assert get_rate_for_model("claude-3-haiku-20240307") == 0.25
+        assert get_rate_for_model("Claude-3-Haiku-20240307") == 0.25
+
+    def test_haiku_4_rate(self):
+        """Should return Haiku 4 rate for claude-haiku-4 models"""
+        assert get_rate_for_model("claude-haiku-4-5-20251001") == 1.00
+        assert get_rate_for_model("claude-haiku-4-20250101") == 1.00
+
+    def test_sonnet_35_rate(self):
+        """Should return Sonnet 3.5 rate for claude-3-5-sonnet models"""
+        assert get_rate_for_model("claude-3-5-sonnet-20241022") == 3.00
+
+    def test_sonnet_4_rate(self):
+        """Should return Sonnet 4 rate for claude-sonnet-4 models"""
+        assert get_rate_for_model("claude-sonnet-4-20250514") == 3.00
+
+    def test_opus_4_rate(self):
+        """Should return Opus 4 rate for claude-opus-4 models"""
+        assert get_rate_for_model("claude-opus-4-20250514") == 15.00
+
+    def test_unknown_model_raises_error(self):
+        """Should raise UnknownModelError for unknown models"""
+        with pytest.raises(UnknownModelError, match="Unknown model 'unknown-model'"):
+            get_rate_for_model("unknown-model")
+
+        with pytest.raises(UnknownModelError, match="Unknown model 'gpt-4'"):
+            get_rate_for_model("gpt-4")
+
+    def test_case_insensitive(self):
+        """Should match model names case-insensitively"""
+        assert get_rate_for_model("CLAUDE-3-HAIKU-20240307") == 0.25
+        assert get_rate_for_model("Claude-Haiku-4-5-20251001") == 1.00
+
+
+class TestModelUsageCalculateCost:
+    """Test suite for ModelUsage.calculate_cost() method"""
+
+    def test_calculate_cost_haiku_3(self):
+        """Should calculate cost correctly for Haiku 3"""
+        # Arrange - 1M input tokens at $0.25/MTok = $0.25
+        usage = ModelUsage(
+            model="claude-3-haiku-20240307",
+            input_tokens=1_000_000,
+            output_tokens=0,
+            cache_read_tokens=0,
+            cache_write_tokens=0,
+        )
+
+        # Act
+        cost = usage.calculate_cost()
+
+        # Assert
+        assert cost == pytest.approx(0.25)
+
+    def test_calculate_cost_with_output_tokens(self):
+        """Should calculate output tokens at 5x input rate"""
+        # Arrange - 1M output tokens at $0.25 * 5 = $1.25
+        usage = ModelUsage(
+            model="claude-3-haiku-20240307",
+            input_tokens=0,
+            output_tokens=1_000_000,
+            cache_read_tokens=0,
+            cache_write_tokens=0,
+        )
+
+        # Act
+        cost = usage.calculate_cost()
+
+        # Assert
+        assert cost == pytest.approx(1.25)
+
+    def test_calculate_cost_with_cache_write(self):
+        """Should calculate cache write tokens at 1.25x input rate"""
+        # Arrange - 1M cache write tokens at $0.25 * 1.25 = $0.3125
+        usage = ModelUsage(
+            model="claude-3-haiku-20240307",
+            input_tokens=0,
+            output_tokens=0,
+            cache_read_tokens=0,
+            cache_write_tokens=1_000_000,
+        )
+
+        # Act
+        cost = usage.calculate_cost()
+
+        # Assert
+        assert cost == pytest.approx(0.3125)
+
+    def test_calculate_cost_with_cache_read(self):
+        """Should calculate cache read tokens at 0.1x input rate"""
+        # Arrange - 1M cache read tokens at $0.25 * 0.1 = $0.025
+        usage = ModelUsage(
+            model="claude-3-haiku-20240307",
+            input_tokens=0,
+            output_tokens=0,
+            cache_read_tokens=1_000_000,
+            cache_write_tokens=0,
+        )
+
+        # Act
+        cost = usage.calculate_cost()
+
+        # Assert
+        assert cost == pytest.approx(0.025)
+
+    def test_calculate_cost_combined(self):
+        """Should calculate combined cost correctly"""
+        # Arrange
+        usage = ModelUsage(
+            model="claude-3-haiku-20240307",
+            input_tokens=100_000,      # $0.025
+            output_tokens=50_000,      # $0.0625
+            cache_read_tokens=200_000,  # $0.005
+            cache_write_tokens=30_000,  # $0.009375
+        )
+        # Total: $0.101875
+
+        # Act
+        cost = usage.calculate_cost()
+
+        # Assert
+        assert cost == pytest.approx(0.101875)
+
+    def test_calculate_cost_sonnet_4(self):
+        """Should calculate cost correctly for Sonnet 4"""
+        # Arrange - 1M input tokens at $3.00/MTok = $3.00
+        usage = ModelUsage(
+            model="claude-sonnet-4-20250514",
+            input_tokens=1_000_000,
+            output_tokens=0,
+            cache_read_tokens=0,
+            cache_write_tokens=0,
+        )
+
+        # Act
+        cost = usage.calculate_cost()
+
+        # Assert
+        assert cost == pytest.approx(3.00)
+
+
+class TestExecutionUsageCalculatedCost:
+    """Test suite for ExecutionUsage.calculated_cost property"""
+
+    def test_calculated_cost_single_model(self):
+        """Should calculate cost for single model"""
+        # Arrange
+        models = [
+            ModelUsage(
+                model="claude-3-haiku-20240307",
+                input_tokens=1_000_000,
+            )
+        ]
+        usage = ExecutionUsage(models=models)
+
+        # Act
+        cost = usage.calculated_cost
+
+        # Assert
+        assert cost == pytest.approx(0.25)
+
+    def test_calculated_cost_multiple_models(self):
+        """Should sum costs across multiple models"""
+        # Arrange
+        models = [
+            ModelUsage(
+                model="claude-3-haiku-20240307",
+                input_tokens=1_000_000,  # $0.25
+            ),
+            ModelUsage(
+                model="claude-sonnet-4-20250514",
+                input_tokens=1_000_000,  # $3.00
+            ),
+        ]
+        usage = ExecutionUsage(models=models)
+
+        # Act
+        cost = usage.calculated_cost
+
+        # Assert
+        assert cost == pytest.approx(3.25)
+
+    def test_calculated_cost_empty_models(self):
+        """Should return 0 for empty models list"""
+        # Arrange
+        usage = ExecutionUsage(models=[])
+
+        # Act
+        cost = usage.calculated_cost
+
+        # Assert
+        assert cost == 0.0
+
+    def test_calculated_cost_differs_from_file_cost(self):
+        """Should calculate differently from inaccurate file cost"""
+        # Arrange - file says $0.148 but actual should be ~$0.033
+        models = [
+            ModelUsage(
+                model="claude-3-haiku-20240307",
+                input_tokens=15,
+                output_tokens=426,
+                cache_read_tokens=90755,
+                cache_write_tokens=30605,
+            )
+        ]
+        usage = ExecutionUsage(models=models, total_cost_usd=0.14843025)
+
+        # Act
+        file_cost = usage.cost  # From file
+        calculated = usage.calculated_cost  # Our calculation
+
+        # Assert - calculated cost should be much lower for Haiku
+        assert file_cost == pytest.approx(0.14843025)
+        # Formula: (15 * 0.25) + (426 * 1.25) + (30605 * 0.3125) + (90755 * 0.025) / 1M
+        # = 0.00000375 + 0.000532 + 0.00956 + 0.00227 = 0.01237 ≈ $0.012
+        assert calculated < file_cost  # Calculated should be less than inflated file cost
+        assert calculated == pytest.approx(0.01237, rel=0.01)
+
+
+class TestRealWorkflowData:
+    """Test suite using real workflow data from gestrich/swift-lambda-sample PR #24"""
+
+    @pytest.fixture
+    def pr24_main_file(self):
+        """Path to PR #24 main execution fixture"""
+        return Path(__file__).parent.parent.parent / "fixtures" / "pr24_main_execution.json"
+
+    @pytest.fixture
+    def pr24_summary_file(self):
+        """Path to PR #24 summary execution fixture"""
+        return Path(__file__).parent.parent.parent / "fixtures" / "pr24_summary_execution.json"
+
+    def test_main_execution_calculated_cost(self, pr24_main_file):
+        """Should calculate correct cost for main execution from real workflow data"""
+        # Arrange
+        usage = ExecutionUsage.from_execution_file(str(pr24_main_file))
+
+        # Act
+        calculated = usage.calculated_cost
+        file_cost = usage.cost
+
+        # Assert - file cost is inflated due to wrong rates
+        assert file_cost == pytest.approx(0.170020, rel=0.01)
+        # Our calculated cost should be accurate:
+        # claude-haiku-4-5: (4271*1.00 + 389*5.00 + 12299*1.25 + 0*0.10) / 1M = 0.02158975
+        # claude-3-haiku: (15*0.25 + 426*1.25 + 30605*0.3125 + 90755*0.025) / 1M = 0.012369188
+        # Total: 0.033958938
+        assert calculated == pytest.approx(0.033959, rel=0.01)
+        # Overcharge factor should be ~5x
+        assert file_cost / calculated == pytest.approx(5.0, rel=0.1)
+
+    def test_summary_execution_calculated_cost(self, pr24_summary_file):
+        """Should calculate correct cost for summary execution from real workflow data"""
+        # Arrange
+        usage = ExecutionUsage.from_execution_file(str(pr24_summary_file))
+
+        # Act
+        calculated = usage.calculated_cost
+        file_cost = usage.cost
+
+        # Assert - file cost is inflated
+        assert file_cost == pytest.approx(0.091275, rel=0.01)
+        # Our calculated cost:
+        # claude-haiku-4-5: (3*1.00 + 208*5.00 + 12247*1.25 + 0*0.10) / 1M = 0.01635175
+        # claude-3-haiku: (6*0.25 + 303*1.25 + 15204*0.3125 + 44484*0.025) / 1M = 0.006244850
+        # Total: 0.022596600
+        assert calculated == pytest.approx(0.022597, rel=0.01)
+        # Overcharge factor should be ~4x
+        assert file_cost / calculated == pytest.approx(4.0, rel=0.2)
+
+    def test_combined_cost_breakdown(self, pr24_main_file, pr24_summary_file):
+        """Should calculate correct total cost from both execution files"""
+        # Arrange
+        breakdown = CostBreakdown.from_execution_files(
+            str(pr24_main_file),
+            str(pr24_summary_file)
+        )
+
+        # Act & Assert
+        # Main: $0.033959, Summary: $0.022597, Total: $0.056556
+        assert breakdown.main_cost == pytest.approx(0.033959, rel=0.01)
+        assert breakdown.summary_cost == pytest.approx(0.022597, rel=0.01)
+        assert breakdown.total_cost == pytest.approx(0.056556, rel=0.01)
+
+        # Token totals
+        assert breakdown.input_tokens == 4271 + 15 + 3 + 6  # 4295
+        assert breakdown.output_tokens == 389 + 426 + 208 + 303  # 1326
+        assert breakdown.cache_read_tokens == 0 + 90755 + 0 + 44484  # 135239
+        assert breakdown.cache_write_tokens == 12299 + 30605 + 12247 + 15204  # 70355
+
+    def test_github_format_with_real_data(self, pr24_main_file, pr24_summary_file):
+        """Should format real workflow data correctly for GitHub comment"""
+        # Arrange
+        breakdown = CostBreakdown.from_execution_files(
+            str(pr24_main_file),
+            str(pr24_summary_file)
+        )
+
+        # Act
+        result = breakdown.format_for_github("gestrich/swift-lambda-sample", "20658904611")
+
+        # Assert - should show our calculated costs, not inflated file costs
+        assert "## 💰 Cost Breakdown" in result
+        assert "$0.03" in result  # Main cost ~$0.033959
+        assert "$0.02" in result  # Summary cost ~$0.022597
+        assert "$0.05" in result  # Total ~$0.056556
+        # Should NOT show inflated costs
+        assert "$0.17" not in result
+        assert "$0.09" not in result
+        assert "$0.26" not in result
+        # Token usage section
+        assert "### Token Usage" in result
+        assert "4,295" in result  # Input tokens
+        assert "1,326" in result  # Output tokens
+        assert "135,239" in result  # Cache read tokens
+        assert "70,355" in result  # Cache write tokens

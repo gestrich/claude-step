@@ -1,9 +1,60 @@
 """Domain model for Claude Code execution cost breakdown."""
 
 import json
+import logging
 import os
 from dataclasses import dataclass, field
 from typing import Self
+
+logger = logging.getLogger(__name__)
+
+# Pricing multipliers relative to input rate
+OUTPUT_MULTIPLIER = 5.0  # Output tokens cost 5x input
+CACHE_WRITE_MULTIPLIER = 1.25  # Cache write costs 1.25x input
+CACHE_READ_MULTIPLIER = 0.1  # Cache read costs 0.1x input (90% discount)
+
+# Model input rates ($ per MTok)
+MODEL_RATES: dict[str, float] = {
+    # Haiku 3 variants
+    "claude-3-haiku": 0.25,
+    # Haiku 4 variants
+    "claude-haiku-4": 1.00,
+    # Sonnet 3.5 variants
+    "claude-3-5-sonnet": 3.00,
+    # Sonnet 4 variants
+    "claude-sonnet-4": 3.00,
+    # Opus 4 variants
+    "claude-opus-4": 15.00,
+}
+
+
+class UnknownModelError(ValueError):
+    """Raised when a model name is not recognized for pricing."""
+
+    pass
+
+
+def get_rate_for_model(model_name: str) -> float:
+    """Get the input token rate (per MTok) for a model.
+
+    Args:
+        model_name: Model name from execution file (e.g., "claude-3-haiku-20240307")
+
+    Returns:
+        Rate per million input tokens
+
+    Raises:
+        UnknownModelError: If model name doesn't match any known patterns
+    """
+    model_lower = model_name.lower()
+
+    for pattern, rate in MODEL_RATES.items():
+        if pattern in model_lower:
+            return rate
+
+    raise UnknownModelError(
+        f"Unknown model '{model_name}'. Add pricing to MODEL_RATES in cost_breakdown.py"
+    )
 
 
 @dataclass
@@ -25,6 +76,22 @@ class ModelUsage:
             + self.output_tokens
             + self.cache_read_tokens
             + self.cache_write_tokens
+        )
+
+    def calculate_cost(self) -> float:
+        """Calculate cost using correct per-model pricing.
+
+        Returns:
+            Calculated cost in USD
+        """
+        rate = get_rate_for_model(self.model)
+        rate_per_token = rate / 1_000_000  # Convert from per-MTok to per-token
+
+        return (
+            self.input_tokens * rate_per_token
+            + self.output_tokens * rate_per_token * OUTPUT_MULTIPLIER
+            + self.cache_write_tokens * rate_per_token * CACHE_WRITE_MULTIPLIER
+            + self.cache_read_tokens * rate_per_token * CACHE_READ_MULTIPLIER
         )
 
     @classmethod
@@ -66,6 +133,14 @@ class ExecutionUsage:
     def cost(self) -> float:
         """Total cost (uses top-level total_cost_usd from file)."""
         return self.total_cost_usd
+
+    @property
+    def calculated_cost(self) -> float:
+        """Calculate total cost using correct per-model pricing.
+
+        Sums calculate_cost() across all models, using hardcoded rates.
+        """
+        return sum(m.calculate_cost() for m in self.models)
 
     @property
     def input_tokens(self) -> int:
@@ -219,8 +294,8 @@ class CostBreakdown:
         total_usage = main_usage + summary_usage
 
         return cls(
-            main_cost=main_usage.cost,
-            summary_cost=summary_usage.cost,
+            main_cost=main_usage.calculated_cost,
+            summary_cost=summary_usage.calculated_cost,
             input_tokens=total_usage.input_tokens,
             output_tokens=total_usage.output_tokens,
             cache_read_tokens=total_usage.cache_read_tokens,

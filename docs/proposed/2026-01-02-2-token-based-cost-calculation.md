@@ -59,7 +59,7 @@ Model name patterns and their input rates:
 - `claude-sonnet-4` or `claude-4-sonnet`: $3.00
 - `claude-opus-4` or `claude-4-opus`: $15.00
 
-Unknown models: log warning, use $3.00 as default (middle ground)
+Unknown models: raise `UnknownModelError` to fail fast and surface pricing gaps immediately
 
 ## Phases
 
@@ -79,7 +79,7 @@ Add tests for:
 - Updated `format_for_github()` output includes tokens
 - Backward compatibility when `modelUsage` is missing
 
-- [ ] Phase 2: Add hardcoded model pricing and per-model cost calculation
+- [x] Phase 2: Add hardcoded model pricing and per-model cost calculation
 
 Add model pricing lookup to `ModelUsage`:
 - Add `MODEL_RATES` dict mapping model name patterns to input rates (per MTok)
@@ -100,7 +100,7 @@ Add tests for:
 - `ExecutionUsage.calculated_cost` sums per-model costs correctly
 - Unknown model names use default rate and log warning
 
-- [ ] Phase 3: Validation
+- [x] Phase 3: Validation
 
 Run full test suite:
 ```bash
@@ -111,3 +111,95 @@ python3 -m pytest tests/integration/cli/commands/test_post_pr_comment.py -v
 Manual verification:
 - Run workflow and verify calculated cost differs from original `total_cost_usd`
 - Verify token breakdown displays correctly per model
+
+## Real Workflow Validation Data
+
+Data from PR #24 on `gestrich/swift-lambda-sample` (workflow run 20658904611):
+- PR: https://github.com/gestrich/swift-lambda-sample/pull/24
+- Workflow: https://github.com/gestrich/swift-lambda-sample/actions/runs/20658904611
+
+### Main Execution File Data
+
+```json
+{
+  "total_cost_usd": 0.170020,
+  "modelUsage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 4271,
+      "outputTokens": 389,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 12299,
+      "costUSD": 0.02158975
+    },
+    "claude-3-haiku-20240307": {
+      "inputTokens": 15,
+      "outputTokens": 426,
+      "cacheReadInputTokens": 90755,
+      "cacheCreationInputTokens": 30605,
+      "costUSD": 0.14843025
+    }
+  }
+}
+```
+
+### Summary Execution File Data
+
+```json
+{
+  "total_cost_usd": 0.091275,
+  "modelUsage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 3,
+      "outputTokens": 208,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 12247,
+      "costUSD": 0.016351749999999998
+    },
+    "claude-3-haiku-20240307": {
+      "inputTokens": 6,
+      "outputTokens": 303,
+      "cacheReadInputTokens": 44484,
+      "cacheCreationInputTokens": 15204,
+      "costUSD": 0.0749232
+    }
+  }
+}
+```
+
+### Expected Calculated Costs (Using Our Formula)
+
+**Main Execution:**
+
+| Model | Rate | Input | Output | Cache Write | Cache Read | Subtotal |
+|-------|------|-------|--------|-------------|------------|----------|
+| claude-haiku-4-5-20251001 | $1.00/MTok | 4271 × $1.00/M = $0.004271 | 389 × $5.00/M = $0.001945 | 12299 × $1.25/M = $0.01537375 | 0 × $0.10/M = $0.00 | **$0.02158975** |
+| claude-3-haiku-20240307 | $0.25/MTok | 15 × $0.25/M = $0.00000375 | 426 × $1.25/M = $0.0005325 | 30605 × $0.3125/M = $0.009564063 | 90755 × $0.025/M = $0.002268875 | **$0.012369188** |
+| **Main Total** | | | | | | **$0.033958938** |
+
+**Summary Execution:**
+
+| Model | Rate | Input | Output | Cache Write | Cache Read | Subtotal |
+|-------|------|-------|--------|-------------|------------|----------|
+| claude-haiku-4-5-20251001 | $1.00/MTok | 3 × $1.00/M = $0.000003 | 208 × $5.00/M = $0.00104 | 12247 × $1.25/M = $0.01530875 | 0 × $0.10/M = $0.00 | **$0.01635175** |
+| claude-3-haiku-20240307 | $0.25/MTok | 6 × $0.25/M = $0.0000015 | 303 × $1.25/M = $0.00037875 | 15204 × $0.3125/M = $0.0047525 | 44484 × $0.025/M = $0.0011121 | **$0.006244850** |
+| **Summary Total** | | | | | | **$0.022596600** |
+
+### Cost Comparison
+
+| Source | Main | Summary | Total |
+|--------|------|---------|-------|
+| File `total_cost_usd` (INACCURATE) | $0.170020 | $0.091275 | **$0.261295** |
+| Our calculated cost (ACCURATE) | $0.033959 | $0.022597 | **$0.056556** |
+| **Overcharge factor** | 5.0x | 4.0x | **4.6x** |
+
+The original costs were inflated because `claude-3-haiku-20240307` was charged at Sonnet rates ($3/$15 per MTok) instead of Haiku 3 rates ($0.25/$1.25 per MTok).
+
+### Expected Token Totals
+
+| Token Type | Main | Summary | Total |
+|------------|------|---------|-------|
+| Input | 4,286 | 9 | 4,295 |
+| Output | 815 | 511 | 1,326 |
+| Cache Read | 90,755 | 44,484 | 135,239 |
+| Cache Write | 42,904 | 27,451 | 70,355 |
+| **Total** | 138,760 | 72,455 | **211,215** |
