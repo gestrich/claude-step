@@ -252,21 +252,28 @@ Ensure the parse-event step has access to the repository name for the API call.
 - If E2E tests are run locally with a Personal Access Token (PAT) instead of `GITHUB_TOKEN`, the `workflow_dispatch` calls could be removed and push events would work naturally
 - This is tracked in the separate local E2E execution plan (`2026-01-01-1-e2e-local-execution.md`)
 
-- [ ] Phase 7: Add unit tests for new functions
+- [x] Phase 7: Add unit tests for new functions
 
 Add comprehensive unit tests for the new infrastructure and detection functions.
 
-**Files to create/modify:**
-- `tests/unit/infrastructure/github/test_operations.py` - Tests for `compare_commits`
-- `tests/unit/infrastructure/github/test_operations.py` - Tests for `detect_project_from_diff`
-- `tests/unit/domain/test_github_event.py` - Update tests for modified `GitHubEventContext`
+**Files modified:**
+- `tests/unit/infrastructure/github/test_operations.py` - Tests for `compare_commits` and `detect_project_from_diff`
+- `tests/unit/domain/test_github_event.py` - Tests for modified `GitHubEventContext`
 
-**Test cases for `detect_project_from_diff`:**
-1. Single spec.md changed → returns project name
-2. No spec.md changed → returns None
-3. Multiple spec.md files changed → raises ValueError
-4. Other files changed (not spec.md) → returns None
-5. Spec.md in wrong directory structure → returns None
+**Technical notes:**
+- All required tests were already implemented in previous phases (Phase 1, 2, and 3)
+- `TestCompareCommits` class: 7 test cases covering success, branch names, empty results, missing files key, API error propagation, many files, and spec.md detection
+- `TestDetectProjectFromDiff` class: 10 test cases covering single/no/multiple spec files, wrong directory structures, empty lists, project names with hyphens/underscores, and same-project multiple files
+- `TestGitHubEventContextChangedFilesContext` class: 8 test cases covering push events, workflow_dispatch, pull_request, and missing SHA scenarios
+- All 660 unit tests pass
+- All 151 integration tests pass
+
+**Test coverage for key functions:**
+1. ✅ Single spec.md changed → returns project name
+2. ✅ No spec.md changed → returns None
+3. ✅ Multiple spec.md files changed → raises ValueError
+4. ✅ Other files changed (not spec.md) → returns None
+5. ✅ Spec.md in wrong directory structure → returns None
 
 - [ ] Phase 8: Validation
 
