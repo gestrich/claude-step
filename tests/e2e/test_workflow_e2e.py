@@ -1,22 +1,26 @@
 """End-to-End tests for ClaudeStep workflow.
 
 This module contains E2E integration tests that verify the ClaudeStep workflow
-creates PRs correctly, generates AI summaries, includes cost information, and
-tests the real user workflows (push-triggered and merge-triggered).
+creates PRs correctly, generates AI summaries, and includes cost information.
 
 The tests use a recursive workflow pattern where the claude-step repository
 tests itself by running the actual claudestep.yml workflow against the main-e2e
 branch with dynamically generated test projects.
 
+Note: Workflows are triggered via workflow_dispatch (not push events) because
+pushes made with GITHUB_TOKEN don't trigger workflows (GitHub security feature
+to prevent infinite loops). Since Sep 2022, GITHUB_TOKEN can trigger
+workflow_dispatch events.
+
 TESTS IN THIS MODULE:
 
 1. test_auto_start_workflow
-   - What: Verifies pushing spec to main-e2e triggers claudestep.yml and PR creation
-   - Why E2E: Tests real user flow of push-triggered automatic PR generation
+   - What: Verifies claudestep.yml creates a PR for a new project
+   - Why E2E: Tests the full workflow including AI summary and cost breakdown
 
 2. test_merge_triggered_workflow
-   - What: Verifies merging a PR triggers creation of the next PR
-   - Why E2E: Tests GitHub Actions trigger-on-merge integration
+   - What: Verifies workflow creates next PR after first PR is merged
+   - Why E2E: Tests multi-task progression through the spec
 """
 
 from .helpers.github_helper import GitHubHelper
@@ -26,31 +30,34 @@ def test_auto_start_workflow(
     gh: GitHubHelper,
     setup_test_project: str
 ) -> None:
-    """Test that claudestep.yml triggers when spec is pushed to main-e2e.
+    """Test that claudestep.yml creates a PR when triggered for a new project.
 
-    This test validates the real user flow where pushing a spec to main-e2e
-    automatically triggers PR creation via the push-triggered workflow.
+    This test validates the workflow creates a PR correctly when triggered
+    via workflow_dispatch with a project name.
+
+    Note: The fixture explicitly triggers the workflow via workflow_dispatch
+    because pushes made with GITHUB_TOKEN don't trigger push events (GitHub
+    security feature). Since Sep 2022, GITHUB_TOKEN can trigger workflow_dispatch.
 
     The test verifies:
-    1. Pushing spec to main-e2e triggers claudestep.yml workflow (push event)
-    2. Workflow completes successfully
-    3. Workflow creates a PR for the first task
-    4. PR has "claudestep" label
-    5. PR targets main-e2e branch
-    6. PR has AI summary comment with cost breakdown
+    1. Workflow completes successfully
+    2. Workflow creates a PR for the first task
+    3. PR has "claudestep" label
+    4. PR targets main-e2e branch
+    5. PR has AI summary comment with cost breakdown
 
     Cleanup happens at test START (not end) to allow manual inspection.
 
     Args:
         gh: GitHub helper fixture
-        setup_test_project: Test project created and pushed to main-e2e
+        setup_test_project: Test project created, pushed, and workflow triggered
     """
     from claudestep.domain.constants import DEFAULT_PR_LABEL
     from tests.e2e.constants import E2E_TEST_BRANCH
 
     test_project = setup_test_project
 
-    # Wait for claudestep workflow to start (triggered by push)
+    # Wait for claudestep workflow to start (triggered by fixture via workflow_dispatch)
     gh.wait_for_workflow_to_start(
         workflow_name="claudestep.yml",
         timeout=60,
@@ -116,17 +123,20 @@ def test_merge_triggered_workflow(
     gh: GitHubHelper,
     setup_test_project: str
 ) -> None:
-    """Test that merging a PR triggers creation of the next PR.
+    """Test that merging a PR and triggering workflow creates the next PR.
 
-    This test verifies that when a ClaudeStep PR is merged, the workflow
-    automatically triggers and creates a PR for the next task in the spec.
+    This test verifies that after a ClaudeStep PR is merged, triggering the
+    workflow creates a PR for the next task in the spec.
+
+    Note: We explicitly trigger the workflow after merge because merges done
+    with GITHUB_TOKEN don't trigger push events (GitHub security feature).
+    Since Sep 2022, GITHUB_TOKEN can trigger workflow_dispatch events.
 
     The test verifies:
-    1. Push triggers claudestep.yml and creates first PR
-    2. Merging the first PR triggers claudestep.yml workflow via push event
-    3. Workflow creates a second PR for the next task
-    4. Second PR has "claudestep" label
-    5. Second PR targets main-e2e branch
+    1. First workflow (triggered by fixture) creates first PR
+    2. Merging the first PR + explicit workflow trigger creates second PR
+    3. Second PR has "claudestep" label
+    4. Second PR targets main-e2e branch
 
     Cleanup happens at test START (not end) to allow manual inspection.
 
@@ -139,7 +149,7 @@ def test_merge_triggered_workflow(
 
     test_project = setup_test_project
 
-    # Wait for claudestep workflow to start (triggered by push from setup)
+    # Wait for claudestep workflow to start (triggered by fixture via workflow_dispatch)
     gh.wait_for_workflow_to_start(
         workflow_name="claudestep.yml",
         timeout=60,
@@ -168,10 +178,18 @@ def test_merge_triggered_workflow(
     assert first_pr.state == "open", \
         f"First PR #{first_pr.number} should be open. PR URL: {first_pr_url}"
 
-    # Merge the first PR (this should trigger the workflow via PR close event)
+    # Merge the first PR
     gh.merge_pull_request(first_pr.number)
 
-    # Wait for the workflow to be triggered by the PR merge
+    # Explicitly trigger workflow via workflow_dispatch after merge
+    # Merges done with GITHUB_TOKEN don't trigger push events (GitHub security feature)
+    gh.trigger_workflow(
+        workflow_name="claudestep.yml",
+        inputs={"project_name": test_project},
+        ref=E2E_TEST_BRANCH
+    )
+
+    # Wait for the workflow to start
     gh.wait_for_workflow_to_start(
         workflow_name="claudestep.yml",
         timeout=60,

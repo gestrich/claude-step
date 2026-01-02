@@ -111,12 +111,18 @@ def setup_test_project(
     test_spec_content: str,
     test_config_content: str,
     test_pr_template_content: str,
-    project_manager: TestProjectManager
+    project_manager: TestProjectManager,
+    gh: GitHubHelper
 ) -> str:
-    """Create and push a test project to main-e2e branch.
+    """Create and push a test project to main-e2e branch, then trigger workflow.
 
     This fixture dynamically generates a test project from the content fixtures
-    and commits it to the main-e2e branch. This will trigger the auto-start workflow.
+    and commits it to the main-e2e branch. It then explicitly triggers the
+    claudestep.yml workflow via workflow_dispatch.
+
+    Note: We must explicitly trigger the workflow because pushes made with
+    GITHUB_TOKEN do not trigger push events (GitHub security feature to prevent
+    infinite loops). Since Sep 2022, GITHUB_TOKEN can trigger workflow_dispatch.
 
     Args:
         test_project: Unique project name from test_project fixture
@@ -124,6 +130,7 @@ def setup_test_project(
         test_config_content: Content for configuration.yml
         test_pr_template_content: Content for pr-template.md
         project_manager: TestProjectManager instance
+        gh: GitHubHelper instance for triggering workflow
 
     Returns:
         Project name that was created
@@ -136,10 +143,18 @@ def setup_test_project(
         pr_template_content=test_pr_template_content
     )
 
-    # Commit and push to main-e2e branch (this will trigger auto-start)
+    # Commit and push to main-e2e branch
     project_manager.commit_and_push_project(
         project_name=test_project,
         branch=E2E_TEST_BRANCH
+    )
+
+    # Explicitly trigger claudestep.yml via workflow_dispatch
+    # Push events from GITHUB_TOKEN don't trigger workflows (GitHub security feature)
+    gh.trigger_workflow(
+        workflow_name="claudestep.yml",
+        inputs={"project_name": test_project},
+        ref=E2E_TEST_BRANCH
     )
 
     return test_project
