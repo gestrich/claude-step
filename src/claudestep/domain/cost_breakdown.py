@@ -8,30 +8,120 @@ from typing import Self
 
 logger = logging.getLogger(__name__)
 
-# Pricing multipliers relative to input rate
-OUTPUT_MULTIPLIER = 5.0  # Output tokens cost 5x input
-CACHE_WRITE_MULTIPLIER = 1.25  # Cache write costs 1.25x input
-CACHE_READ_MULTIPLIER = 0.1  # Cache read costs 0.1x input (90% discount)
 
-# Model input rates ($ per MTok)
-MODEL_RATES: dict[str, float] = {
-    # Haiku 3 variants
-    "claude-3-haiku": 0.25,
-    # Haiku 4 variants
-    "claude-haiku-4": 1.00,
-    # Sonnet 3.5 variants
-    "claude-3-5-sonnet": 3.00,
-    # Sonnet 4 variants
-    "claude-sonnet-4": 3.00,
-    # Opus 4 variants
-    "claude-opus-4": 15.00,
-}
+@dataclass(frozen=True)
+class ClaudeModel:
+    """Pricing information for a Claude model.
+
+    All rates are in USD per million tokens (MTok).
+    Based on official Anthropic pricing: https://docs.anthropic.com/en/docs/about-claude/pricing
+    """
+
+    pattern: str  # Pattern to match in model name (e.g., "claude-3-haiku")
+    input_rate: float  # $ per MTok for input tokens
+    output_rate: float  # $ per MTok for output tokens
+    cache_write_rate: float  # $ per MTok for cache write tokens
+    cache_read_rate: float  # $ per MTok for cache read tokens
+
+    def calculate_cost(
+        self,
+        input_tokens: int,
+        output_tokens: int,
+        cache_write_tokens: int,
+        cache_read_tokens: int,
+    ) -> float:
+        """Calculate cost for given token counts.
+
+        Args:
+            input_tokens: Number of input tokens
+            output_tokens: Number of output tokens
+            cache_write_tokens: Number of cache write tokens
+            cache_read_tokens: Number of cache read tokens
+
+        Returns:
+            Total cost in USD
+        """
+        return (
+            input_tokens * self.input_rate
+            + output_tokens * self.output_rate
+            + cache_write_tokens * self.cache_write_rate
+            + cache_read_tokens * self.cache_read_rate
+        ) / 1_000_000
+
+
+# Claude model pricing registry
+# Source: https://docs.anthropic.com/en/docs/about-claude/pricing
+CLAUDE_MODELS: list[ClaudeModel] = [
+    # Haiku 3 - unique cache multipliers (1.2x write, 0.12x read)
+    ClaudeModel(
+        pattern="claude-3-haiku",
+        input_rate=0.25,
+        output_rate=1.25,
+        cache_write_rate=0.30,
+        cache_read_rate=0.03,
+    ),
+    # Haiku 4/4.5 - standard multipliers (1.25x write, 0.1x read)
+    ClaudeModel(
+        pattern="claude-haiku-4",
+        input_rate=1.00,
+        output_rate=5.00,
+        cache_write_rate=1.25,
+        cache_read_rate=0.10,
+    ),
+    # Sonnet 3.5 - standard multipliers
+    ClaudeModel(
+        pattern="claude-3-5-sonnet",
+        input_rate=3.00,
+        output_rate=15.00,
+        cache_write_rate=3.75,
+        cache_read_rate=0.30,
+    ),
+    # Sonnet 4/4.5 - standard multipliers
+    ClaudeModel(
+        pattern="claude-sonnet-4",
+        input_rate=3.00,
+        output_rate=15.00,
+        cache_write_rate=3.75,
+        cache_read_rate=0.30,
+    ),
+    # Opus 4/4.5 - standard multipliers
+    ClaudeModel(
+        pattern="claude-opus-4",
+        input_rate=15.00,
+        output_rate=75.00,
+        cache_write_rate=18.75,
+        cache_read_rate=1.50,
+    ),
+]
 
 
 class UnknownModelError(ValueError):
     """Raised when a model name is not recognized for pricing."""
 
     pass
+
+
+def get_model(model_name: str) -> ClaudeModel:
+    """Get the ClaudeModel for a model name.
+
+    Args:
+        model_name: Model name from execution file (e.g., "claude-3-haiku-20240307")
+
+    Returns:
+        ClaudeModel with pricing information
+
+    Raises:
+        UnknownModelError: If model name doesn't match any known patterns
+    """
+    model_lower = model_name.lower()
+
+    for claude_model in CLAUDE_MODELS:
+        if claude_model.pattern in model_lower:
+            return claude_model
+
+    raise UnknownModelError(
+        f"Unknown model '{model_name}'. Add pricing to CLAUDE_MODELS in cost_breakdown.py"
+    )
 
 
 def get_rate_for_model(model_name: str) -> float:
@@ -46,15 +136,7 @@ def get_rate_for_model(model_name: str) -> float:
     Raises:
         UnknownModelError: If model name doesn't match any known patterns
     """
-    model_lower = model_name.lower()
-
-    for pattern, rate in MODEL_RATES.items():
-        if pattern in model_lower:
-            return rate
-
-    raise UnknownModelError(
-        f"Unknown model '{model_name}'. Add pricing to MODEL_RATES in cost_breakdown.py"
-    )
+    return get_model(model_name).input_rate
 
 
 @dataclass
@@ -84,14 +166,12 @@ class ModelUsage:
         Returns:
             Calculated cost in USD
         """
-        rate = get_rate_for_model(self.model)
-        rate_per_token = rate / 1_000_000  # Convert from per-MTok to per-token
-
-        return (
-            self.input_tokens * rate_per_token
-            + self.output_tokens * rate_per_token * OUTPUT_MULTIPLIER
-            + self.cache_write_tokens * rate_per_token * CACHE_WRITE_MULTIPLIER
-            + self.cache_read_tokens * rate_per_token * CACHE_READ_MULTIPLIER
+        claude_model = get_model(self.model)
+        return claude_model.calculate_cost(
+            input_tokens=self.input_tokens,
+            output_tokens=self.output_tokens,
+            cache_write_tokens=self.cache_write_tokens,
+            cache_read_tokens=self.cache_read_tokens,
         )
 
     @classmethod

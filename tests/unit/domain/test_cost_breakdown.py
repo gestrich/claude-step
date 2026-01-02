@@ -8,11 +8,13 @@ from pathlib import Path
 import pytest
 
 from claudestep.domain.cost_breakdown import (
+    CLAUDE_MODELS,
+    ClaudeModel,
     CostBreakdown,
     ExecutionUsage,
-    MODEL_RATES,
     ModelUsage,
     UnknownModelError,
+    get_model,
     get_rate_for_model,
 )
 
@@ -784,13 +786,14 @@ class TestCostBreakdownWithTokens:
                 str(summary_file)
             )
 
-            # Assert - costs are calculated, not from file
-            # Main: (1000*0.25 + 500*1.25 + 300*0.3125 + 2000*0.025) / 1M
-            #     = (250 + 625 + 93.75 + 50) / 1M = 0.00101875
-            # Summary: (200*0.25 + 100*1.25 + 50*0.3125 + 400*0.025) / 1M
-            #        = (50 + 125 + 15.625 + 10) / 1M = 0.000200625
-            assert breakdown.main_cost == pytest.approx(0.00101875)
-            assert breakdown.summary_cost == pytest.approx(0.000200625)
+            # Assert - costs are calculated using Haiku 3 rates:
+            # input $0.25, output $1.25, cache_write $0.30, cache_read $0.03
+            # Main: (1000*0.25 + 500*1.25 + 300*0.30 + 2000*0.03) / 1M
+            #     = (250 + 625 + 90 + 60) / 1M = 0.001025
+            # Summary: (200*0.25 + 100*1.25 + 50*0.30 + 400*0.03) / 1M
+            #        = (50 + 125 + 15 + 12) / 1M = 0.000202
+            assert breakdown.main_cost == pytest.approx(0.001025)
+            assert breakdown.summary_cost == pytest.approx(0.000202)
             # Tokens should be summed from both files
             assert breakdown.input_tokens == 1000 + 200
             assert breakdown.output_tokens == 500 + 100
@@ -881,6 +884,149 @@ class TestGetRateForModel:
         assert get_rate_for_model("Claude-Haiku-4-5-20251001") == 1.00
 
 
+class TestClaudeModel:
+    """Test suite for ClaudeModel dataclass"""
+
+    def test_claude_model_creation(self):
+        """Should create ClaudeModel with all pricing rates"""
+        # Act
+        model = ClaudeModel(
+            pattern="test-model",
+            input_rate=1.00,
+            output_rate=5.00,
+            cache_write_rate=1.25,
+            cache_read_rate=0.10,
+        )
+
+        # Assert
+        assert model.pattern == "test-model"
+        assert model.input_rate == 1.00
+        assert model.output_rate == 5.00
+        assert model.cache_write_rate == 1.25
+        assert model.cache_read_rate == 0.10
+
+    def test_claude_model_calculate_cost(self):
+        """Should calculate cost using all token types"""
+        # Arrange
+        model = ClaudeModel(
+            pattern="test-model",
+            input_rate=1.00,
+            output_rate=5.00,
+            cache_write_rate=1.25,
+            cache_read_rate=0.10,
+        )
+
+        # Act - 1M of each token type
+        cost = model.calculate_cost(
+            input_tokens=1_000_000,
+            output_tokens=1_000_000,
+            cache_write_tokens=1_000_000,
+            cache_read_tokens=1_000_000,
+        )
+
+        # Assert: $1.00 + $5.00 + $1.25 + $0.10 = $7.35
+        assert cost == pytest.approx(7.35)
+
+    def test_claude_model_is_frozen(self):
+        """Should be immutable (frozen dataclass)"""
+        # Arrange
+        model = ClaudeModel(
+            pattern="test-model",
+            input_rate=1.00,
+            output_rate=5.00,
+            cache_write_rate=1.25,
+            cache_read_rate=0.10,
+        )
+
+        # Act & Assert
+        with pytest.raises(AttributeError):
+            model.input_rate = 2.00
+
+    def test_haiku_3_has_unique_cache_rates(self):
+        """Should have correct unique cache rates for Haiku 3 (1.2x write, 0.12x read)"""
+        # Act
+        model = get_model("claude-3-haiku-20240307")
+
+        # Assert - Haiku 3 uses different multipliers than other models
+        assert model.input_rate == 0.25
+        assert model.output_rate == 1.25
+        assert model.cache_write_rate == 0.30  # 1.2x input (not 1.25x)
+        assert model.cache_read_rate == 0.03   # 0.12x input (not 0.1x)
+
+    def test_haiku_4_has_standard_cache_rates(self):
+        """Should have standard cache rates for Haiku 4 (1.25x write, 0.1x read)"""
+        # Act
+        model = get_model("claude-haiku-4-5-20251001")
+
+        # Assert - Haiku 4 uses standard multipliers
+        assert model.input_rate == 1.00
+        assert model.output_rate == 5.00
+        assert model.cache_write_rate == 1.25  # 1.25x input
+        assert model.cache_read_rate == 0.10   # 0.1x input
+
+
+class TestGetModel:
+    """Test suite for get_model() function"""
+
+    def test_get_model_returns_claude_model(self):
+        """Should return ClaudeModel instance"""
+        # Act
+        model = get_model("claude-3-haiku-20240307")
+
+        # Assert
+        assert isinstance(model, ClaudeModel)
+
+    def test_get_model_haiku_3(self):
+        """Should return correct model for Haiku 3"""
+        # Act
+        model = get_model("claude-3-haiku-20240307")
+
+        # Assert
+        assert model.pattern == "claude-3-haiku"
+        assert model.input_rate == 0.25
+
+    def test_get_model_haiku_4(self):
+        """Should return correct model for Haiku 4"""
+        # Act
+        model = get_model("claude-haiku-4-5-20251001")
+
+        # Assert
+        assert model.pattern == "claude-haiku-4"
+        assert model.input_rate == 1.00
+
+    def test_get_model_sonnet_4(self):
+        """Should return correct model for Sonnet 4"""
+        # Act
+        model = get_model("claude-sonnet-4-20250514")
+
+        # Assert
+        assert model.pattern == "claude-sonnet-4"
+        assert model.input_rate == 3.00
+
+    def test_get_model_opus_4(self):
+        """Should return correct model for Opus 4"""
+        # Act
+        model = get_model("claude-opus-4-20250514")
+
+        # Assert
+        assert model.pattern == "claude-opus-4"
+        assert model.input_rate == 15.00
+
+    def test_get_model_unknown_raises_error(self):
+        """Should raise UnknownModelError for unknown models"""
+        # Act & Assert
+        with pytest.raises(UnknownModelError, match="Unknown model 'gpt-4'"):
+            get_model("gpt-4")
+
+    def test_get_model_case_insensitive(self):
+        """Should match model names case-insensitively"""
+        # Act
+        model = get_model("CLAUDE-3-HAIKU-20240307")
+
+        # Assert
+        assert model.pattern == "claude-3-haiku"
+
+
 class TestModelUsageCalculateCost:
     """Test suite for ModelUsage.calculate_cost() method"""
 
@@ -919,8 +1065,8 @@ class TestModelUsageCalculateCost:
         assert cost == pytest.approx(1.25)
 
     def test_calculate_cost_with_cache_write(self):
-        """Should calculate cache write tokens at 1.25x input rate"""
-        # Arrange - 1M cache write tokens at $0.25 * 1.25 = $0.3125
+        """Should calculate cache write tokens at correct rate for Haiku 3"""
+        # Arrange - 1M cache write tokens at $0.30/MTok (Haiku 3 uses 1.2x, not 1.25x)
         usage = ModelUsage(
             model="claude-3-haiku-20240307",
             input_tokens=0,
@@ -933,11 +1079,11 @@ class TestModelUsageCalculateCost:
         cost = usage.calculate_cost()
 
         # Assert
-        assert cost == pytest.approx(0.3125)
+        assert cost == pytest.approx(0.30)
 
     def test_calculate_cost_with_cache_read(self):
-        """Should calculate cache read tokens at 0.1x input rate"""
-        # Arrange - 1M cache read tokens at $0.25 * 0.1 = $0.025
+        """Should calculate cache read tokens at correct rate for Haiku 3"""
+        # Arrange - 1M cache read tokens at $0.03/MTok (Haiku 3 uses 0.12x, not 0.1x)
         usage = ModelUsage(
             model="claude-3-haiku-20240307",
             input_tokens=0,
@@ -950,25 +1096,25 @@ class TestModelUsageCalculateCost:
         cost = usage.calculate_cost()
 
         # Assert
-        assert cost == pytest.approx(0.025)
+        assert cost == pytest.approx(0.03)
 
     def test_calculate_cost_combined(self):
-        """Should calculate combined cost correctly"""
-        # Arrange
+        """Should calculate combined cost correctly for Haiku 3"""
+        # Arrange - Haiku 3 rates: input $0.25, output $1.25, cache_write $0.30, cache_read $0.03
         usage = ModelUsage(
             model="claude-3-haiku-20240307",
             input_tokens=100_000,      # $0.025
             output_tokens=50_000,      # $0.0625
-            cache_read_tokens=200_000,  # $0.005
-            cache_write_tokens=30_000,  # $0.009375
+            cache_read_tokens=200_000,  # $0.006 (200k * $0.03/MTok)
+            cache_write_tokens=30_000,  # $0.009 (30k * $0.30/MTok)
         )
-        # Total: $0.101875
+        # Total: $0.025 + $0.0625 + $0.006 + $0.009 = $0.1025
 
         # Act
         cost = usage.calculate_cost()
 
         # Assert
-        assert cost == pytest.approx(0.101875)
+        assert cost == pytest.approx(0.1025)
 
     def test_calculate_cost_sonnet_4(self):
         """Should calculate cost correctly for Sonnet 4"""
