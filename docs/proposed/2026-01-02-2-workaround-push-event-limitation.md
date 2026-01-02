@@ -87,7 +87,7 @@ Update all documentation to reflect the supported triggers.
 - Remove any references to push event triggering
 - Search for "push" references in docs and update as needed
 
-- [ ] Phase 3: Keep push-specific code (no changes)
+- [x] Phase 3: Keep push-specific code (no changes)
 
 Keep the push event handling code for potential future use.
 
@@ -101,7 +101,7 @@ Keep the push event handling code for potential future use.
 - If `claude-code-action` adds push support later, ClaudeStep will already work
 - No harm in keeping the code
 
-- [ ] Phase 4: Validation
+- [x] Phase 4: Validation
 
 **Automated testing:**
 ```bash
