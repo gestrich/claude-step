@@ -17,10 +17,10 @@ inputs:
 
   # Event context inputs (for simplified workflow)
   github_event:
-    description: 'GitHub event payload JSON (pass ${{ toJson(github.event) }}). Used for automatic event handling.'
+    description: 'GitHub event payload JSON. Used for automatic event handling.'
     required: false
   event_name:
-    description: 'GitHub event name (pass ${{ github.event_name }}). Used with github_event for automatic handling.'
+    description: 'GitHub event name. Used with github_event for automatic handling.'
     required: false
 
   # Project configuration
