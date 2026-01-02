@@ -418,7 +418,9 @@ The configuration file is **optional**. Projects work without it using sensible 
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `reviewers` | array | | Reviewers with `username` and `maxOpenPRs` |
+| `reviewers` | array | | List of reviewer objects |
+| `reviewers[].username` | string | Yes | GitHub username |
+| `reviewers[].maxOpenPRs` | number | Yes | Maximum open PRs for this reviewer |
 | `baseBranch` | string | | Override base branch for this project (defaults to workflow context) |
 
 Example:
