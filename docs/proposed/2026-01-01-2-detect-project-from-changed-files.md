@@ -233,16 +233,24 @@ Ensure the parse-event step has access to the repository name for the API call.
     python3 -m claudestep parse-event
 ```
 
-- [ ] Phase 6: Revert E2E test workflow_dispatch changes
+- [x] Phase 6: Revert E2E test workflow_dispatch changes
 
-Since push events will now correctly detect the project, we can remove the explicit `trigger_workflow()` calls we added earlier.
+**Outcome:** No changes needed - workflow_dispatch approach is still required.
 
-**Files to modify:**
-- `tests/e2e/conftest.py` - Remove `gh.trigger_workflow()` from `setup_test_project` fixture
-- `tests/e2e/test_workflow_e2e.py` - Remove `gh.trigger_workflow()` from `test_merge_triggered_workflow`
-- Update docstrings to reflect that push events now work correctly
+**Technical notes:**
+- The `workflow_dispatch` calls in E2E tests are **not** a workaround for project detection - they address a fundamental GitHub Actions limitation
+- **GitHub Security Feature**: Pushes/merges made with `GITHUB_TOKEN` do NOT trigger `push` events (prevents infinite workflow loops)
+- This is independent of project detection: even with project detection from changed files working correctly, the `push` event itself won't fire when using `GITHUB_TOKEN`
+- The `workflow_dispatch` approach is the correct pattern for E2E tests running in GitHub Actions
+- Since Sep 2022, `GITHUB_TOKEN` can trigger `workflow_dispatch` events, making this the recommended approach
 
-**Note:** This phase may not be needed immediately if we're still running E2E tests via workflow (which uses GITHUB_TOKEN). The workflow_dispatch approach is still valid for that case. We can revisit this when implementing the local E2E execution plan.
+**Files unchanged (intentionally):**
+- `tests/e2e/conftest.py` - `trigger_workflow()` in `setup_test_project` remains (needed for GITHUB_TOKEN limitation)
+- `tests/e2e/test_workflow_e2e.py` - `trigger_workflow()` in `test_merge_triggered_workflow` remains (needed after merge with GITHUB_TOKEN)
+
+**When to revisit:**
+- If E2E tests are run locally with a Personal Access Token (PAT) instead of `GITHUB_TOKEN`, the `workflow_dispatch` calls could be removed and push events would work naturally
+- This is tracked in the separate local E2E execution plan (`2026-01-01-1-e2e-local-execution.md`)
 
 - [ ] Phase 7: Add unit tests for new functions
 
