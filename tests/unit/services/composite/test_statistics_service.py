@@ -466,6 +466,26 @@ class TestStatisticsReport:
         assert "alice" in slack_msg_with_reviewers
         assert "Merged" in slack_msg_with_reviewers  # Leaderboard header
 
+    def test_format_for_slack_includes_base_branch(self):
+        """Test Slack formatting includes base branch when provided"""
+        report = StatisticsReport()
+        report.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+        # Add a project
+        project = ProjectStats("test-project", "/path/spec.md")
+        project.total_tasks = 10
+        project.completed_tasks = 5
+        report.add_project(project)
+
+        # With base_branch specified
+        slack_msg = report.format_for_slack(base_branch="dev")
+        assert "Branch: dev" in slack_msg
+        assert "2025-01-01" in slack_msg  # Timestamp still present
+
+        # Without base_branch
+        slack_msg_no_branch = report.format_for_slack()
+        assert "Branch:" not in slack_msg_no_branch
+
     def test_format_for_pr_comment_single_project(self):
         """Test PR comment formatting with single project"""
         report = StatisticsReport()

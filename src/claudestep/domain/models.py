@@ -580,12 +580,18 @@ class StatisticsReport:
 
         return "\n".join(lines)
 
-    def format_for_slack(self, show_reviewer_stats: bool = False, stale_pr_days: int = 7) -> str:
+    def format_for_slack(
+        self,
+        show_reviewer_stats: bool = False,
+        stale_pr_days: int = 7,
+        base_branch: Optional[str] = None
+    ) -> str:
         """Complete report in Slack mrkdwn format with tables
 
         Args:
             show_reviewer_stats: Whether to include the reviewer leaderboard (default: False)
             stale_pr_days: Threshold for stale PR warnings (default: 7 days)
+            base_branch: Base branch name to display in report header (optional)
         """
         fmt = MarkdownFormatter(for_slack=True)
         lines = []
@@ -594,10 +600,16 @@ class StatisticsReport:
         lines.append(fmt.header("🤖 ClaudeStep Statistics Report", level=1))
         lines.append("")
 
+        # Metadata line with timestamp and branch
+        metadata_parts = []
         if self.generated_at:
             from datetime import datetime
             timestamp = self.generated_at.strftime("%Y-%m-%d %H:%M UTC")
-            lines.append(fmt.italic(f"Generated: {timestamp}"))
+            metadata_parts.append(f"Generated: {timestamp}")
+        if base_branch:
+            metadata_parts.append(f"Branch: {base_branch}")
+        if metadata_parts:
+            lines.append(fmt.italic(" • ".join(metadata_parts)))
             lines.append("")
 
         # Leaderboard Table (only if enabled)

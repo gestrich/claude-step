@@ -72,7 +72,10 @@ def cmd_statistics(
 
         # Generate outputs based on format
         if format_type == "slack":
-            slack_text = report.format_for_slack(show_reviewer_stats=show_reviewer_stats)
+            slack_text = report.format_for_slack(
+                show_reviewer_stats=show_reviewer_stats,
+                base_branch=base_branch
+            )
             gh.write_output("slack_message", slack_text)
             gh.write_output("has_statistics", "true")
             gh.write_output("slack_webhook_url", slack_webhook_url)
