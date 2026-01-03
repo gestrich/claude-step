@@ -28,7 +28,7 @@ Add any new element types needed for PR notifications to `src/claudestep/domain/
 - `Emoji` - for platform-appropriate emoji handling (Slack uses `:emoji:` syntax vs unicode)
 - Review existing elements (Header, Link, TextBlock, Table) for reuse
 
-- [ ] Phase 2: Create PullRequestCreatedReport domain model
+- [x] Phase 2: Create PullRequestCreatedReport domain model
 
 Create `src/claudestep/domain/pr_created_report.py`:
 - `PullRequestCreatedReport` dataclass with fields: `pr_number`, `pr_url`, `project_name`, `task`, `cost_breakdown`, `summary_content`, `repo`, `run_id`
