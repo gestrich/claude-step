@@ -14,6 +14,7 @@ from claudestep.domain.project_configuration import ProjectConfiguration
 from claudestep.infrastructure.repositories.project_repository import ProjectRepository
 from claudestep.services.core.pr_service import PRService
 from claudestep.domain.models import ProjectStats, StatisticsReport, TeamMemberStats, PRReference, TaskWithPR, TaskStatus
+from claudestep.services.composite.artifact_service import find_project_artifacts
 
 
 class StatisticsService:
@@ -229,8 +230,12 @@ class StatisticsService:
         )
         print(f"  Pending: {stats.pending_tasks}")
 
-        # Cost tracking is handled via PR comments (see add_cost_comment command)
-        stats.total_cost_usd = 0.0
+        # Aggregate costs from artifacts
+        stats.total_cost_usd = self._aggregate_costs_from_artifacts(
+            project_name, label
+        )
+        if stats.total_cost_usd > 0:
+            print(f"  Cost: ${stats.total_cost_usd:.2f}")
 
         return stats
 
@@ -299,6 +304,35 @@ class StatisticsService:
 
         if stats.orphaned_prs:
             print(f"  Orphaned PRs: {len(stats.orphaned_prs)}")
+
+    def _aggregate_costs_from_artifacts(
+        self, project_name: str, label: str
+    ) -> float:
+        """Aggregate costs from task metadata artifacts.
+
+        Downloads artifacts for the project and sums up costs from TaskMetadata.
+
+        Args:
+            project_name: Name of the project
+            label: GitHub label for filtering
+
+        Returns:
+            Total cost in USD, or 0.0 if no artifacts found
+        """
+        artifacts = find_project_artifacts(
+            repo=self.repo,
+            project=project_name,
+            label=label,
+            pr_state="all",
+            download_metadata=True,
+        )
+
+        total_cost = 0.0
+        for artifact in artifacts:
+            if artifact.metadata:
+                total_cost += artifact.metadata.get_total_cost()
+
+        return total_cost
 
     def collect_team_member_stats(
         self, reviewers: List[str], days_back: int = DEFAULT_STATS_DAYS_BACK, label: str = DEFAULT_PR_LABEL

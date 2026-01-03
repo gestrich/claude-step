@@ -94,7 +94,7 @@ Modify `finalize.py` to create a JSON artifact file with `TaskMetadata`:
 }
 ```
 
-- [ ] Phase 2: Retrieve Artifacts in Statistics Service
+- [x] Phase 2: Retrieve Artifacts in Statistics Service
 
 Add artifact download and cost aggregation to `StatisticsService`:
 

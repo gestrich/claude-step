@@ -5,7 +5,7 @@ interface for working with GitHub workflow artifacts containing task metadata.
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 import pytest
@@ -116,7 +116,7 @@ class TestProjectArtifact:
             project="test",
             branch_name="test-branch",
             reviewer="alice",
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
             workflow_run_id=123,
             pr_number=1,
         )
@@ -591,7 +591,7 @@ class TestGetReviewerAssignments:
                     project="test",
                     branch_name="claude-step-test-1",
                     reviewer="alice",
-                    created_at=datetime.now(),
+                    created_at=datetime.now(timezone.utc),
                     workflow_run_id=100,
                     pr_number=10,
                 ),
@@ -606,7 +606,7 @@ class TestGetReviewerAssignments:
                     project="test",
                     branch_name="claude-step-test-2",
                     reviewer="bob",
-                    created_at=datetime.now(),
+                    created_at=datetime.now(timezone.utc),
                     workflow_run_id=101,
                     pr_number=11,
                 ),
@@ -643,7 +643,7 @@ class TestGetReviewerAssignments:
                     project="test",
                     branch_name="claude-step-test-1",
                     reviewer="alice",
-                    created_at=datetime.now(),
+                    created_at=datetime.now(timezone.utc),
                     workflow_run_id=100,
                     pr_number=10,
                 ),

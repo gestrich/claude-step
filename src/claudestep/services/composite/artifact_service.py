@@ -7,57 +7,13 @@ modules. Note: These are utility functions supporting the Service Layer rather t
 a full service class.
 """
 
-import json
 import re
 from dataclasses import dataclass
-from datetime import datetime
 from typing import List, Optional
 
 from claudestep.domain.exceptions import GitHubAPIError
+from claudestep.domain.models import TaskMetadata
 from claudestep.infrastructure.github.operations import download_artifact_json, gh_api_call
-
-
-@dataclass
-class TaskMetadata:
-    """Metadata from a task artifact"""
-
-    task_index: int
-    task_description: str
-    project: str
-    branch_name: str
-    reviewer: str
-    created_at: datetime
-    workflow_run_id: int
-    pr_number: int
-    main_task_cost_usd: float = 0.0
-    pr_summary_cost_usd: float = 0.0
-    total_cost_usd: float = 0.0
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "TaskMetadata":
-        """Parse from artifact JSON
-
-        Args:
-            data: Dictionary containing artifact metadata
-
-        Returns:
-            TaskMetadata instance
-        """
-        return cls(
-            task_index=data["task_index"],
-            task_description=data["task_description"],
-            project=data["project"],
-            branch_name=data["branch_name"],
-            reviewer=data["reviewer"],
-            created_at=datetime.fromisoformat(
-                data["created_at"].replace("Z", "+00:00")
-            ),
-            workflow_run_id=data["workflow_run_id"],
-            pr_number=data["pr_number"],
-            main_task_cost_usd=data.get("main_task_cost_usd", 0.0),
-            pr_summary_cost_usd=data.get("pr_summary_cost_usd", 0.0),
-            total_cost_usd=data.get("total_cost_usd", 0.0),
-        )
 
 
 @dataclass
