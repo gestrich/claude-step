@@ -117,12 +117,8 @@ Each project lives in `claude-step/{project-name}/` with:
 **Example configuration.yml:**
 
 ```yaml
-reviewers:
-  - username: alice
-    maxOpenPRs: 2
-  - username: bob
-    maxOpenPRs: 1
-baseBranch: develop              # Optional: override base branch
+assignee: alice                     # Optional: GitHub username for PR assignment
+baseBranch: develop                 # Optional: override base branch
 allowedTools: Read,Write,Edit,Bash  # Optional: override tool permissions
 ```
 

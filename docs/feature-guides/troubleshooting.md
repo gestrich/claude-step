@@ -11,7 +11,7 @@ This guide covers common issues and solutions when using ClaudeStep.
 - [Claude Code GitHub App Not Installed](#claude-code-github-app-not-installed)
 - [API Rate Limits](#api-rate-limits)
 - [Orphaned PR Warnings](#orphaned-pr-warnings)
-- [No Reviewer Has Capacity](#no-reviewer-has-capacity)
+- [PR Already Open for Project](#pr-already-open-for-project)
 - [Workflow Runs But No PR Created](#workflow-runs-but-no-pr-created)
 
 ---
@@ -210,48 +210,30 @@ See [Projects Guide - Modifying Tasks](./projects.md#modifying-tasks) for how to
 
 ---
 
-## No Reviewer Has Capacity
+## PR Already Open for Project
 
 **Message:**
 ```
-No reviewer has capacity. Skipping PR creation.
+Project already has an open PR. Skipping PR creation.
 ```
 
 ### Cause
 
-All configured reviewers have reached their `maxOpenPRs` limit.
+ClaudeStep enforces one open PR per project at a time. A PR for this project is already open and awaiting review.
 
 ### Solution
 
-**Option 1: Merge existing PRs**
+**Option 1: Merge or close the existing PR**
 
-Review and merge open PRs to free up capacity.
+Review and merge the open PR to allow the next task to proceed.
 
-**Option 2: Increase capacity**
+**Option 2: Check for the open PR**
 
-Edit `configuration.yml` to increase `maxOpenPRs`:
+1. Go to **Pull requests** in your repository
+2. Search for PRs with the `claudestep` label
+3. Find the PR for this project and review it
 
-```yaml
-reviewers:
-  - username: alice
-    maxOpenPRs: 3  # Increased from 2
-```
-
-**Option 3: Add more reviewers**
-
-```yaml
-reviewers:
-  - username: alice
-    maxOpenPRs: 2
-  - username: bob
-    maxOpenPRs: 2
-  - username: charlie  # New reviewer
-    maxOpenPRs: 2
-```
-
-**Option 4: Remove configuration**
-
-If you don't need reviewer assignment, delete `configuration.yml`. PRs will be created without an assignee.
+This is working as designed—one PR at a time keeps changes focused and avoids merge conflicts.
 
 ---
 
@@ -322,7 +304,7 @@ If you can't resolve an issue:
 | App not installed | Claude Code GitHub App missing | `/install-github-app` |
 | Rate limit | Too many API calls | Wait 1 hour |
 | Orphaned PRs | Task description changed | Close old PR |
-| No capacity | All reviewers at limit | Merge PRs or add reviewers |
+| PR already open | One PR per project limit | Merge existing PR |
 
 ---
 
