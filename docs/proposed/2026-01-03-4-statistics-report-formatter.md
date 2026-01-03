@@ -15,7 +15,7 @@ This follows the existing pattern where `TableFormatter` already abstracts table
 
 ## Phases
 
-- [ ] Phase 1: Define report element types
+- [x] Phase 1: Define report element types
 
 Create data classes in `src/claudestep/domain/formatters/report_elements.py` to represent abstract report components:
 - `Header` - title text with level (h1, h2, h3)
