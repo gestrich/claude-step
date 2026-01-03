@@ -31,6 +31,8 @@ Each task is identified by a hash of its description, so you can freely reorder,
 
 ## Quick Start
 
+**Prerequisite:** [Anthropic API key](https://console.anthropic.com)
+
 ### 1. Create a Project
 
 ```bash
