@@ -61,12 +61,11 @@ Add new method to `src/claudestep/services/core/pr_service.py`:
 
 This will use the GitHub API to fetch recently merged PRs with the claudestep label for the project.
 
-- [ ] Phase 4: Update Report Formatting for Detailed Task View
+- [x] Phase 4: Update Report Formatting for Detailed Task View
 
-Add new formatting method to `StatisticsReport`:
-- `format_project_details(for_slack: bool = False) -> str` - Detailed view showing each task and its PR
+Added `format_project_details(for_slack: bool = False) -> str` method to `StatisticsReport` in `src/claudestep/domain/models.py`.
 
-Example output format:
+Output format:
 ```
 ## print-line-count (5/20 complete)
 
@@ -81,7 +80,7 @@ Example output format:
 - PR #28 (Open, 5d) - Task removed from spec
 ```
 
-Update GitHub Step Summary in `statistics.py` CLI command to include this detailed view.
+**TODO:** Update GitHub Step Summary in `statistics.py` CLI command to include this detailed view.
 
 - [ ] Phase 5: Update Slack Report Format
 
@@ -100,11 +99,11 @@ This better reflects that the Slack message is a summary pointing users to the f
 
 - [ ] Phase 6: Validation
 
-**Unit Tests:**
-- Test `TaskWithPR` model creation and status determination
-- Test task-PR matching logic (by hash)
-- Test orphaned PR detection
-- Test formatting of detailed task view
+**Unit Tests (DONE):**
+- [x] Test `TaskWithPR` model creation and status determination
+- [x] Test task-PR matching logic (by hash) - `TestTaskPRMappings` class (7 tests)
+- [x] Test orphaned PR detection
+- [x] Test formatting of detailed task view - `TestFormatProjectDetails` class (7 tests)
 
 **Integration Tests:**
 - Run statistics against swift-lambda-sample to verify:
