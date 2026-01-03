@@ -740,6 +740,168 @@ class TestLeaderboard:
         # Leaderboard should come first (most engaging)
         assert leaderboard_pos < project_pos
 
+
+class TestStatusColumnAndWarnings:
+    """Test status column and warnings section in Slack output"""
+
+    def test_status_column_shows_stale_count(self):
+        """Should show stale PR count in status column"""
+        report = StatisticsReport()
+        report.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+        project = ProjectStats("test-project", "/path/spec.md")
+        project.total_tasks = 10
+        project.completed_tasks = 5
+        project.in_progress_tasks = 2
+        project.pending_tasks = 3
+        project.stale_pr_count = 2
+        report.add_project(project)
+
+        slack_msg = report.format_for_slack()
+        assert "Status" in slack_msg  # Status column header
+        assert "⚠️ 2 stale" in slack_msg
+
+    def test_status_column_shows_no_prs_warning(self):
+        """Should show 'no PRs' warning when project has remaining tasks but no open PRs"""
+        report = StatisticsReport()
+        report.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+        project = ProjectStats("test-project", "/path/spec.md")
+        project.total_tasks = 10
+        project.completed_tasks = 5
+        project.in_progress_tasks = 0  # No open PRs
+        project.pending_tasks = 5      # Tasks remaining
+        project.stale_pr_count = 0
+        report.add_project(project)
+
+        slack_msg = report.format_for_slack()
+        assert "Status" in slack_msg
+        assert "⚠️ no PRs" in slack_msg
+
+    def test_status_column_empty_for_healthy_project(self):
+        """Should show empty status for healthy projects"""
+        report = StatisticsReport()
+        report.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+        project = ProjectStats("healthy-project", "/path/spec.md")
+        project.total_tasks = 10
+        project.completed_tasks = 5
+        project.in_progress_tasks = 2  # Has open PRs
+        project.pending_tasks = 3
+        project.stale_pr_count = 0
+        report.add_project(project)
+
+        slack_msg = report.format_for_slack()
+        assert "Status" in slack_msg
+        # Should not contain warning indicators
+        assert "⚠️" not in slack_msg
+
+    def test_warnings_section_with_stale_prs(self):
+        """Should show detailed warnings section with stale PR info"""
+        from claudestep.domain.github_models import GitHubPullRequest, GitHubUser
+        from datetime import timedelta
+
+        report = StatisticsReport()
+        report.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+        # Create a stale PR (10 days old)
+        stale_pr = GitHubPullRequest(
+            number=123,
+            title="Stale PR",
+            state="open",
+            created_at=datetime.now(timezone.utc) - timedelta(days=10),
+            merged_at=None,
+            assignees=[GitHubUser(login="alice")],
+            labels=["claudestep"],
+            head_ref_name="claude-step-test-a1b2c3d4"
+        )
+
+        project = ProjectStats("api-cleanup", "/path/spec.md")
+        project.total_tasks = 10
+        project.completed_tasks = 5
+        project.in_progress_tasks = 1
+        project.pending_tasks = 4
+        project.stale_pr_count = 1
+        project.open_prs = [stale_pr]
+        report.add_project(project)
+
+        slack_msg = report.format_for_slack()
+        assert "⚠️ Projects Needing Attention" in slack_msg
+        assert "PR #123 stale" in slack_msg
+        assert "alice" in slack_msg
+
+    def test_warnings_section_with_no_prs(self):
+        """Should show warnings section for projects with no open PRs"""
+        report = StatisticsReport()
+        report.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+        project = ProjectStats("idle-project", "/path/spec.md")
+        project.total_tasks = 20
+        project.completed_tasks = 3
+        project.in_progress_tasks = 0
+        project.pending_tasks = 17
+        project.stale_pr_count = 0
+        report.add_project(project)
+
+        slack_msg = report.format_for_slack()
+        assert "⚠️ Projects Needing Attention" in slack_msg
+        assert "No open PRs (17 tasks remaining)" in slack_msg
+
+    def test_no_warnings_section_for_healthy_projects(self):
+        """Should not show warnings section when all projects are healthy"""
+        report = StatisticsReport()
+        report.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+        project = ProjectStats("healthy-project", "/path/spec.md")
+        project.total_tasks = 10
+        project.completed_tasks = 5
+        project.in_progress_tasks = 2
+        project.pending_tasks = 3
+        project.stale_pr_count = 0
+        report.add_project(project)
+
+        slack_msg = report.format_for_slack()
+        assert "⚠️ Projects Needing Attention" not in slack_msg
+
+    def test_stale_threshold_respected_in_warnings(self):
+        """Should respect stale_pr_days threshold when formatting warnings"""
+        from claudestep.domain.github_models import GitHubPullRequest, GitHubUser
+        from datetime import timedelta
+
+        report = StatisticsReport()
+        report.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+        # PR that's 5 days old
+        pr = GitHubPullRequest(
+            number=99,
+            title="5 day old PR",
+            state="open",
+            created_at=datetime.now(timezone.utc) - timedelta(days=5),
+            merged_at=None,
+            assignees=[GitHubUser(login="bob")],
+            labels=["claudestep"],
+            head_ref_name="claude-step-test-e5f6g7h8"
+        )
+
+        project = ProjectStats("test-project", "/path/spec.md")
+        project.total_tasks = 10
+        project.completed_tasks = 5
+        project.in_progress_tasks = 1
+        project.pending_tasks = 4
+        project.stale_pr_count = 1  # Marked as stale by statistics service
+        project.open_prs = [pr]
+        report.add_project(project)
+
+        # With 7-day threshold: PR is not stale (5 < 7)
+        slack_msg_7 = report.format_for_slack(stale_pr_days=7)
+        # The PR won't appear in stale warnings because is_stale(7) returns False
+        assert "PR #99 stale" not in slack_msg_7
+
+        # With 3-day threshold: PR is stale (5 >= 3)
+        slack_msg_3 = report.format_for_slack(stale_pr_days=3)
+        assert "PR #99 stale" in slack_msg_3
+
+
 class TestCostExtraction:
     """Test cost extraction from PR comments"""
 

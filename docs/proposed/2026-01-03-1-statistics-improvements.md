@@ -121,7 +121,7 @@ Alert when a project has remaining tasks but no open PRs.
   - Returns list of projects with stale PRs OR no open PRs with remaining tasks
 - Include in formatted output as warnings section
 
-- [ ] Phase 5: Update statistics output formatting
+- [x] Phase 5: Update statistics output formatting
 
 Update Slack and GitHub output to show stale indicators and warnings.
 

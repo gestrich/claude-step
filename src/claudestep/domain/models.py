@@ -521,11 +521,71 @@ class StatisticsReport:
 
         return "\n".join(lines)
 
-    def format_for_slack(self, show_reviewer_stats: bool = False) -> str:
+    def _format_project_status(self, stats: ProjectStats) -> str:
+        """Format status indicator for a project.
+
+        Args:
+            stats: Project statistics
+
+        Returns:
+            Status string like "⚠️ 1 stale", "⚠️ no PRs", or empty string
+        """
+        if stats.stale_pr_count > 0:
+            return f"⚠️ {stats.stale_pr_count} stale"
+        elif stats.has_remaining_tasks:
+            return "⚠️ no PRs"
+        return ""
+
+    def _format_warnings_section(self, fmt: MarkdownFormatter, stale_pr_days: int = 7) -> str:
+        """Format detailed warnings section for projects needing attention.
+
+        Args:
+            fmt: Markdown formatter instance
+            stale_pr_days: Threshold for stale PRs (used in descriptions)
+
+        Returns:
+            Formatted warnings section or empty string if no warnings
+        """
+        projects = self.projects_needing_attention()
+        if not projects:
+            return ""
+
+        lines = []
+        lines.append(fmt.header("⚠️ Projects Needing Attention", level=2))
+        lines.append("```")
+
+        table = TableFormatter(
+            headers=["Project", "Issue"],
+            align=['left', 'left']
+        )
+
+        for stats in projects:
+            issues = []
+            # Check for stale PRs first
+            if stats.stale_pr_count > 0:
+                # Get details of stale PRs
+                for pr in stats.open_prs:
+                    if pr.is_stale(stale_pr_days):
+                        assignee = pr.first_assignee or "unassigned"
+                        issues.append(f"PR #{pr.number} stale ({pr.days_open}d, {assignee})")
+            # Then check for no open PRs
+            if stats.has_remaining_tasks:
+                issues.append(f"No open PRs ({stats.pending_tasks} tasks remaining)")
+
+            for issue in issues:
+                table.add_row([stats.project_name[:20], issue])
+
+        lines.append(table.format())
+        lines.append("```")
+
+        return "\n".join(lines)
+
+    def format_for_slack(self, show_reviewer_stats: bool = False, stale_pr_days: int = 7) -> str:
         """Complete report in Slack mrkdwn format with tables
 
         Args:
             show_reviewer_stats: Whether to include the reviewer leaderboard (default: False)
+            stale_pr_days: Threshold for stale PR warnings (default: 7 days)
         """
         fmt = MarkdownFormatter(for_slack=True)
         lines = []
@@ -581,8 +641,8 @@ class StatisticsReport:
 
             # Build table using TableFormatter
             table = TableFormatter(
-                headers=["Project", "Open", "Merged", "Total", "Progress", "Cost"],
-                align=['left', 'right', 'right', 'right', 'left', 'right']
+                headers=["Project", "Open", "Merged", "Total", "Progress", "Cost", "Status"],
+                align=['left', 'right', 'right', 'right', 'left', 'right', 'left']
             )
 
             for project_name in sorted(self.project_stats.keys()):
@@ -598,18 +658,28 @@ class StatisticsReport:
                 # Format cost
                 cost_display = format_usd(stats.total_cost_usd) if stats.total_cost_usd > 0 else "-"
 
+                # Format status
+                status_display = self._format_project_status(stats)
+
                 table.add_row([
                     project_name[:20],
                     str(stats.in_progress_tasks),
                     str(stats.completed_tasks),
                     str(stats.total_tasks),
                     progress_display,
-                    cost_display
+                    cost_display,
+                    status_display
                 ])
 
             lines.append(table.format())
             lines.append("```")
             lines.append("")
+
+            # Add warnings section if there are projects needing attention
+            warnings_section = self._format_warnings_section(fmt, stale_pr_days)
+            if warnings_section:
+                lines.append(warnings_section)
+                lines.append("")
         else:
             lines.append(fmt.header("📊 Project Progress", level=2))
             lines.append("")
