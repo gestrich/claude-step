@@ -627,21 +627,6 @@ class StatisticsReport:
 
         return "\n".join(lines)
 
-    def _format_project_status(self, stats: ProjectStats) -> str:
-        """Format status indicator for a project.
-
-        Args:
-            stats: Project statistics
-
-        Returns:
-            Status string like "⚠️ 1 stale", "⚠️ no PRs", or empty string
-        """
-        if stats.stale_pr_count > 0:
-            return f"⚠️ {stats.stale_pr_count} stale"
-        elif stats.has_remaining_tasks:
-            return "⚠️ no PRs"
-        return ""
-
     def _format_warnings_section(self, fmt: MarkdownFormatter, stale_pr_days: int = 7) -> str:
         """Format actionable items section for projects needing attention.
 
@@ -776,8 +761,8 @@ class StatisticsReport:
 
             # Build table using TableFormatter
             table = TableFormatter(
-                headers=["Project", "Open", "Merged", "Total", "Progress", "Cost", "Status"],
-                align=['left', 'right', 'right', 'right', 'left', 'right', 'left']
+                headers=["Project", "Open", "Merged", "Total", "Progress", "Cost"],
+                align=['left', 'right', 'right', 'right', 'left', 'right']
             )
 
             for project_name in sorted(self.project_stats.keys()):
@@ -793,9 +778,6 @@ class StatisticsReport:
                 # Format cost
                 cost_display = format_usd(stats.total_cost_usd) if stats.total_cost_usd > 0 else "-"
 
-                # Format status
-                status_display = self._format_project_status(stats)
-
                 table.add_row([
                     project_name[:20],
                     str(stats.in_progress_tasks),
@@ -803,7 +785,6 @@ class StatisticsReport:
                     str(stats.total_tasks),
                     progress_display,
                     cost_display,
-                    status_display
                 ])
 
             lines.append(table.format())

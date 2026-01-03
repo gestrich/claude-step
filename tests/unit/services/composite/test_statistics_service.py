@@ -874,60 +874,8 @@ class TestLeaderboard:
         assert leaderboard_pos < project_pos
 
 
-class TestStatusColumnAndWarnings:
-    """Test status column and warnings section in Slack output"""
-
-    def test_status_column_shows_stale_count(self):
-        """Should show stale PR count in status column"""
-        report = StatisticsReport()
-        report.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-
-        project = ProjectStats("test-project", "/path/spec.md")
-        project.total_tasks = 10
-        project.completed_tasks = 5
-        project.in_progress_tasks = 2
-        project.pending_tasks = 3
-        project.stale_pr_count = 2
-        report.add_project(project)
-
-        slack_msg = report.format_for_slack()
-        assert "Status" in slack_msg  # Status column header
-        assert "⚠️ 2 stale" in slack_msg
-
-    def test_status_column_shows_no_prs_warning(self):
-        """Should show 'no PRs' warning when project has remaining tasks but no open PRs"""
-        report = StatisticsReport()
-        report.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-
-        project = ProjectStats("test-project", "/path/spec.md")
-        project.total_tasks = 10
-        project.completed_tasks = 5
-        project.in_progress_tasks = 0  # No open PRs
-        project.pending_tasks = 5      # Tasks remaining
-        project.stale_pr_count = 0
-        report.add_project(project)
-
-        slack_msg = report.format_for_slack()
-        assert "Status" in slack_msg
-        assert "⚠️ no PRs" in slack_msg
-
-    def test_status_column_empty_for_healthy_project(self):
-        """Should show empty status for healthy projects"""
-        report = StatisticsReport()
-        report.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-
-        project = ProjectStats("healthy-project", "/path/spec.md")
-        project.total_tasks = 10
-        project.completed_tasks = 5
-        project.in_progress_tasks = 2  # Has open PRs
-        project.pending_tasks = 3
-        project.stale_pr_count = 0
-        report.add_project(project)
-
-        slack_msg = report.format_for_slack()
-        assert "Status" in slack_msg
-        # Should not contain warning indicators
-        assert "⚠️" not in slack_msg
+class TestWarningsSection:
+    """Test warnings section in Slack output"""
 
     def test_warnings_section_with_stale_prs(self):
         """Should show detailed warnings section with stale PR info"""
