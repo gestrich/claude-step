@@ -9,10 +9,8 @@ from claudestep.domain.formatters import (
     Header,
     TextBlock,
     LabeledValue,
-    Link,
     Table,
     Divider,
-    SlackReportFormatter,
     MarkdownReportFormatter,
 )
 
@@ -97,54 +95,54 @@ class TestPullRequestCreatedReport:
 class TestBuildNotificationElements:
     """Tests for build_notification_elements()."""
 
-    def test_returns_section(self, report):
-        """Test that build_notification_elements returns a Section."""
+    def test_returns_string(self, report):
+        """Test that build_notification_elements returns a formatted string."""
         result = report.build_notification_elements()
-        assert isinstance(result, Section)
+        assert isinstance(result, str)
 
     def test_contains_header(self, report):
         """Test notification contains header with emoji."""
         result = report.build_notification_elements()
-        headers = [e for e in result.elements if isinstance(e, TextBlock) and e.style == "bold"]
-        assert len(headers) >= 1
-        assert "New PR Created" in headers[0].text
+        assert "🎉 *New PR Created*" in result
 
     def test_contains_pr_link(self, report):
-        """Test notification contains PR link."""
+        """Test notification contains PR link in Slack format."""
         result = report.build_notification_elements()
-        labeled_values = [e for e in result.elements if isinstance(e, LabeledValue)]
-        pr_label = next((lv for lv in labeled_values if lv.label == "PR"), None)
-        assert pr_label is not None
-        assert isinstance(pr_label.value, Link)
-        assert pr_label.value.text == "#123"
+        assert "*PR:*" in result
+        assert "<https://github.com/owner/repo/pull/123|#123>" in result
 
     def test_contains_project_name(self, report):
-        """Test notification contains project name."""
+        """Test notification contains project name in code format."""
         result = report.build_notification_elements()
-        labeled_values = [e for e in result.elements if isinstance(e, LabeledValue)]
-        project_label = next((lv for lv in labeled_values if lv.label == "Project"), None)
-        assert project_label is not None
-        assert isinstance(project_label.value, TextBlock)
-        assert project_label.value.text == "my-project"
+        assert "*Project:*" in result
+        assert "`my-project`" in result
+
+    def test_contains_task(self, report):
+        """Test notification contains task."""
+        result = report.build_notification_elements()
+        assert "*Task:*" in result
+        assert "Fix the login bug" in result
 
     def test_contains_cost(self, report):
         """Test notification contains cost."""
         result = report.build_notification_elements()
-        labeled_values = [e for e in result.elements if isinstance(e, LabeledValue)]
-        cost_label = next((lv for lv in labeled_values if "Cost" in lv.label), None)
-        assert cost_label is not None
-        assert "$0.20" in str(cost_label.value)
-
-    def test_formats_correctly_for_slack(self, report):
-        """Test notification renders correctly with SlackReportFormatter."""
-        elements = report.build_notification_elements()
-        formatter = SlackReportFormatter()
-        result = formatter.format(elements)
-
-        assert "*New PR Created*" in result or "New PR Created" in result
-        assert "#123" in result
-        assert "my-project" in result
+        assert "*💰 Cost:*" in result
         assert "$0.20" in result
+
+    def test_matches_expected_format(self, report):
+        """Test notification matches the expected Slack mrkdwn format."""
+        result = report.build_notification_elements()
+
+        expected = (
+            "🎉 *New PR Created*\n"
+            "\n"
+            "*PR:* <https://github.com/owner/repo/pull/123|#123>\n"
+            "*Project:* `my-project`\n"
+            "*Task:* Fix the login bug\n"
+            "\n"
+            "*💰 Cost:* $0.20"
+        )
+        assert result == expected
 
 
 class TestBuildCommentElements:

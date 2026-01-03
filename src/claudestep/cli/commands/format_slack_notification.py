@@ -3,7 +3,7 @@ Format Slack notification message for created PR.
 """
 
 from claudestep.domain.cost_breakdown import CostBreakdown
-from claudestep.domain.formatting import format_usd
+from claudestep.domain.pr_created_report import PullRequestCreatedReport
 from claudestep.infrastructure.github.actions import GitHubActionsHelper
 
 
@@ -54,14 +54,14 @@ def cmd_format_slack_notification(
         # Parse cost breakdown from structured JSON
         cost_breakdown = CostBreakdown.from_json(cost_breakdown_json)
 
-        # Format the Slack message using typed model
+        # Format the Slack message using domain model
         message = format_pr_notification(
             pr_number=pr_number,
             pr_url=pr_url,
             project_name=project_name,
             task=task,
             cost_breakdown=cost_breakdown,
-            repo=repo
+            repo=repo,
         )
 
         # Output for Slack
@@ -86,7 +86,7 @@ def format_pr_notification(
     project_name: str,
     task: str,
     cost_breakdown: CostBreakdown,
-    repo: str
+    repo: str,
 ) -> str:
     """
     Format PR notification for Slack in mrkdwn format.
@@ -97,21 +97,21 @@ def format_pr_notification(
         project_name: Project name
         task: Task description
         cost_breakdown: CostBreakdown with costs and per-model data
-        repo: Repository name
+        repo: Repository name (used for workflow URL generation)
 
     Returns:
         Formatted Slack message in mrkdwn
     """
-    # Build the message with Slack mrkdwn formatting
-    # Keep it concise - detailed per-model breakdown is in the PR comment
-    lines = [
-        "🎉 *New PR Created*",
-        "",
-        f"*PR:* <{pr_url}|#{pr_number}>",
-        f"*Project:* `{project_name}`",
-        f"*Task:* {task}",
-        "",
-        f"*💰 Cost:* {format_usd(cost_breakdown.total_cost)}",
-    ]
+    # Create domain model and use its notification formatting
+    # Note: run_id is not needed for Slack notification (no workflow link)
+    report = PullRequestCreatedReport(
+        pr_number=pr_number,
+        pr_url=pr_url,
+        project_name=project_name,
+        task=task,
+        cost_breakdown=cost_breakdown,
+        repo=repo,
+        run_id="",  # Not used for Slack notification
+    )
 
-    return "\n".join(lines)
+    return report.build_notification_elements()

@@ -63,28 +63,38 @@ class PullRequestCreatedReport:
     # Element Building Methods
     # ============================================================
 
-    def build_notification_elements(self) -> Section:
-        """Build report elements for Slack notification.
+    def build_notification_elements(self) -> str:
+        """Build formatted Slack notification message.
+
+        Returns a pre-formatted string to match the exact Slack message format
+        with specific blank line placement.
 
         Returns:
-            Section containing elements for concise Slack notification.
+            Formatted Slack notification string.
         """
-        section = Section()
+        from claudestep.domain.formatters import SlackReportFormatter
 
-        # Header with emoji
-        section.add(TextBlock("🎉 New PR Created", style="bold"))
+        formatter = SlackReportFormatter()
 
-        # PR metadata
-        section.add(LabeledValue("PR", Link(f"#{self.pr_number}", self.pr_url)))
-        section.add(LabeledValue("Project", TextBlock(self.project_name, style="code")))
-        section.add(LabeledValue("Task", self.task))
+        # Build using formatter for individual elements to ensure correct syntax
+        # Note: emoji is outside bold markers to match original format
+        lines = [
+            "🎉 " + formatter.format_text_block(TextBlock("New PR Created", style="bold")),
+            "",
+            formatter.format_labeled_value(
+                LabeledValue("PR", Link(f"#{self.pr_number}", self.pr_url))
+            ),
+            formatter.format_labeled_value(
+                LabeledValue("Project", TextBlock(self.project_name, style="code"))
+            ),
+            formatter.format_labeled_value(LabeledValue("Task", self.task)),
+            "",
+            formatter.format_labeled_value(
+                LabeledValue("💰 Cost", format_usd(self.cost_breakdown.total_cost))
+            ),
+        ]
 
-        # Cost (concise for notification)
-        section.add(
-            LabeledValue("💰 Cost", format_usd(self.cost_breakdown.total_cost))
-        )
-
-        return section
+        return "\n".join(lines)
 
     def build_comment_elements(self) -> Section:
         """Build report elements for PR comment.

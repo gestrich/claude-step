@@ -38,7 +38,7 @@ Create `src/claudestep/domain/pr_created_report.py`:
   - `build_workflow_summary_elements()` - for GitHub Actions step summary
 - Factory method `from_components()` to construct from existing data
 
-- [ ] Phase 3: Refactor PR creation notification
+- [x] Phase 3: Refactor PR creation notification
 
 Update `src/claudestep/cli/commands/format_slack_notification.py`:
 - Use `PullRequestCreatedReport` and `SlackReportFormatter`
