@@ -6,6 +6,18 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Literal, Optional
 from claudestep.domain.formatters.table_formatter import TableFormatter
+from claudestep.domain.formatters.report_elements import (
+    Header,
+    TextBlock,
+    Link,
+    ListItem,
+    ListBlock,
+    TableColumn,
+    TableRow,
+    Table,
+    ProgressBar,
+    Section,
+)
 from claudestep.domain.formatting import format_usd
 from claudestep.domain.github_models import GitHubPullRequest, PRState
 
@@ -562,6 +574,250 @@ class StatisticsReport:
             if stats.stale_pr_count > 0 or stats.has_remaining_tasks or has_open_orphaned_prs:
                 needing_attention.append(stats)
         return sorted(needing_attention, key=lambda s: s.project_name)
+
+    def to_header_section(self) -> Section:
+        """Build report header section with title and metadata.
+
+        Returns:
+            Section containing the report header and metadata
+        """
+        section = Section()
+        section.add(Header("🤖 ClaudeStep Statistics Report", level=1))
+
+        # Build metadata text
+        metadata_parts = []
+        if self.generated_at:
+            timestamp = self.generated_at.strftime("%Y-%m-%d %H:%M UTC")
+            metadata_parts.append(f"Generated: {timestamp}")
+        if self.base_branch:
+            metadata_parts.append(f"Branch: {self.base_branch}")
+
+        if metadata_parts:
+            section.add(TextBlock(" • ".join(metadata_parts), style="italic"))
+
+        return section
+
+    def to_leaderboard_section(self) -> Section:
+        """Build leaderboard section showing top contributors.
+
+        Returns:
+            Section containing the leaderboard table, or empty section if no active members
+        """
+        section = Section(header=Header("🏆 Leaderboard", level=2))
+
+        if not self.team_stats:
+            return section
+
+        # Sort by activity level (merged PRs desc, then username)
+        sorted_members = sorted(
+            self.team_stats.items(),
+            key=lambda x: (-x[1].merged_count, x[0])
+        )
+
+        # Filter to only members with activity
+        active_members = [(username, stats) for username, stats in sorted_members
+                         if stats.merged_count > 0]
+
+        if not active_members:
+            return section
+
+        # Build table
+        columns = (
+            TableColumn("Rank", align="left"),
+            TableColumn("Username", align="left"),
+            TableColumn("Open", align="right"),
+            TableColumn("Merged", align="right"),
+        )
+
+        medals = ["🥇", "🥈", "🥉"]
+        rows = []
+        for idx, (username, stats) in enumerate(active_members):
+            rank_display = medals[idx] if idx < 3 else f"#{idx+1}"
+            rows.append(TableRow((
+                rank_display,
+                username[:15],
+                str(stats.open_count),
+                str(stats.merged_count),
+            )))
+
+        section.add(Table(columns=columns, rows=tuple(rows), in_code_block=True))
+        return section
+
+    def to_project_progress_section(self) -> Section:
+        """Build project progress section with statistics table.
+
+        Returns:
+            Section containing the project progress table
+        """
+        section = Section(header=Header("📊 Project Progress", level=2))
+
+        if not self.project_stats:
+            section.add(TextBlock("No projects found", style="italic"))
+            return section
+
+        # Build table
+        columns = (
+            TableColumn("Project", align="left"),
+            TableColumn("Open", align="right"),
+            TableColumn("Merged", align="right"),
+            TableColumn("Total", align="right"),
+            TableColumn("Progress", align="left"),
+            TableColumn("Cost", align="right"),
+        )
+
+        rows = []
+        for project_name in sorted(self.project_stats.keys()):
+            stats = self.project_stats[project_name]
+
+            # Create progress bar data
+            pct = stats.completion_percentage
+            bar_width = 10
+            filled = int((pct / 100) * bar_width)
+            bar = "█" * filled + "░" * (bar_width - filled)
+            progress_display = f"{bar} {pct:>3.0f}%"
+
+            # Format cost
+            cost_display = format_usd(stats.total_cost_usd) if stats.total_cost_usd > 0 else "-"
+
+            rows.append(TableRow((
+                project_name[:20],
+                str(stats.in_progress_tasks),
+                str(stats.completed_tasks),
+                str(stats.total_tasks),
+                progress_display,
+                cost_display,
+            )))
+
+        section.add(Table(columns=columns, rows=tuple(rows), in_code_block=True))
+        return section
+
+    def to_warnings_section(self, stale_pr_days: int = 7) -> Section:
+        """Build warnings section for projects needing attention.
+
+        Args:
+            stale_pr_days: Threshold for stale PRs
+
+        Returns:
+            Section containing warnings, or empty section if no warnings
+        """
+        section = Section(header=Header("⚠️ Needs Attention", level=2))
+
+        projects = self.projects_needing_attention()
+        if not projects:
+            return section
+
+        for stats in projects:
+            project_items = []
+
+            # Collect all open PRs with their status indicators
+            for pr in stats.open_prs:
+                indicators = []
+                if pr.is_stale(stale_pr_days):
+                    indicators.append("stale")
+                assignee = pr.first_assignee or "unassigned"
+
+                status_parts = [f"{pr.days_open}d", assignee]
+                if indicators:
+                    status_parts.extend(indicators)
+
+                # Store PR info as a tuple (number, url, status_text)
+                status_text = ", ".join(status_parts)
+                if pr.url:
+                    project_items.append(ListItem(
+                        Link(f"#{pr.number}", pr.url),
+                        bullet="•"
+                    ))
+                    # Note: We need to include status_text - will handle in formatter
+                else:
+                    project_items.append(ListItem(
+                        f"#{pr.number} ({status_text})",
+                        bullet="•"
+                    ))
+
+            # Add open orphaned PRs
+            for pr in stats.orphaned_prs:
+                if pr.is_open():
+                    if pr.url:
+                        project_items.append(ListItem(
+                            Link(f"#{pr.number}", pr.url),
+                            bullet="•"
+                        ))
+                    else:
+                        project_items.append(ListItem(
+                            f"#{pr.number} ({pr.days_open}d, orphaned)",
+                            bullet="•"
+                        ))
+
+            # Add warning if no open PRs but tasks remain
+            if stats.has_remaining_tasks:
+                project_items.append(ListItem(
+                    f"No open PRs ({stats.pending_tasks} tasks remaining)",
+                    bullet="•"
+                ))
+
+            if project_items:
+                # Add project header as bold text, then the list
+                section.add(TextBlock(stats.project_name, style="bold"))
+                section.add(ListBlock(tuple(project_items)))
+
+        return section
+
+    def to_project_details_section(self) -> Section:
+        """Build detailed task view showing each task with its PR association.
+
+        Returns:
+            Section containing detailed task-PR mappings for all projects
+        """
+        section = Section()
+
+        for project_name in sorted(self.project_stats.keys()):
+            stats = self.project_stats[project_name]
+
+            # Project header with completion count
+            header_text = f"{project_name} ({stats.completed_tasks}/{stats.total_tasks} complete)"
+            project_section = Section(header=Header(header_text, level=2))
+
+            # Tasks section
+            if stats.tasks:
+                task_items = []
+                for task in stats.tasks:
+                    checkbox = "[x]" if task.status == TaskStatus.COMPLETED else "[ ]"
+                    # Truncate long descriptions
+                    desc = task.description[:60] + "..." if len(task.description) > 60 else task.description
+
+                    if task.has_pr:
+                        pr = task.pr
+                        if pr.is_merged():
+                            pr_info = f"PR #{pr.number} (Merged)"
+                        elif pr.is_open():
+                            pr_info = f"PR #{pr.number} (Open, {pr.days_open}d)"
+                        else:
+                            pr_info = f"PR #{pr.number} (Closed)"
+                        task_items.append(ListItem(f"{checkbox} `{desc}` - {pr_info}"))
+                    else:
+                        task_items.append(ListItem(f"{checkbox} `{desc}` - (no PR)"))
+
+                project_section.add(Header("Tasks", level=3))
+                project_section.add(ListBlock(tuple(task_items)))
+
+            # Orphaned PRs section
+            if stats.orphaned_prs:
+                orphan_items = []
+                for pr in stats.orphaned_prs:
+                    if pr.is_merged():
+                        state = "Merged"
+                    elif pr.is_open():
+                        state = f"Open, {pr.days_open}d"
+                    else:
+                        state = "Closed"
+                    orphan_items.append(ListItem(f"PR #{pr.number} ({state}) - Task removed from spec"))
+
+                project_section.add(Header("Orphaned PRs", level=3))
+                project_section.add(ListBlock(tuple(orphan_items)))
+
+            section.add(project_section)
+
+        return section
 
     def format_leaderboard(self, for_slack: bool = False) -> str:
         """Format leaderboard showing top contributors with rankings
