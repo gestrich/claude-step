@@ -22,7 +22,7 @@ from claudestep.services.core.reviewer_service import ReviewerService
 from claudestep.services.core.task_service import TaskService
 
 
-def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
+def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper, default_allowed_tools: str) -> int:
     """Orchestrate preparation workflow using Service Layer classes.
 
     This command instantiates services and coordinates their operations but
@@ -34,6 +34,7 @@ def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
     Args:
         args: Parsed command-line arguments
         gh: GitHub Actions helper instance
+        default_allowed_tools: Default allowed tools from workflow (can be overridden by project config)
 
     Returns:
         Exit code (0 for success, non-zero for various failure modes)
@@ -113,6 +114,13 @@ Please merge your spec.md file to the '{default_base_branch}' branch before runn
             print(f"Base branch: {base_branch} (overridden from default: {default_base_branch})")
         else:
             print(f"Base branch: {base_branch}")
+
+        # Resolve allowed tools (config override or default)
+        allowed_tools = config.get_allowed_tools(default_allowed_tools)
+        if allowed_tools != default_allowed_tools:
+            print(f"Allowed tools: {allowed_tools} (overridden from default)")
+        else:
+            print(f"Allowed tools: {allowed_tools}")
 
         slack_webhook_url = os.environ.get("SLACK_WEBHOOK_URL", "")  # From action input
         label = os.environ.get("PR_LABEL", "claudestep")  # From action input, defaults to "claudestep"
@@ -258,6 +266,7 @@ Now complete the task '{task}' following all the details and instructions in the
         gh.write_output("spec_path", project.spec_path)
         gh.write_output("pr_template_path", project.pr_template_path)
         gh.write_output("base_branch", base_branch)
+        gh.write_output("allowed_tools", allowed_tools)
         gh.write_output("label", label)
         gh.write_output("reviewers_json", json.dumps([{"username": r.username, "maxOpenPRs": r.max_open_prs} for r in config.reviewers]))
         gh.write_output("slack_webhook_url", slack_webhook_url)

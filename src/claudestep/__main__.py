@@ -42,7 +42,14 @@ def main():
     elif args.command == "discover-ready":
         return cmd_discover_ready()
     elif args.command == "prepare":
-        return cmd_prepare(args, gh)
+        return cmd_prepare(
+            args,
+            gh,
+            default_allowed_tools=os.environ.get(
+                "CLAUDE_ALLOWED_TOOLS",
+                "Read,Write,Edit,Bash(git add:*),Bash(git commit:*)"
+            )
+        )
     elif args.command == "finalize":
         return cmd_finalize(args, gh)
     elif args.command == "prepare-summary":

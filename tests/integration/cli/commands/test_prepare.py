@@ -108,7 +108,7 @@ class TestPrepareBaseBranchResolution:
             mock_reviewer_service_class.return_value = mock_reviewer_service
 
             # Act
-            result = cmd_prepare(mock_args, mock_github_helper)
+            result = cmd_prepare(mock_args, mock_github_helper, default_allowed_tools="Read,Write,Edit")
 
         # Assert
         assert result == 0
@@ -169,7 +169,7 @@ class TestPrepareBaseBranchResolution:
             mock_reviewer_service_class.return_value = mock_reviewer_service
 
             # Act
-            result = cmd_prepare(mock_args, mock_github_helper)
+            result = cmd_prepare(mock_args, mock_github_helper, default_allowed_tools="Read,Write,Edit")
 
         # Assert
         assert result == 0
@@ -231,7 +231,7 @@ class TestPrepareBaseBranchResolution:
             mock_reviewer_service_class.return_value = mock_reviewer_service
 
             # Act
-            result = cmd_prepare(mock_args, mock_github_helper)
+            result = cmd_prepare(mock_args, mock_github_helper, default_allowed_tools="Read,Write,Edit")
 
         # Assert
         assert result == 0
@@ -301,7 +301,7 @@ class TestPrepareBaseBranchResolution:
             mock_reviewer_service_class.return_value = mock_reviewer_service
 
             # Act
-            result = cmd_prepare(mock_args, mock_github_helper)
+            result = cmd_prepare(mock_args, mock_github_helper, default_allowed_tools="Read,Write,Edit")
 
         # Assert
         assert result == 0
