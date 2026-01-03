@@ -627,7 +627,7 @@ class StatisticsReport:
 
         return "\n".join(lines)
 
-    def _format_warnings_section(self, fmt: MarkdownFormatter, stale_pr_days: int = 7) -> str:
+    def format_warnings_section(self, for_slack: bool = False, stale_pr_days: int = 7) -> str:
         """Format actionable items section for projects needing attention.
 
         Shows all open PRs that need action, with clickable links and status indicators:
@@ -636,7 +636,7 @@ class StatisticsReport:
         - Projects with no open PRs but pending tasks
 
         Args:
-            fmt: Markdown formatter instance
+            for_slack: If True, use Slack mrkdwn format; otherwise GitHub markdown
             stale_pr_days: Threshold for stale PRs (used in descriptions)
 
         Returns:
@@ -646,6 +646,7 @@ class StatisticsReport:
         if not projects:
             return ""
 
+        fmt = MarkdownFormatter(for_slack=for_slack)
         lines = []
         lines.append(fmt.header("⚠️ Needs Attention", level=2))
 
@@ -659,9 +660,12 @@ class StatisticsReport:
                     indicators.append("stale")
                 assignee = pr.first_assignee or "unassigned"
 
-                # Format PR link
+                # Format PR link (Slack vs GitHub markdown)
                 if pr.url:
-                    pr_link = f"<{pr.url}|#{pr.number}>"
+                    if for_slack:
+                        pr_link = f"<{pr.url}|#{pr.number}>"
+                    else:
+                        pr_link = f"[#{pr.number}]({pr.url})"
                 else:
                     pr_link = f"#{pr.number}"
 
@@ -675,7 +679,10 @@ class StatisticsReport:
             for pr in stats.orphaned_prs:
                 if pr.is_open():
                     if pr.url:
-                        pr_link = f"<{pr.url}|#{pr.number}>"
+                        if for_slack:
+                            pr_link = f"<{pr.url}|#{pr.number}>"
+                        else:
+                            pr_link = f"[#{pr.number}]({pr.url})"
                     else:
                         pr_link = f"#{pr.number}"
                     project_items.append(f"• {pr_link} ({pr.days_open}d, orphaned)")
@@ -685,10 +692,21 @@ class StatisticsReport:
                 project_items.append(f"• No open PRs ({stats.pending_tasks} tasks remaining)")
 
             if project_items:
-                lines.append(f"*{stats.project_name}*")
+                # Bold project name
+                if for_slack:
+                    lines.append(f"*{stats.project_name}*")
+                else:
+                    lines.append(f"**{stats.project_name}**")
                 lines.extend(project_items)
 
         return "\n".join(lines)
+
+    def _format_warnings_section(self, _fmt: MarkdownFormatter, stale_pr_days: int = 7) -> str:
+        """Internal method for backward compatibility with format_for_slack.
+
+        Delegates to format_warnings_section with for_slack=True.
+        """
+        return self.format_warnings_section(for_slack=True, stale_pr_days=stale_pr_days)
 
     def format_for_slack(
         self,

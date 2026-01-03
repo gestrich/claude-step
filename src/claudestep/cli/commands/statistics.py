@@ -109,6 +109,12 @@ def cmd_statistics(
                 gh.write_step_summary(stats.format_summary())
                 gh.write_step_summary("")
 
+            # Add warnings section if there are projects needing attention
+            warnings_section = report.format_warnings_section(for_slack=False)
+            if warnings_section:
+                gh.write_step_summary(warnings_section)
+                gh.write_step_summary("")
+
             # Add detailed task view with orphaned PRs
             gh.write_step_summary("## Detailed Task View")
             gh.write_step_summary("")
