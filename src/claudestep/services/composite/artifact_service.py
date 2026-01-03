@@ -1,10 +1,8 @@
 """Service Layer utilities for artifact operations.
 
 Follows Service Layer pattern (Fowler, PoEAA) - provides a unified interface for
-working with GitHub workflow artifacts that contain task metadata. Eliminates code
-duplication across reviewer_management, task_management, and statistics_collector
-modules. Note: These are utility functions supporting the Service Layer rather than
-a full service class.
+working with GitHub workflow artifacts that contain task metadata. These are utility
+functions supporting the Service Layer rather than a full service class.
 """
 
 import re

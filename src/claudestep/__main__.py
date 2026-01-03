@@ -107,7 +107,7 @@ def main():
             days_back=args.days_back or int(os.environ.get("STATS_DAYS_BACK", "30")),
             format_type=args.format or os.environ.get("STATS_FORMAT", "slack"),
             slack_webhook_url=os.environ.get("SLACK_WEBHOOK_URL", ""),
-            show_reviewer_stats=args.show_reviewer_stats or os.environ.get("SHOW_REVIEWER_STATS", "").lower() == "true",
+            show_assignee_stats=args.show_assignee_stats or os.environ.get("SHOW_ASSIGNEE_STATS", "").lower() == "true",
         )
     elif args.command == "auto-start":
         # Parse auto_start_enabled from argument or environment variable

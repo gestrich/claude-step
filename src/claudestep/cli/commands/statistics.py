@@ -22,7 +22,7 @@ def cmd_statistics(
     days_back: int = 30,
     format_type: str = "slack",
     slack_webhook_url: str = "",
-    show_reviewer_stats: bool = False,
+    show_assignee_stats: bool = False,
 ) -> int:
     """Orchestrate statistics workflow using Service Layer classes.
 
@@ -38,7 +38,7 @@ def cmd_statistics(
         days_back: Days to look back for statistics (default: 30)
         format_type: Output format - "slack" or "json" (default: "slack")
         slack_webhook_url: Slack webhook URL for posting statistics (default: "")
-        show_reviewer_stats: Whether to show reviewer leaderboard (default: False)
+        show_assignee_stats: Whether to show assignee leaderboard (default: False)
 
     Returns:
         Exit code (0 for success, 1 for failure)
@@ -62,7 +62,7 @@ def cmd_statistics(
         report = statistics_service.collect_all_statistics(
             config_path=config_path if config_path else None,
             days_back=days_back,
-            show_reviewer_stats=show_reviewer_stats,
+            show_assignee_stats=show_assignee_stats,
         )
 
         print(f"\n=== Collection Complete ===")
@@ -73,7 +73,7 @@ def cmd_statistics(
         # Generate outputs based on format
         if format_type == "slack":
             slack_text = report.format_for_slack(
-                show_reviewer_stats=show_reviewer_stats,
+                show_assignee_stats=show_assignee_stats,
             )
             gh.write_output("slack_message", slack_text)
             gh.write_output("has_statistics", "true")
@@ -94,7 +94,7 @@ def cmd_statistics(
         gh.write_step_summary("")
 
         # Add leaderboard to step summary (only if enabled)
-        if show_reviewer_stats:
+        if show_assignee_stats:
             leaderboard = report.format_leaderboard()
             if leaderboard:
                 gh.write_step_summary(leaderboard)
@@ -127,7 +127,7 @@ def cmd_statistics(
             gh.write_step_summary("")
 
         # Add team member summaries (detailed view, only if enabled)
-        if show_reviewer_stats:
+        if show_assignee_stats:
             if report.team_stats:
                 gh.write_step_summary("## Team Member Activity (Detailed)")
                 gh.write_step_summary("")

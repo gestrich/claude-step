@@ -109,7 +109,7 @@ class TestCmdStatistics:
         # Assert
         assert result == 0
         mock_service.collect_all_statistics.assert_called_once_with(
-            config_path=None, days_back=30, show_reviewer_stats=False
+            config_path=None, days_back=30, show_assignee_stats=False
         )
 
         # Verify Slack output was written
@@ -158,7 +158,7 @@ class TestCmdStatistics:
         # Assert
         assert result == 0
         mock_service.collect_all_statistics.assert_called_once_with(
-            config_path="/path/to/config.yml", days_back=7, show_reviewer_stats=False
+            config_path="/path/to/config.yml", days_back=7, show_assignee_stats=False
         )
 
         # Verify JSON output was written
@@ -195,7 +195,7 @@ class TestCmdStatistics:
 
         # Assert
         assert result == 0
-        mock_collect.assert_called_once_with(config_path=None, days_back=30, show_reviewer_stats=False)
+        mock_collect.assert_called_once_with(config_path=None, days_back=30, show_assignee_stats=False)
 
     def test_cmd_statistics_writes_leaderboard_when_present(
         self, mock_github_helper, sample_statistics_report
@@ -214,12 +214,12 @@ class TestCmdStatistics:
             )
             mock_collect.return_value = sample_statistics_report
 
-            # Act - must enable show_reviewer_stats to see leaderboard
+            # Act - must enable show_assignee_stats to see leaderboard
             result = cmd_statistics(
                 gh=mock_github_helper,
                 repo="owner/repo",
                 format_type="slack",
-                show_reviewer_stats=True
+                show_assignee_stats=True
             )
 
         # Assert
@@ -274,12 +274,12 @@ class TestCmdStatistics:
             mock_service_class.return_value = mock_service
             mock_collect.return_value = sample_statistics_report
 
-            # Act - must enable show_reviewer_stats to see team member activity
+            # Act - must enable show_assignee_stats to see team member activity
             result = cmd_statistics(
                 gh=mock_github_helper,
                 repo="owner/repo",
                 format_type="slack",
-                show_reviewer_stats=True
+                show_assignee_stats=True
             )
 
         # Assert
@@ -309,12 +309,12 @@ class TestCmdStatistics:
             mock_service_class.return_value = mock_service
             mock_collect.return_value = empty_statistics_report
 
-            # Act - with show_reviewer_stats=True to test team member section
+            # Act - with show_assignee_stats=True to test team member section
             result = cmd_statistics(
                 gh=mock_github_helper,
                 repo="owner/repo",
                 format_type="slack",
-                show_reviewer_stats=True
+                show_assignee_stats=True
             )
 
         # Assert
@@ -536,7 +536,7 @@ class TestCmdStatistics:
 
         # Assert
         assert result == 0
-        mock_collect.assert_called_once_with(config_path=None, days_back=90, show_reviewer_stats=False)
+        mock_collect.assert_called_once_with(config_path=None, days_back=90, show_assignee_stats=False)
 
     def test_cmd_statistics_no_leaderboard_when_empty(
         self, mock_github_helper, sample_statistics_report

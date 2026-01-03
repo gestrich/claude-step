@@ -268,12 +268,12 @@ def list_pull_requests(
 ) -> List[GitHubPullRequest]:
     """Fetch PRs with filtering, returns domain models
 
-    This function provides GitHub PR querying capabilities for reviewer capacity
+    This function provides GitHub PR querying capabilities for capacity
     checking and other use cases. It encapsulates all GitHub CLI command construction
     and JSON parsing, returning type-safe domain models.
 
     **Current Usage**:
-    - Reviewer capacity checking (filter by assignee + state=open)
+    - Capacity checking (filter by assignee + state=open)
     - Project detection (filter by label)
     - Statistics collection (filter by label, configurable limit)
 
@@ -294,7 +294,7 @@ def list_pull_requests(
         repo: GitHub repository (owner/name)
         state: "open", "closed", "merged", or "all"
         label: Optional label filter (e.g., "claudestep" for ClaudeStep PRs)
-        assignee: Optional assignee filter (e.g., "username" for specific reviewer)
+        assignee: Optional assignee filter (e.g., "username" for specific assignee)
         since: Optional date filter (filters by created_at >= since)
         limit: Max results (default 100, increase for repos with many PRs)
 
@@ -305,9 +305,9 @@ def list_pull_requests(
         GitHubAPIError: If gh command fails
 
     Example:
-        >>> # Check reviewer capacity
-        >>> prs = list_pull_requests("owner/repo", state="open", label="claudestep", assignee="reviewer1")
-        >>> print(f"Reviewer has {len(prs)} open PRs")
+        >>> # Check capacity
+        >>> prs = list_pull_requests("owner/repo", state="open", label="claudestep", assignee="alice")
+        >>> print(f"Assignee has {len(prs)} open PRs")
         >>>
         >>> # Statistics for large repos
         >>> all_prs = list_pull_requests("owner/repo", state="all", label="claudestep", limit=500)
@@ -408,12 +408,12 @@ def list_open_pull_requests(
 ) -> List[GitHubPullRequest]:
     """Convenience function for fetching open PRs
 
-    **Current Usage**: Reviewer capacity checking (filter by assignee)
+    **Current Usage**: Capacity checking (filter by assignee)
 
     **Usage Examples**:
-    - Reviewer capacity: Check how many open PRs a reviewer has
+    - Capacity checking: Check how many open PRs an assignee has
     - Stale PR detection: Find open PRs older than expected review time
-    - Workload balancing: Cross-check reviewer assignments
+    - Workload balancing: Cross-check assignee assignments
 
     Args:
         repo: GitHub repository (owner/name)
@@ -425,9 +425,9 @@ def list_open_pull_requests(
         List of open GitHubPullRequest domain models
 
     Example:
-        >>> # Check reviewer capacity
-        >>> open_prs = list_open_pull_requests("owner/repo", label="claudestep", assignee="reviewer1")
-        >>> print(f"Reviewer has {len(open_prs)} open PRs")
+        >>> # Check capacity
+        >>> open_prs = list_open_pull_requests("owner/repo", label="claudestep", assignee="alice")
+        >>> print(f"Assignee has {len(open_prs)} open PRs")
 
     See Also:
         - list_pull_requests(): Base function with full filtering options

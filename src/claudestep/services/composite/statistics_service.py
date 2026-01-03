@@ -52,7 +52,7 @@ class StatisticsService:
         config_path: Optional[str] = None,
         days_back: int = DEFAULT_STATS_DAYS_BACK,
         label: str = DEFAULT_PR_LABEL,
-        show_reviewer_stats: bool = False,
+        show_assignee_stats: bool = False,
     ) -> StatisticsReport:
         """Collect statistics for all projects and team members
 
@@ -60,7 +60,7 @@ class StatisticsService:
             config_path: Optional path to specific config (for single project mode)
             days_back: Days to look back for team member stats
             label: GitHub label to filter PRs
-            show_reviewer_stats: Whether to collect reviewer statistics (default: False)
+            show_assignee_stats: Whether to collect reviewer statistics (default: False)
 
         Returns:
             Complete StatisticsReport
@@ -146,7 +146,7 @@ class StatisticsService:
                 print(f"Error collecting stats for {config.project.name}: {e}")
 
         # Collect team member statistics across all projects (only if enabled)
-        if show_reviewer_stats:
+        if show_assignee_stats:
             if all_assignees:
                 try:
                     team_stats = self.collect_team_member_stats(

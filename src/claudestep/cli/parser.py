@@ -78,9 +78,9 @@ def create_parser() -> argparse.ArgumentParser:
         help="Output format (default: slack)"
     )
     parser_statistics.add_argument(
-        "--show-reviewer-stats",
+        "--show-assignee-stats",
         action="store_true",  # Flag presence = True, absence = False
-        help="Show reviewer leaderboard statistics (default: hidden)"
+        help="Show assignee leaderboard statistics (default: hidden)"
     )
     parser_auto_start = subparsers.add_parser(
         "auto-start",

@@ -482,7 +482,7 @@ class TestStatisticsReport:
         member.merged_prs = [PRReference(pr_number=1, title="Test", project="test", timestamp=timestamp)]
         report.add_team_member(member)
 
-        # Without show_reviewer_stats, leaderboard is hidden
+        # Without show_assignee_stats, leaderboard is hidden
         slack_msg = report.format_for_slack()
         assert "ClaudeStep Statistics Report" in slack_msg
         assert "test-project" in slack_msg
@@ -492,8 +492,8 @@ class TestStatisticsReport:
         assert "Total" in slack_msg  # Table header
         assert "2025-01-01" in slack_msg
 
-        # With show_reviewer_stats=True, leaderboard appears
-        slack_msg_with_reviewers = report.format_for_slack(show_reviewer_stats=True)
+        # With show_assignee_stats=True, leaderboard appears
+        slack_msg_with_reviewers = report.format_for_slack(show_assignee_stats=True)
         assert "alice" in slack_msg_with_reviewers
         assert "Merged" in slack_msg_with_reviewers  # Leaderboard header
 
@@ -683,8 +683,8 @@ class TestStatisticsReport:
         charlie.merged_prs = [PRReference(pr_number=i, title=f"PR {i}", project="proj", timestamp=timestamp) for i in range(10)]
         report.add_team_member(charlie)
 
-        # Must enable show_reviewer_stats to see team stats in output
-        slack_msg = report.format_for_slack(show_reviewer_stats=True)
+        # Must enable show_assignee_stats to see team stats in output
+        slack_msg = report.format_for_slack(show_assignee_stats=True)
 
         # Charlie should appear first (most active), then alice, then bob
         # Table format doesn't use @ prefix
@@ -876,7 +876,7 @@ class TestLeaderboard:
         assert "🏆 Leaderboard" not in slack_msg_default
 
         # Leaderboard visible when enabled
-        slack_msg = report.format_for_slack(show_reviewer_stats=True)
+        slack_msg = report.format_for_slack(show_assignee_stats=True)
 
         # Leaderboard should appear before project progress
         assert "🏆 Leaderboard" in slack_msg
@@ -1481,16 +1481,16 @@ assignee: alice
         # Create service and test
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
 
-        # Default: show_reviewer_stats=False, so team stats not collected
+        # Default: show_assignee_stats=False, so team stats not collected
         report = service.collect_all_statistics("claude-step/project1/configuration.yml")
         assert len(report.project_stats) == 1
         assert "project1" in report.project_stats
         assert len(report.team_stats) == 0  # Not collected by default
 
-        # With show_reviewer_stats=True, team stats are collected
+        # With show_assignee_stats=True, team stats are collected
         report_with_reviewers = service.collect_all_statistics(
             "claude-step/project1/configuration.yml",
-            show_reviewer_stats=True
+            show_assignee_stats=True
         )
         assert len(report_with_reviewers.project_stats) == 1
         assert "project1" in report_with_reviewers.project_stats

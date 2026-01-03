@@ -800,13 +800,13 @@ class StatisticsReport:
 
     def format_for_slack(
         self,
-        show_reviewer_stats: bool = False,
+        show_assignee_stats: bool = False,
         stale_pr_days: int = 7,
     ) -> str:
         """Complete report in Slack mrkdwn format with tables
 
         Args:
-            show_reviewer_stats: Whether to include the reviewer leaderboard (default: False)
+            show_assignee_stats: Whether to include the assignee leaderboard (default: False)
             stale_pr_days: Threshold for stale PR warnings (default: 7 days)
         """
         formatter = SlackReportFormatter()
@@ -816,7 +816,7 @@ class StatisticsReport:
         sections.append(formatter.format_section(self.to_header_section()))
 
         # Leaderboard section (only if enabled)
-        if show_reviewer_stats:
+        if show_assignee_stats:
             leaderboard = self.to_leaderboard_section()
             if not leaderboard.is_empty():
                 sections.append(formatter.format_section(leaderboard))
@@ -1055,7 +1055,7 @@ class TaskMetadata:
             task_description=data["task_description"],
             project=data["project"],
             branch_name=data["branch_name"],
-            assignee=data.get("assignee", data.get("reviewer", "")),
+            assignee=data.get("assignee", ""),
             created_at=created_at,
             workflow_run_id=data["workflow_run_id"],
             pr_number=data["pr_number"],
