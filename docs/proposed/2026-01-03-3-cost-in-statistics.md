@@ -137,7 +137,7 @@ Ensure cost displays correctly in all statistics output formats:
 └──────────────────┴──────┴────────┴───────┴─────────────────┴────────┴────────┘
 ```
 
-- [ ] Phase 4: Add Unit Tests
+- [x] Phase 4: Add Unit Tests
 
 Add tests for the new artifact creation and cost retrieval:
 

@@ -19,6 +19,7 @@ from claudestep.services.composite.artifact_service import (
     get_reviewer_assignments,
     parse_task_index_from_name,
 )
+from claudestep.domain.models import AITask
 from claudestep.domain.exceptions import GitHubAPIError
 
 
@@ -102,6 +103,146 @@ class TestTaskMetadata:
         assert metadata.main_task_cost_usd == 0.0
         assert metadata.pr_summary_cost_usd == 0.0
         assert metadata.total_cost_usd == 0.0
+
+    def test_from_dict_parses_ai_tasks_list(self):
+        """Should parse ai_tasks list from JSON dictionary"""
+        # Arrange
+        data = {
+            "task_index": 1,
+            "task_description": "Add feature",
+            "project": "my-project",
+            "branch_name": "claude-step-my-project-abc12345",
+            "reviewer": "alice",
+            "created_at": "2025-12-27T15:30:00Z",
+            "workflow_run_id": 123,
+            "pr_number": 42,
+            "ai_tasks": [
+                {
+                    "type": "PRCreation",
+                    "model": "claude-sonnet-4",
+                    "cost_usd": 0.15,
+                    "created_at": "2025-12-27T15:25:00Z",
+                    "tokens_input": 5000,
+                    "tokens_output": 2000,
+                    "duration_seconds": 45.2
+                },
+                {
+                    "type": "PRSummary",
+                    "model": "claude-sonnet-4",
+                    "cost_usd": 0.02,
+                    "created_at": "2025-12-27T15:28:00Z",
+                    "tokens_input": 1000,
+                    "tokens_output": 500,
+                    "duration_seconds": 8.1
+                }
+            ]
+        }
+
+        # Act
+        metadata = TaskMetadata.from_dict(data)
+
+        # Assert
+        assert len(metadata.ai_tasks) == 2
+        assert metadata.ai_tasks[0].type == "PRCreation"
+        assert metadata.ai_tasks[0].model == "claude-sonnet-4"
+        assert metadata.ai_tasks[0].cost_usd == 0.15
+        assert metadata.ai_tasks[0].tokens_input == 5000
+        assert metadata.ai_tasks[1].type == "PRSummary"
+        assert metadata.ai_tasks[1].cost_usd == 0.02
+
+    def test_get_total_cost_sums_ai_tasks(self):
+        """Should calculate total cost from ai_tasks list"""
+        # Arrange
+        now = datetime.now(timezone.utc)
+        metadata = TaskMetadata(
+            task_index=1,
+            task_description="Test",
+            project="test",
+            branch_name="test-branch",
+            reviewer="alice",
+            created_at=now,
+            workflow_run_id=123,
+            pr_number=1,
+            ai_tasks=[
+                AITask(type="PRCreation", model="claude-sonnet-4", cost_usd=0.15, created_at=now),
+                AITask(type="PRSummary", model="claude-sonnet-4", cost_usd=0.02, created_at=now),
+            ]
+        )
+
+        # Act
+        total = metadata.get_total_cost()
+
+        # Assert
+        assert total == pytest.approx(0.17, rel=1e-6)
+
+    def test_to_dict_includes_ai_tasks(self):
+        """Should serialize ai_tasks to JSON dictionary"""
+        # Arrange
+        now = datetime.now(timezone.utc)
+        metadata = TaskMetadata(
+            task_index=1,
+            task_description="Test",
+            project="test",
+            branch_name="test-branch",
+            reviewer="alice",
+            created_at=now,
+            workflow_run_id=123,
+            pr_number=42,
+            ai_tasks=[
+                AITask(type="PRCreation", model="claude-sonnet-4", cost_usd=0.25, created_at=now,
+                       tokens_input=3000, tokens_output=1500, duration_seconds=30.5),
+            ]
+        )
+
+        # Act
+        data = metadata.to_dict()
+
+        # Assert
+        assert "ai_tasks" in data
+        assert len(data["ai_tasks"]) == 1
+        assert data["ai_tasks"][0]["type"] == "PRCreation"
+        assert data["ai_tasks"][0]["model"] == "claude-sonnet-4"
+        assert data["ai_tasks"][0]["cost_usd"] == 0.25
+        assert data["ai_tasks"][0]["tokens_input"] == 3000
+        assert data["total_cost_usd"] == 0.25
+
+    def test_json_roundtrip_with_ai_tasks(self):
+        """Should correctly roundtrip TaskMetadata with AITask list through JSON"""
+        # Arrange
+        now = datetime.now(timezone.utc)
+        original = TaskMetadata(
+            task_index=5,
+            task_description="Implement authentication",
+            project="auth-project",
+            branch_name="claude-step-auth-project-a1b2c3d4",
+            reviewer="bob",
+            created_at=now,
+            workflow_run_id=99999,
+            pr_number=123,
+            pr_state="open",
+            ai_tasks=[
+                AITask(type="PRCreation", model="claude-opus-4", cost_usd=0.50, created_at=now,
+                       tokens_input=10000, tokens_output=5000, duration_seconds=120.0),
+                AITask(type="PRSummary", model="claude-sonnet-4", cost_usd=0.05, created_at=now,
+                       tokens_input=2000, tokens_output=800, duration_seconds=15.0),
+            ]
+        )
+
+        # Act - serialize to JSON and back
+        json_str = json.dumps(original.to_dict())
+        parsed_data = json.loads(json_str)
+        restored = TaskMetadata.from_dict(parsed_data)
+
+        # Assert
+        assert restored.task_index == original.task_index
+        assert restored.task_description == original.task_description
+        assert restored.project == original.project
+        assert restored.pr_number == original.pr_number
+        assert len(restored.ai_tasks) == 2
+        assert restored.ai_tasks[0].type == "PRCreation"
+        assert restored.ai_tasks[0].cost_usd == 0.50
+        assert restored.ai_tasks[1].type == "PRSummary"
+        assert restored.get_total_cost() == 0.55
 
 
 class TestProjectArtifact:

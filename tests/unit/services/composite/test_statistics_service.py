@@ -1117,6 +1117,173 @@ This PR was generated using Claude Code with the following costs:
         # Should show "-" for zero cost
         assert "Cost" in slack_msg
 
+    def test_format_summary_includes_cost_when_present(self):
+        """Test that format_summary includes cost when total_cost_usd > 0"""
+        stats = ProjectStats("test-project", "/fake/spec.md")
+        stats.total_tasks = 10
+        stats.completed_tasks = 5
+        stats.in_progress_tasks = 2
+        stats.pending_tasks = 3
+        stats.total_cost_usd = 1.23
+
+        summary = stats.format_summary()
+
+        # Should include cost with money emoji
+        assert "💰$1.23" in summary
+
+    def test_format_summary_excludes_cost_when_zero(self):
+        """Test that format_summary does not include cost when total_cost_usd is 0"""
+        stats = ProjectStats("test-project", "/fake/spec.md")
+        stats.total_tasks = 10
+        stats.completed_tasks = 5
+        stats.in_progress_tasks = 2
+        stats.pending_tasks = 3
+        stats.total_cost_usd = 0.0
+
+        summary = stats.format_summary()
+
+        # Should not include money emoji
+        assert "💰" not in summary
+
+
+class TestCostAggregationFromArtifacts:
+    """Test cost aggregation from artifacts in statistics collection"""
+
+    @patch("claudestep.services.composite.statistics_service.find_project_artifacts")
+    def test_aggregate_costs_from_multiple_artifacts(self, mock_find_artifacts):
+        """Should sum costs from all artifacts for a project"""
+        from claudestep.services.composite.artifact_service import ProjectArtifact
+        from claudestep.domain.models import TaskMetadata, AITask
+
+        now = datetime.now(timezone.utc)
+
+        # Create mock artifacts with different costs
+        mock_find_artifacts.return_value = [
+            ProjectArtifact(
+                artifact_id=1,
+                artifact_name="task-metadata-test-abc12345.json",
+                workflow_run_id=100,
+                metadata=TaskMetadata(
+                    task_index=1,
+                    task_description="Task 1",
+                    project="test",
+                    branch_name="claude-step-test-abc12345",
+                    reviewer="alice",
+                    created_at=now,
+                    workflow_run_id=100,
+                    pr_number=10,
+                    ai_tasks=[
+                        AITask(type="PRCreation", model="claude-sonnet-4", cost_usd=0.15, created_at=now),
+                        AITask(type="PRSummary", model="claude-sonnet-4", cost_usd=0.02, created_at=now),
+                    ]
+                ),
+            ),
+            ProjectArtifact(
+                artifact_id=2,
+                artifact_name="task-metadata-test-def67890.json",
+                workflow_run_id=101,
+                metadata=TaskMetadata(
+                    task_index=2,
+                    task_description="Task 2",
+                    project="test",
+                    branch_name="claude-step-test-def67890",
+                    reviewer="bob",
+                    created_at=now,
+                    workflow_run_id=101,
+                    pr_number=11,
+                    ai_tasks=[
+                        AITask(type="PRCreation", model="claude-sonnet-4", cost_usd=0.25, created_at=now),
+                    ]
+                ),
+            ),
+            ProjectArtifact(
+                artifact_id=3,
+                artifact_name="task-metadata-test-ghi11111.json",
+                workflow_run_id=102,
+                metadata=TaskMetadata(
+                    task_index=3,
+                    task_description="Task 3",
+                    project="test",
+                    branch_name="claude-step-test-ghi11111",
+                    reviewer="charlie",
+                    created_at=now,
+                    workflow_run_id=102,
+                    pr_number=12,
+                    ai_tasks=[
+                        AITask(type="PRCreation", model="claude-opus-4", cost_usd=0.50, created_at=now),
+                        AITask(type="PRSummary", model="claude-sonnet-4", cost_usd=0.03, created_at=now),
+                    ]
+                ),
+            ),
+        ]
+
+        # Create service and test aggregation
+        mock_repo = Mock()
+        mock_pr_service = Mock()
+        service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
+
+        total = service._aggregate_costs_from_artifacts("test", "claudestep")
+
+        # Assert: 0.15 + 0.02 + 0.25 + 0.50 + 0.03 = 0.95
+        assert total == pytest.approx(0.95, rel=1e-6)
+
+    @patch("claudestep.services.composite.statistics_service.find_project_artifacts")
+    def test_aggregate_costs_handles_missing_metadata(self, mock_find_artifacts):
+        """Should skip artifacts without metadata (legacy PRs)"""
+        from claudestep.services.composite.artifact_service import ProjectArtifact
+        from claudestep.domain.models import TaskMetadata, AITask
+
+        now = datetime.now(timezone.utc)
+
+        mock_find_artifacts.return_value = [
+            ProjectArtifact(
+                artifact_id=1,
+                artifact_name="task-metadata-test-abc12345.json",
+                workflow_run_id=100,
+                metadata=TaskMetadata(
+                    task_index=1,
+                    task_description="Task 1",
+                    project="test",
+                    branch_name="claude-step-test-abc12345",
+                    reviewer="alice",
+                    created_at=now,
+                    workflow_run_id=100,
+                    pr_number=10,
+                    ai_tasks=[
+                        AITask(type="PRCreation", model="claude-sonnet-4", cost_usd=0.20, created_at=now),
+                    ]
+                ),
+            ),
+            ProjectArtifact(
+                artifact_id=2,
+                artifact_name="task-metadata-test-def67890.json",
+                workflow_run_id=101,
+                metadata=None,  # Failed to download/parse - legacy PR
+            ),
+        ]
+
+        mock_repo = Mock()
+        mock_pr_service = Mock()
+        service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
+
+        total = service._aggregate_costs_from_artifacts("test", "claudestep")
+
+        # Should only count the first artifact
+        assert total == pytest.approx(0.20, rel=1e-6)
+
+    @patch("claudestep.services.composite.statistics_service.find_project_artifacts")
+    def test_aggregate_costs_returns_zero_when_no_artifacts(self, mock_find_artifacts):
+        """Should return 0.0 when no artifacts are found"""
+        mock_find_artifacts.return_value = []
+
+        mock_repo = Mock()
+        mock_pr_service = Mock()
+        service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
+
+        total = service._aggregate_costs_from_artifacts("test", "claudestep")
+
+        assert total == 0.0
+
 
 class TestCollectTeamMemberStats:
     """Test team member statistics collection from GitHub API"""
