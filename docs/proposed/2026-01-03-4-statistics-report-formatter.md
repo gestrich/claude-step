@@ -47,7 +47,7 @@ Create formatters in `src/claudestep/domain/formatters/`:
 
 Each formatter takes report elements and produces a string. The existing `MarkdownFormatter` helper class in models.py can be refactored into these formatters.
 
-- [ ] Phase 4: Refactor StatisticsReport to use new system
+- [x] Phase 4: Refactor StatisticsReport to use new system
 
 Update `StatisticsReport` in [models.py](src/claudestep/domain/models.py):
 - Replace `format_for_slack()` with element-building methods

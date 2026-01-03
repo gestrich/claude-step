@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Literal, Optional
-from claudestep.domain.formatters.table_formatter import TableFormatter
 from claudestep.domain.formatters.report_elements import (
     Header,
     TextBlock,
@@ -15,9 +14,10 @@ from claudestep.domain.formatters.report_elements import (
     TableColumn,
     TableRow,
     Table,
-    ProgressBar,
     Section,
 )
+from claudestep.domain.formatters.slack_formatter import SlackReportFormatter
+from claudestep.domain.formatters.markdown_formatter import MarkdownReportFormatter
 from claudestep.domain.formatting import format_usd
 from claudestep.domain.github_models import GitHubPullRequest, PRState
 
@@ -197,55 +197,6 @@ def parse_iso_timestamp(timestamp_str: str) -> datetime:
     return dt
 
 
-class MarkdownFormatter:
-    """Helper class for formatting text in both Slack mrkdwn and GitHub markdown"""
-
-    def __init__(self, for_slack: bool = False):
-        self.for_slack = for_slack
-
-    def bold(self, text: str) -> str:
-        """Format text as bold"""
-        if self.for_slack:
-            return f"*{text}*"
-        return f"**{text}**"
-
-    def italic(self, text: str) -> str:
-        """Format text as italic"""
-        return f"_{text}_"
-
-    def header(self, text: str, level: int = 2) -> str:
-        """Format text as a header
-
-        Args:
-            text: Header text
-            level: Header level (1-6 for GitHub, 1-2 for Slack)
-        """
-        if self.for_slack:
-            # Slack only has bold for headers
-            return f"*{text}*"
-        return f"{'#' * level} {text}"
-
-    def code(self, text: str) -> str:
-        """Format text as inline code"""
-        return f"`{text}`"
-
-    def code_block(self, text: str, language: str = "") -> str:
-        """Format text as code block"""
-        if self.for_slack:
-            return f"```{text}```"
-        return f"```{language}\n{text}\n```"
-
-    def link(self, text: str, url: str) -> str:
-        """Format text as a link"""
-        if self.for_slack:
-            return f"<{url}|{text}>"
-        return f"[{text}]({url})"
-
-    def list_item(self, text: str, bullet: str = "-") -> str:
-        """Format text as a list item"""
-        return f"{bullet} {text}"
-
-
 class ReviewerCapacityResult:
     """Result of reviewer capacity check with detailed information"""
 
@@ -380,29 +331,34 @@ class TeamMemberStats:
             by_project[pr_ref.project].append(pr_ref)
         return by_project
 
-    def format_summary(self, for_slack: bool = False) -> str:
-        """Format for GitHub/Slack markdown output
+    def to_summary_section(self) -> Section:
+        """Build summary section for this team member.
 
-        Args:
-            for_slack: If True, use Slack mrkdwn format; otherwise use standard markdown
+        Returns:
+            Section containing team member summary
         """
-        fmt = MarkdownFormatter(for_slack)
-        lines = []
-
         # Emoji status indicator
         if self.merged_count > 0 or self.open_count > 0:
             status_emoji = "✅"
         else:
             status_emoji = "💤"
 
-        # Member header
-        lines.append(f"{status_emoji} {fmt.bold(f'@{self.username}')}")
+        section = Section()
+        section.add(TextBlock(f"{status_emoji} @{self.username}", style="bold"))
+        section.add(ListBlock((
+            ListItem(f"Merged: {self.merged_count} PR(s)"),
+            ListItem(f"Open: {self.open_count} PR(s)"),
+        )))
+        return section
 
-        # Activity summary
-        lines.append(f"- Merged: {self.merged_count} PR(s)")
-        lines.append(f"- Open: {self.open_count} PR(s)")
+    def format_summary(self, for_slack: bool = False) -> str:
+        """Format for GitHub/Slack markdown output
 
-        return "\n".join(lines)
+        Args:
+            for_slack: If True, use Slack mrkdwn format; otherwise use standard markdown
+        """
+        formatter = SlackReportFormatter() if for_slack else MarkdownReportFormatter()
+        return formatter.format_section(self.to_summary_section())
 
     def format_table_row(self, rank: int = 0) -> str:
         """Format team member as a table row for compact display
@@ -497,25 +453,21 @@ class ProjectStats:
         bar = "█" * filled + "░" * empty
         return f"{bar} {self.completion_percentage:.0f}%"
 
-    def format_summary(self, for_slack: bool = False) -> str:
-        """Format for GitHub/Slack markdown with progress bar
+    def to_summary_section(self) -> Section:
+        """Build summary section for this project.
 
-        Args:
-            for_slack: If True, use Slack mrkdwn format; otherwise use standard markdown
+        Returns:
+            Section containing project summary with progress bar
         """
-        fmt = MarkdownFormatter(for_slack)
-        lines = []
+        section = Section(header=Header(f"📊 {self.project_name}", level=3))
 
-        # Project header
-        lines.append(fmt.header(f"📊 {self.project_name}", level=3))
-        lines.append("")
-
-        # Progress bar and tasks on same line for compactness
-        lines.append(f"{self.format_progress_bar()} · {self.completed_tasks}/{self.total_tasks} complete")
+        # Progress bar and completion info
+        section.add(TextBlock(
+            f"{self.format_progress_bar()} · {self.completed_tasks}/{self.total_tasks} complete"
+        ))
 
         # Compact status breakdown - only show non-zero counts
-        status_parts = []
-        status_parts.append(f"✅{self.completed_tasks}")
+        status_parts = [f"✅{self.completed_tasks}"]
         if self.in_progress_tasks > 0:
             status_parts.append(f"🔄{self.in_progress_tasks}")
         if self.pending_tasks > 0:
@@ -523,9 +475,17 @@ class ProjectStats:
         if self.total_cost_usd > 0:
             status_parts.append(f"💰{format_usd(self.total_cost_usd)}")
 
-        lines.append(" · ".join(status_parts))
+        section.add(TextBlock(" · ".join(status_parts)))
+        return section
 
-        return "\n".join(lines)
+    def format_summary(self, for_slack: bool = False) -> str:
+        """Format for GitHub/Slack markdown with progress bar
+
+        Args:
+            for_slack: If True, use Slack mrkdwn format; otherwise use standard markdown
+        """
+        formatter = SlackReportFormatter() if for_slack else MarkdownReportFormatter()
+        return formatter.format_section(self.to_summary_section())
 
     def format_table_row(self) -> str:
         """Format project as a table row for compact display
@@ -828,63 +788,12 @@ class StatisticsReport:
         Returns:
             Formatted leaderboard with medals and rankings
         """
-        fmt = MarkdownFormatter(for_slack)
-        lines = []
-
-        if not self.team_stats:
+        section = self.to_leaderboard_section()
+        if section.is_empty():
             return ""
 
-        # Sort by activity level (merged PRs desc, then username)
-        sorted_members = sorted(
-            self.team_stats.items(),
-            key=lambda x: (-x[1].merged_count, x[0])
-        )
-
-        # Filter to only members with activity
-        active_members = [(username, stats) for username, stats in sorted_members
-                         if stats.merged_count > 0]
-
-        if not active_members:
-            return ""
-
-        # Header
-        lines.append(fmt.header("🏆 Leaderboard", level=2))
-        lines.append("")
-
-        # Medal emojis for top 3
-        medals = ["🥇", "🥈", "🥉"]
-
-        for idx, (username, stats) in enumerate(active_members):
-            rank = idx + 1
-
-            # Get medal or rank number
-            if rank <= 3:
-                rank_display = medals[idx]
-            else:
-                rank_display = f"#{rank}"
-
-            # Format the leaderboard entry
-            merged = stats.merged_count
-            open_prs = stats.open_count
-
-            # Create activity bar (visual representation of merged PRs)
-            max_merged = active_members[0][1].merged_count if active_members else 1
-            bar_width = 10
-            filled = int((merged / max_merged) * bar_width) if max_merged > 0 else 0
-
-            # Use lighter squares for Slack, full blocks for GitHub
-            if for_slack:
-                bar = "▓" * filled + "░" * (bar_width - filled)
-            else:
-                bar = "█" * filled + "░" * (bar_width - filled)
-
-            lines.append(f"{rank_display} {fmt.bold(f'@{username}')} - {merged} PR(s) merged")
-            lines.append(f"   {bar}")
-            if open_prs > 0:
-                lines.append(f"   {fmt.italic(f'({open_prs} open PR(s))')}")
-            lines.append("")
-
-        return "\n".join(lines)
+        formatter = SlackReportFormatter() if for_slack else MarkdownReportFormatter()
+        return formatter.format_section(section)
 
     def format_warnings_section(self, for_slack: bool = False, stale_pr_days: int = 7) -> str:
         """Format actionable items section for projects needing attention.
@@ -901,71 +810,12 @@ class StatisticsReport:
         Returns:
             Formatted warnings section or empty string if no warnings
         """
-        projects = self.projects_needing_attention()
-        if not projects:
+        section = self.to_warnings_section(stale_pr_days)
+        if section.is_empty():
             return ""
 
-        fmt = MarkdownFormatter(for_slack=for_slack)
-        lines = []
-        lines.append(fmt.header("⚠️ Needs Attention", level=2))
-
-        for stats in projects:
-            project_items = []
-
-            # Collect all open PRs with their status indicators
-            for pr in stats.open_prs:
-                indicators = []
-                if pr.is_stale(stale_pr_days):
-                    indicators.append("stale")
-                assignee = pr.first_assignee or "unassigned"
-
-                # Format PR link (Slack vs GitHub markdown)
-                if pr.url:
-                    if for_slack:
-                        pr_link = f"<{pr.url}|#{pr.number}>"
-                    else:
-                        pr_link = f"[#{pr.number}]({pr.url})"
-                else:
-                    pr_link = f"#{pr.number}"
-
-                status_parts = [f"{pr.days_open}d", assignee]
-                if indicators:
-                    status_parts.extend(indicators)
-
-                project_items.append(f"• {pr_link} ({', '.join(status_parts)})")
-
-            # Add open orphaned PRs (only open ones need attention)
-            for pr in stats.orphaned_prs:
-                if pr.is_open():
-                    if pr.url:
-                        if for_slack:
-                            pr_link = f"<{pr.url}|#{pr.number}>"
-                        else:
-                            pr_link = f"[#{pr.number}]({pr.url})"
-                    else:
-                        pr_link = f"#{pr.number}"
-                    project_items.append(f"• {pr_link} ({pr.days_open}d, orphaned)")
-
-            # Add warning if no open PRs but tasks remain
-            if stats.has_remaining_tasks:
-                project_items.append(f"• No open PRs ({stats.pending_tasks} tasks remaining)")
-
-            if project_items:
-                # Bold project name
-                if for_slack:
-                    lines.append(f"*{stats.project_name}*")
-                else:
-                    lines.append(f"**{stats.project_name}**")
-                lines.extend(project_items)
-
-        return "\n".join(lines)
-
-    def _format_warnings_section(self, _fmt: MarkdownFormatter, stale_pr_days: int = 7) -> str:
-        """Internal method for backward compatibility with format_for_slack.
-
-        Delegates to format_warnings_section with for_slack=True.
-        """
-        return self.format_warnings_section(for_slack=True, stale_pr_days=stale_pr_days)
+        formatter = SlackReportFormatter() if for_slack else MarkdownReportFormatter()
+        return formatter.format_section(section)
 
     def format_for_slack(
         self,
@@ -978,108 +828,27 @@ class StatisticsReport:
             show_reviewer_stats: Whether to include the reviewer leaderboard (default: False)
             stale_pr_days: Threshold for stale PR warnings (default: 7 days)
         """
-        fmt = MarkdownFormatter(for_slack=True)
-        lines = []
+        formatter = SlackReportFormatter()
+        sections = []
 
-        # Header
-        lines.append(fmt.header("🤖 ClaudeStep Statistics Report", level=1))
-        lines.append("")
+        # Header section
+        sections.append(formatter.format_section(self.to_header_section()))
 
-        # Metadata line with timestamp and branch
-        metadata_parts = []
-        if self.generated_at:
-            from datetime import datetime
-            timestamp = self.generated_at.strftime("%Y-%m-%d %H:%M UTC")
-            metadata_parts.append(f"Generated: {timestamp}")
-        if self.base_branch:
-            metadata_parts.append(f"Branch: {self.base_branch}")
-        if metadata_parts:
-            lines.append(fmt.italic(" • ".join(metadata_parts)))
-            lines.append("")
+        # Leaderboard section (only if enabled)
+        if show_reviewer_stats:
+            leaderboard = self.to_leaderboard_section()
+            if not leaderboard.is_empty():
+                sections.append(formatter.format_section(leaderboard))
 
-        # Leaderboard Table (only if enabled)
-        if show_reviewer_stats and self.team_stats:
-            # Filter to active members only
-            sorted_members = sorted(
-                self.team_stats.items(),
-                key=lambda x: (-x[1].merged_count, x[0])
-            )
-            active_members = [(username, stats) for username, stats in sorted_members
-                             if stats.merged_count > 0]
+        # Project progress section
+        sections.append(formatter.format_section(self.to_project_progress_section()))
 
-            if active_members:
-                lines.append(fmt.header("🏆 Leaderboard", level=2))
-                lines.append("```")
+        # Warnings section
+        warnings = self.to_warnings_section(stale_pr_days)
+        if not warnings.is_empty():
+            sections.append(formatter.format_section(warnings))
 
-                # Build table using TableFormatter
-                table = TableFormatter(
-                    headers=["Rank", "Username", "Open", "Merged"],
-                    align=['left', 'left', 'right', 'right']
-                )
-
-                medals = ["🥇", "🥈", "🥉"]
-                for idx, (username, stats) in enumerate(active_members):
-                    rank_display = medals[idx] if idx < 3 else f"#{idx+1}"
-                    table.add_row([
-                        rank_display,
-                        username[:15],
-                        str(stats.open_count),
-                        str(stats.merged_count)
-                    ])
-
-                lines.append(table.format())
-                lines.append("```")
-                lines.append("")
-
-        # Project Statistics Table
-        if self.project_stats:
-            lines.append(fmt.header("📊 Project Progress", level=2))
-            lines.append("```")
-
-            # Build table using TableFormatter
-            table = TableFormatter(
-                headers=["Project", "Open", "Merged", "Total", "Progress", "Cost"],
-                align=['left', 'right', 'right', 'right', 'left', 'right']
-            )
-
-            for project_name in sorted(self.project_stats.keys()):
-                stats = self.project_stats[project_name]
-                pct = stats.completion_percentage
-
-                # Create progress bar
-                bar_width = 10
-                filled = int((pct / 100) * bar_width)
-                bar = "█" * filled + "░" * (bar_width - filled)
-                progress_display = f"{bar} {pct:>3.0f}%"
-
-                # Format cost
-                cost_display = format_usd(stats.total_cost_usd) if stats.total_cost_usd > 0 else "-"
-
-                table.add_row([
-                    project_name[:20],
-                    str(stats.in_progress_tasks),
-                    str(stats.completed_tasks),
-                    str(stats.total_tasks),
-                    progress_display,
-                    cost_display,
-                ])
-
-            lines.append(table.format())
-            lines.append("```")
-            lines.append("")
-
-            # Add warnings section if there are projects needing attention
-            warnings_section = self._format_warnings_section(fmt, stale_pr_days)
-            if warnings_section:
-                lines.append(warnings_section)
-                lines.append("")
-        else:
-            lines.append(fmt.header("📊 Project Progress", level=2))
-            lines.append("")
-            lines.append(fmt.italic("No projects found"))
-            lines.append("")
-
-        return "\n".join(lines)
+        return "\n\n".join(sections)
 
     def format_for_pr_comment(self) -> str:
         """Brief summary for PR notifications"""
@@ -1129,53 +898,9 @@ class StatisticsReport:
             ### Orphaned PRs
             - PR #25 (Merged) - Task removed from spec
         """
-        fmt = MarkdownFormatter(for_slack)
-        lines = []
-
-        for project_name in sorted(self.project_stats.keys()):
-            stats = self.project_stats[project_name]
-
-            # Project header with completion count
-            header = f"{project_name} ({stats.completed_tasks}/{stats.total_tasks} complete)"
-            lines.append(fmt.header(header, level=2))
-            lines.append("")
-
-            # Tasks section
-            if stats.tasks:
-                lines.append(fmt.header("Tasks", level=3))
-                for task in stats.tasks:
-                    checkbox = "[x]" if task.status == TaskStatus.COMPLETED else "[ ]"
-                    # Truncate long descriptions
-                    desc = task.description[:60] + "..." if len(task.description) > 60 else task.description
-                    desc_formatted = fmt.code(desc)
-
-                    if task.has_pr:
-                        pr = task.pr
-                        if pr.is_merged():
-                            pr_info = f"PR #{pr.number} (Merged)"
-                        elif pr.is_open():
-                            pr_info = f"PR #{pr.number} (Open, {pr.days_open}d)"
-                        else:
-                            pr_info = f"PR #{pr.number} (Closed)"
-                        lines.append(f"- {checkbox} {desc_formatted} - {pr_info}")
-                    else:
-                        lines.append(f"- {checkbox} {desc_formatted} - (no PR)")
-                lines.append("")
-
-            # Orphaned PRs section
-            if stats.orphaned_prs:
-                lines.append(fmt.header("Orphaned PRs", level=3))
-                for pr in stats.orphaned_prs:
-                    if pr.is_merged():
-                        state = "Merged"
-                    elif pr.is_open():
-                        state = f"Open, {pr.days_open}d"
-                    else:
-                        state = "Closed"
-                    lines.append(f"- PR #{pr.number} ({state}) - Task removed from spec")
-                lines.append("")
-
-        return "\n".join(lines)
+        section = self.to_project_details_section()
+        formatter = SlackReportFormatter() if for_slack else MarkdownReportFormatter()
+        return formatter.format_section(section)
 
     def to_json(self) -> str:
         """Export as JSON for programmatic access"""
