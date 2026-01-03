@@ -38,7 +38,7 @@ The artifact upload step exists in `action.yml` but is never triggered because `
 
 ## Phases
 
-- [ ] Phase 1: Create TaskMetadata Artifact in Finalize
+- [x] Phase 1: Create TaskMetadata Artifact in Finalize
 
 Modify `finalize.py` to create a JSON artifact file with `TaskMetadata`:
 
