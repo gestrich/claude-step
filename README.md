@@ -138,6 +138,32 @@ allowedTools: Read,Write,Edit,Bash  # Optional: override tool permissions
 
 Enable Slack by adding `slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}` to your workflow.
 
+**Statistics workflow:** Create `.github/workflows/claudechain-statistics.yml` for weekly progress reports:
+
+```yaml
+name: ClaudeChain Statistics
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9 AM UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+jobs:
+  statistics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gestrich/claude-chain/statistics@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+```
+
 → **[Full guide: Notifications](docs/feature-guides/notifications.md)**
 
 ## Troubleshooting
