@@ -2,7 +2,7 @@
 
 ## Background
 
-ClaudeStep currently has a well-organized layered architecture but lacks formal documentation of its architectural pattern. After analysis, the codebase closely aligns with Martin Fowler's **Service Layer pattern** from "Patterns of Enterprise Application Architecture" (2002).
+ClaudeChain currently has a well-organized layered architecture but lacks formal documentation of its architectural pattern. After analysis, the codebase closely aligns with Martin Fowler's **Service Layer pattern** from "Patterns of Enterprise Application Architecture" (2002).
 
 ### What is Service Layer?
 
@@ -18,7 +18,7 @@ The Service Layer pattern:
 
 ### Current State
 
-ClaudeStep already follows Service Layer principles:
+ClaudeChain already follows Service Layer principles:
 - Service classes exist: `TaskManagementService`, `ReviewerManagementService`, `MetadataService`, `PROperationsService`
 - All business logic is now in service classes
 - Folder structure is close but not aligned with Fowler's organization
@@ -33,7 +33,7 @@ ClaudeStep already follows Service Layer principles:
 
 ### Goals
 
-1. Document that ClaudeStep follows Service Layer pattern (referencing Fowler)
+1. Document that ClaudeChain follows Service Layer pattern (referencing Fowler)
 2. Reorganize folders to better reflect Service Layer responsibilities
 3. Keep the architecture lightweight and pragmatic
 
@@ -47,7 +47,7 @@ ClaudeStep already follows Service Layer principles:
 1. Update `docs/architecture/architecture.md`:
    - Add new section: "Service Layer Pattern (Martin Fowler)"
    - Reference Fowler's PoEAA and the catalog URL
-   - Explain how ClaudeStep implements Service Layer
+   - Explain how ClaudeChain implements Service Layer
    - Document the lightweight approach (pragmatic, not dogmatic)
    - Keep existing content about Python-first approach and layered structure
 
@@ -69,7 +69,7 @@ ClaudeStep already follows Service Layer principles:
 **Outcome:**
 - ✅ Added comprehensive "Service Layer Pattern (Martin Fowler)" section to architecture.md
 - ✅ Included reference to Fowler's PoEAA catalog with direct URL
-- ✅ Documented ClaudeStep's lightweight, pragmatic implementation approach
+- ✅ Documented ClaudeChain's lightweight, pragmatic implementation approach
 - ✅ Added detailed layer responsibilities for all four layers (CLI, Service, Domain, Infrastructure)
 - ✅ Documented service class conventions with code examples
 - ✅ Added full-stack example showing all layers working together
@@ -85,13 +85,13 @@ ClaudeStep already follows Service Layer principles:
 **Why this change:**
 - **Clarity**: `services/` immediately signals this is the Service Layer
 - **Eliminates redundancy**: No more nested `application/services/` path
-- **Better imports**: `from claudestep.services.X` is cleaner than `from claudestep.application.services.X`
+- **Better imports**: `from claudechain.services.X` is cleaner than `from claudechain.application.services.X`
 - **Industry standard**: Most frameworks use `services/` directory
 - **Fowler alignment**: Directly reflects "Service Layer" terminology
 
 **Current structure:**
 ```
-src/claudestep/
+src/claudechain/
 ├── domain/
 ├── infrastructure/
 ├── application/         # To be renamed
@@ -102,7 +102,7 @@ src/claudestep/
 
 **New structure:**
 ```
-src/claudestep/
+src/claudechain/
 ├── domain/              # Domain models, config, exceptions
 ├── infrastructure/      # External system integrations
 │   ├── git/
@@ -124,17 +124,17 @@ src/claudestep/
 ```
 
 **Migration tasks:**
-1. Move `src/claudestep/application/` → `src/claudestep/services/`
+1. Move `src/claudechain/application/` → `src/claudechain/services/`
 2. Flatten structure: move all `.py` files from `services/services/` to `services/`
 3. Keep `services/formatters/` subdirectory for formatting utilities
 4. Update all imports throughout codebase:
-   - Find: `from claudestep.application.services`
-   - Replace: `from claudestep.services`
+   - Find: `from claudechain.application.services`
+   - Replace: `from claudechain.services`
 5. Update test imports similarly
 6. Update any documentation references to `application/` directory
 
 **Files to modify:**
-- All files in `src/claudestep/cli/commands/`
+- All files in `src/claudechain/cli/commands/`
 - All test files that import from application layer
 - `docs/architecture/architecture.md`
 - Any other docs referencing folder structure
@@ -146,7 +146,7 @@ src/claudestep/
 - All tests still pass
 
 **Outcome:**
-- ✅ Successfully renamed `src/claudestep/application/` → `src/claudestep/services/`
+- ✅ Successfully renamed `src/claudechain/application/` → `src/claudechain/services/`
 - ✅ Flattened structure: all service files now directly in `services/` directory
 - ✅ Updated all imports in CLI commands (4 files: discover_ready.py, finalize.py, prepare.py, statistics.py)
 - ✅ Updated all imports in domain layer (1 file: models.py)
@@ -156,13 +156,13 @@ src/claudestep/
 - ✅ Flattened test directory structure to match source layout
 - ✅ All unit tests passing (411 passed) - same count as before refactor
 - ✅ Pre-existing test failures (13 in infrastructure layer) remain unchanged - not related to this refactor
-- ✅ Import paths now cleaner: `from claudestep.services.X` instead of `from claudestep.application.services.X`
+- ✅ Import paths now cleaner: `from claudechain.services.X` instead of `from claudechain.application.services.X`
 - ✅ Directory structure now matches Service Layer pattern terminology
 
 **Technical notes:**
 - Used `git mv` to preserve file history
 - Applied regex pattern matching to update all import statements and @patch decorators in tests
-- Verified no references to `claudestep.application` remain in codebase
+- Verified no references to `claudechain.application` remain in codebase
 - Test count maintained at 411 passed unit tests (excludes pre-existing infrastructure failures)
 
 ---
@@ -284,7 +284,7 @@ src/claudestep/
 
 3. **Coverage check:**
    ```bash
-   PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=term-missing
+   PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudechain --cov-report=term-missing
    ```
    - Maintain 85%+ coverage
    - New service classes should be tested

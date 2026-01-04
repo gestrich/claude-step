@@ -1,16 +1,16 @@
-# ClaudeStep Documentation
+# ClaudeChain Documentation
 
-This directory contains all documentation for the ClaudeStep project, organized by audience and purpose.
+This directory contains all documentation for the ClaudeChain project, organized by audience and purpose.
 
 ## Documentation Structure
 
 ### [Feature Guides](feature-guides/) - For Users
-User-facing documentation explaining how to use ClaudeStep features:
+User-facing documentation explaining how to use ClaudeChain features:
 - Getting started guides
 - How-to guides for specific features
 - User workflows and best practices
 
-**Start here if you're** using ClaudeStep in your project.
+**Start here if you're** using ClaudeChain in your project.
 
 ### [Feature Architecture](feature-architecture/) - For Developers
 Technical documentation for specific features and components:
@@ -29,7 +29,7 @@ General patterns, conventions, and architectural principles:
 - Service layer patterns
 - Command dispatcher architecture
 
-**Start here if you're** contributing to ClaudeStep and need to understand the overall architecture and coding conventions.
+**Start here if you're** contributing to ClaudeChain and need to understand the overall architecture and coding conventions.
 
 ### Implementation Specs
 Ephemeral documentation for planning and tracking implementation work:
@@ -40,7 +40,7 @@ Ephemeral documentation for planning and tracking implementation work:
 
 ## Quick Links
 
-- [Getting Started Guide](feature-guides/getting-started.md) - New to ClaudeStep? Start here
+- [Getting Started Guide](feature-guides/getting-started.md) - New to ClaudeChain? Start here
 - [Architecture Overview](general-architecture/) - Understanding the system design
 - [API Reference](feature-architecture/api-reference.md) - Detailed API documentation
 

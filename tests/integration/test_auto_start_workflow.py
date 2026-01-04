@@ -1,4 +1,4 @@
-"""Integration tests for ClaudeStep workflows.
+"""Integration tests for ClaudeChain workflows.
 
 This module tests workflow configuration and structure validation.
 """
@@ -13,14 +13,14 @@ class TestAutoStartWorkflowLogic:
 
     def test_project_name_extraction_pattern(self):
         """Verify the sed pattern correctly extracts project names from spec paths."""
-        # Pattern used in workflow: sed 's|claude-step/\([^/]*\)/spec.md|\1|'
-        pattern = r'claude-step/([^/]*)/spec\.md'
+        # Pattern used in workflow: sed 's|claude-chain/\([^/]*\)/spec.md|\1|'
+        pattern = r'claude-chain/([^/]*)/spec\.md'
 
         test_cases = [
-            ("claude-step/my-project/spec.md", "my-project"),
-            ("claude-step/test-project-1/spec.md", "test-project-1"),
-            ("claude-step/auth-refactor/spec.md", "auth-refactor"),
-            ("claude-step/api_v2/spec.md", "api_v2"),
+            ("claude-chain/my-project/spec.md", "my-project"),
+            ("claude-chain/test-project-1/spec.md", "test-project-1"),
+            ("claude-chain/auth-refactor/spec.md", "auth-refactor"),
+            ("claude-chain/api_v2/spec.md", "api_v2"),
         ]
 
         for path, expected_project in test_cases:
@@ -32,13 +32,13 @@ class TestAutoStartWorkflowLogic:
 
     def test_project_name_extraction_rejects_invalid_paths(self):
         """Verify the pattern rejects invalid paths."""
-        pattern = r'claude-step/([^/]*)/spec\.md'
+        pattern = r'claude-chain/([^/]*)/spec\.md'
 
         invalid_paths = [
-            "claude-step/spec.md",  # Missing project directory
-            "spec.md",  # Missing claude-step prefix
-            "claude-step/project/other.md",  # Wrong filename
-            "claude-step/project/subdir/spec.md",  # Too many directories
+            "claude-chain/spec.md",  # Missing project directory
+            "spec.md",  # Missing claude-chain prefix
+            "claude-chain/project/other.md",  # Wrong filename
+            "claude-chain/project/subdir/spec.md",  # Too many directories
         ]
 
         for path in invalid_paths:
@@ -47,21 +47,21 @@ class TestAutoStartWorkflowLogic:
 
     def test_branch_name_pattern_for_pr_detection(self):
         """Verify the branch name pattern used to detect existing PRs."""
-        # Pattern used in workflow: claude-step-$project-*
+        # Pattern used in workflow: claude-chain-$project-*
         # We check if branch starts with the pattern prefix
 
         def matches_pr_branch_pattern(branch_name: str, project: str) -> bool:
-            """Check if branch name matches ClaudeStep PR pattern for given project."""
-            prefix = f"claude-step-{project}-"
+            """Check if branch name matches ClaudeChain PR pattern for given project."""
+            prefix = f"claude-chain-{project}-"
             return branch_name.startswith(prefix)
 
         test_cases = [
             # (branch_name, project, should_match)
-            ("claude-step-my-project-1", "my-project", True),
-            ("claude-step-my-project-2", "my-project", True),
-            ("claude-step-my-project-123", "my-project", True),
-            ("claude-step-other-project-1", "my-project", False),
-            ("claude-step-my-project", "my-project", False),  # Missing task number
+            ("claude-chain-my-project-1", "my-project", True),
+            ("claude-chain-my-project-2", "my-project", True),
+            ("claude-chain-my-project-123", "my-project", True),
+            ("claude-chain-other-project-1", "my-project", False),
+            ("claude-chain-my-project", "my-project", False),  # Missing task number
             ("my-project-1", "my-project", False),  # Missing prefix
         ]
 
@@ -88,20 +88,20 @@ class TestAutoStartWorkflowLogic:
         assert deleted_filter == "D", "Should detect Deleted files separately"
 
 
-class TestClaudeStepWorkflowYAML:
-    """Tests for ClaudeStep workflow YAML structure (simplified workflow)."""
+class TestClaudeChainWorkflowYAML:
+    """Tests for ClaudeChain workflow YAML structure (simplified workflow)."""
 
     def test_workflow_file_exists(self):
-        """Verify the ClaudeStep workflow file exists."""
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
+        """Verify the ClaudeChain workflow file exists."""
+        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudechain.yml"
         assert workflow_path.exists(), \
-            f"ClaudeStep workflow should exist at {workflow_path}"
+            f"ClaudeChain workflow should exist at {workflow_path}"
 
     def test_workflow_yaml_is_valid(self):
         """Verify the workflow YAML is syntactically valid."""
         import yaml
 
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
+        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudechain.yml"
 
         with open(workflow_path) as f:
             workflow_data = yaml.safe_load(f)
@@ -117,15 +117,15 @@ class TestClaudeStepWorkflowYAML:
         """Verify the workflow uses the simplified pattern with github_event."""
         import yaml
 
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
+        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudechain.yml"
 
         with open(workflow_path) as f:
             workflow_data = yaml.safe_load(f)
 
         jobs = workflow_data["jobs"]
-        assert "run-claudestep" in jobs, "Workflow should have run-claudestep job"
+        assert "run-claudechain" in jobs, "Workflow should have run-claudechain job"
 
-        steps = jobs["run-claudestep"]["steps"]
+        steps = jobs["run-claudechain"]["steps"]
 
         # Should have a single step that uses the action
         action_step = None
@@ -145,12 +145,12 @@ class TestClaudeStepWorkflowYAML:
         """Verify the workflow doesn't have complex bash logic (simplified)."""
         import yaml
 
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
+        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudechain.yml"
 
         with open(workflow_path) as f:
             workflow_data = yaml.safe_load(f)
 
-        steps = workflow_data["jobs"]["run-claudestep"]["steps"]
+        steps = workflow_data["jobs"]["run-claudechain"]["steps"]
 
         # The simplified workflow should NOT have these steps
         step_names = [step.get("name", "") for step in steps]
@@ -164,7 +164,7 @@ class TestClaudeStepWorkflowYAML:
         """Verify the workflow uses required secrets."""
         import yaml
 
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
+        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudechain.yml"
 
         with open(workflow_path) as f:
             content = f.read()
@@ -202,7 +202,7 @@ class TestAutoStartEdgeCases:
 
     def test_project_name_with_hyphens_and_underscores(self):
         """Verify project names with special characters are handled correctly."""
-        pattern = r'claude-step/([^/]*)/spec\.md'
+        pattern = r'claude-chain/([^/]*)/spec\.md'
 
         special_names = [
             "my-project",
@@ -213,33 +213,33 @@ class TestAutoStartEdgeCases:
         ]
 
         for name in special_names:
-            path = f"claude-step/{name}/spec.md"
+            path = f"claude-chain/{name}/spec.md"
             match = re.search(pattern, path)
             assert match is not None, f"Should match project name: {name}"
             assert match.group(1) == name, f"Should extract exact name: {name}"
 
 
 @pytest.mark.integration
-class TestClaudeStepBranchNameEdgeCases:
-    """Tests for branch name edge cases in ClaudeStep workflow.
+class TestClaudeChainBranchNameEdgeCases:
+    """Tests for branch name edge cases in ClaudeChain workflow.
 
-    The claudestep.yml workflow extracts project names from PR branch names
-    using the pattern: claude-step-{project}-{8-char-hex-hash}
+    The claudechain.yml workflow extracts project names from PR branch names
+    using the pattern: claude-chain-{project}-{8-char-hex-hash}
     """
 
     def test_branch_name_extraction_with_hyphenated_projects(self):
         """Verify project extraction works with hyphenated project names."""
-        # Pattern matches: claude-step-{project}-{8-char-hex}
+        # Pattern matches: claude-chain-{project}-{8-char-hex}
         # Project names can contain hyphens, only the final 8-char hex is special
-        pattern = r'^claude-step-(.+)-([0-9a-f]{8})$'
+        pattern = r'^claude-chain-(.+)-([0-9a-f]{8})$'
 
         test_cases = [
             # (branch_name, expected_project)
-            ("claude-step-my-project-a1b2c3d4", "my-project"),
-            ("claude-step-test-project-12345678", "test-project"),
-            ("claude-step-my-complex-project-name-deadbeef", "my-complex-project-name"),
-            ("claude-step-api-v2-refactor-abcd1234", "api-v2-refactor"),
-            ("claude-step-2024-q1-auth-00000000", "2024-q1-auth"),
+            ("claude-chain-my-project-a1b2c3d4", "my-project"),
+            ("claude-chain-test-project-12345678", "test-project"),
+            ("claude-chain-my-complex-project-name-deadbeef", "my-complex-project-name"),
+            ("claude-chain-api-v2-refactor-abcd1234", "api-v2-refactor"),
+            ("claude-chain-2024-q1-auth-00000000", "2024-q1-auth"),
         ]
 
         for branch, expected_project in test_cases:
@@ -251,18 +251,18 @@ class TestClaudeStepBranchNameEdgeCases:
 
     def test_branch_name_extraction_rejects_invalid_patterns(self):
         """Verify pattern rejects invalid branch names."""
-        pattern = r'^claude-step-(.+)-([0-9a-f]{8})$'
+        pattern = r'^claude-chain-(.+)-([0-9a-f]{8})$'
 
         invalid_branches = [
-            "claude-step-project-123",      # Hash too short (3 chars)
-            "claude-step-project-1234567",  # Hash too short (7 chars)
-            "claude-step-project-123456789", # Hash too long (9 chars)
-            "claude-step-project-ABCD1234", # Uppercase not valid hex
-            "claude-step-project-xyz12345", # Invalid hex chars
-            "claude-step-project",          # Missing hash entirely
-            "feature/my-branch",            # Not a ClaudeStep branch
-            "main",                         # Not a ClaudeStep branch
-            "claude-step--a1b2c3d4",        # Empty project name
+            "claude-chain-project-123",      # Hash too short (3 chars)
+            "claude-chain-project-1234567",  # Hash too short (7 chars)
+            "claude-chain-project-123456789", # Hash too long (9 chars)
+            "claude-chain-project-ABCD1234", # Uppercase not valid hex
+            "claude-chain-project-xyz12345", # Invalid hex chars
+            "claude-chain-project",          # Missing hash entirely
+            "feature/my-branch",            # Not a ClaudeChain branch
+            "main",                         # Not a ClaudeChain branch
+            "claude-chain--a1b2c3d4",        # Empty project name
         ]
 
         for branch in invalid_branches:
@@ -271,11 +271,11 @@ class TestClaudeStepBranchNameEdgeCases:
 
     def test_branch_name_with_long_project_names(self):
         """Verify very long project names are handled correctly."""
-        pattern = r'^claude-step-(.+)-([0-9a-f]{8})$'
+        pattern = r'^claude-chain-(.+)-([0-9a-f]{8})$'
 
         # Very long project name (but still reasonable)
         long_project = "this-is-a-very-long-project-name-with-many-hyphens-2024"
-        branch = f"claude-step-{long_project}-abcdef12"
+        branch = f"claude-chain-{long_project}-abcdef12"
 
         match = re.match(pattern, branch)
         assert match is not None, f"Should match long project name"
@@ -283,12 +283,12 @@ class TestClaudeStepBranchNameEdgeCases:
 
     def test_branch_name_with_numeric_project_names(self):
         """Verify project names with numbers are handled correctly."""
-        pattern = r'^claude-step-(.+)-([0-9a-f]{8})$'
+        pattern = r'^claude-chain-(.+)-([0-9a-f]{8})$'
 
         test_cases = [
-            ("claude-step-v2-api-12345678", "v2-api"),
-            ("claude-step-2024-refactor-abcdef00", "2024-refactor"),
-            ("claude-step-project-123-update-11111111", "project-123-update"),
+            ("claude-chain-v2-api-12345678", "v2-api"),
+            ("claude-chain-2024-refactor-abcdef00", "2024-refactor"),
+            ("claude-chain-project-123-update-11111111", "project-123-update"),
         ]
 
         for branch, expected_project in test_cases:
@@ -301,12 +301,12 @@ class TestClaudeStepBranchNameEdgeCases:
         """Verify project names that look like hex are handled correctly.
 
         Edge case: project name 'deadbeef' with hash '12345678'
-        Branch: 'claude-step-deadbeef-12345678'
+        Branch: 'claude-chain-deadbeef-12345678'
         Should extract project='deadbeef', hash='12345678'
         """
-        pattern = r'^claude-step-(.+)-([0-9a-f]{8})$'
+        pattern = r'^claude-chain-(.+)-([0-9a-f]{8})$'
 
-        branch = "claude-step-deadbeef-12345678"
+        branch = "claude-chain-deadbeef-12345678"
         match = re.match(pattern, branch)
         assert match is not None, "Should match hex-like project name"
         assert match.group(1) == "deadbeef", "Should extract 'deadbeef' as project"
@@ -325,12 +325,12 @@ class TestSimplifiedWorkflowEventHandling:
         """Verify workflow passes github event context to the action."""
         import yaml
 
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
+        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudechain.yml"
 
         with open(workflow_path) as f:
             workflow_data = yaml.safe_load(f)
 
-        steps = workflow_data["jobs"]["run-claudestep"]["steps"]
+        steps = workflow_data["jobs"]["run-claudechain"]["steps"]
 
         # Find the action step
         action_step = None
@@ -357,7 +357,7 @@ class TestSimplifiedWorkflowEventHandling:
         """Verify workflow_dispatch input for project_name is passed to action."""
         import yaml
 
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
+        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudechain.yml"
 
         with open(workflow_path) as f:
             workflow_data = yaml.safe_load(f)
@@ -370,7 +370,7 @@ class TestSimplifiedWorkflowEventHandling:
         assert "project_name" in inputs, "Should have project_name input"
 
         # Check that project_name is passed to action
-        steps = workflow_data["jobs"]["run-claudestep"]["steps"]
+        steps = workflow_data["jobs"]["run-claudechain"]["steps"]
         action_step = None
         for step in steps:
             if step.get("uses", "").startswith("./"):
@@ -385,9 +385,9 @@ class TestSimplifiedWorkflowEventHandling:
 class TestGenericWorkflowDocumentation:
     """Tests for generic workflow documentation."""
 
-    def test_claudestep_has_event_handling_documentation(self):
-        """Verify ClaudeStep workflow has documentation about automatic event handling."""
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
+    def test_claudechain_has_event_handling_documentation(self):
+        """Verify ClaudeChain workflow has documentation about automatic event handling."""
+        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudechain.yml"
 
         with open(workflow_path) as f:
             content = f.read()
@@ -396,9 +396,9 @@ class TestGenericWorkflowDocumentation:
         assert "automatically" in content.lower() or "event context" in content.lower(), \
             "Should document that workflow handles events automatically"
 
-    def test_claudestep_has_security_documentation(self):
-        """Verify ClaudeStep workflow has security considerations documented."""
-        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudestep.yml"
+    def test_claudechain_has_security_documentation(self):
+        """Verify ClaudeChain workflow has security considerations documented."""
+        workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudechain.yml"
 
         with open(workflow_path) as f:
             content = f.read()

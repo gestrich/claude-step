@@ -38,9 +38,9 @@ def gh() -> GitHubHelper:
     """Provide a GitHubHelper instance for tests.
 
     Returns:
-        Configured GitHubHelper instance for claude-step repository
+        Configured GitHubHelper instance for claude-chain repository
     """
-    return GitHubHelper(repo="gestrich/claude-step")
+    return GitHubHelper(repo="gestrich/claude-chain")
 
 
 @pytest.fixture
@@ -136,7 +136,7 @@ def setup_test_project(
 
     This fixture dynamically generates a test project from the content fixtures
     and commits it to the main-e2e branch. It then explicitly triggers the
-    claudestep.yml workflow via workflow_dispatch.
+    claudechain.yml workflow via workflow_dispatch.
 
     Note: We must explicitly trigger the workflow because pushes made with
     GITHUB_TOKEN do not trigger push events (GitHub security feature to prevent
@@ -167,10 +167,10 @@ def setup_test_project(
         branch=E2E_TEST_BRANCH
     )
 
-    # Explicitly trigger claudestep.yml via workflow_dispatch
+    # Explicitly trigger claudechain.yml via workflow_dispatch
     # Push events from GITHUB_TOKEN don't trigger workflows (GitHub security feature)
     gh.trigger_workflow(
-        workflow_name="claudestep.yml",
+        workflow_name="claudechain.yml",
         inputs={"project_name": test_project},
         ref=E2E_TEST_BRANCH
     )
@@ -210,14 +210,14 @@ def cleanup_previous_test_runs():
     Cleanup tasks:
     - Delete old main-e2e branch if it exists
     - Create fresh main-e2e branch from main
-    - Close any open PRs with "claudestep" label
-    - Remove "claudestep" label from ALL PRs (open and closed)
+    - Close any open PRs with "claudechain" label
+    - Remove "claudechain" label from ALL PRs (open and closed)
     - Clean up test branches from previous failed runs
 
     Yields:
         None - Just ensures cleanup happens before tests
     """
-    gh = GitHubHelper(repo="gestrich/claude-step")
+    gh = GitHubHelper(repo="gestrich/claude-chain")
     from .helpers.test_branch_manager import TestBranchManager
 
     # Delete old main-e2e branch and create a fresh one
@@ -230,13 +230,13 @@ def cleanup_previous_test_runs():
         pass
 
     # Clean up test branches from previous failed runs
-    gh.cleanup_test_branches(pattern_prefix="claude-step-test-")
+    gh.cleanup_test_branches(pattern_prefix="claude-chain-test-")
 
-    # Get all PRs with claudestep label (both open and closed)
-    from claudestep.domain.constants import DEFAULT_PR_LABEL
-    from claudestep.infrastructure.github.operations import list_pull_requests
+    # Get all PRs with claudechain label (both open and closed)
+    from claudechain.domain.constants import DEFAULT_PR_LABEL
+    from claudechain.infrastructure.github.operations import list_pull_requests
 
-    # Close open PRs with claudestep label
+    # Close open PRs with claudechain label
     try:
         open_prs = list_pull_requests(
             repo=gh.repo,
@@ -252,7 +252,7 @@ def cleanup_previous_test_runs():
     except Exception as e:
         print(f"Warning: Failed to list open PRs: {e}")
 
-    # Remove claudestep label from ALL PRs (open and closed)
+    # Remove claudechain label from ALL PRs (open and closed)
     try:
         all_prs = list_pull_requests(
             repo=gh.repo,

@@ -1,6 +1,6 @@
 # Troubleshooting
 
-This guide covers common issues and solutions when using ClaudeStep.
+This guide covers common issues and solutions when using ClaudeChain.
 
 ## Table of Contents
 
@@ -27,14 +27,14 @@ This guide covers common issues and solutions when using ClaudeStep.
 **Option 1: Use a labeled PR (Recommended)**
 
 1. Create a PR that adds your spec files
-2. Add the `claudestep` label to the PR
+2. Add the `claudechain` label to the PR
 3. Merge the PR
 
-ClaudeStep detects the merge and creates the first task PR.
+ClaudeChain detects the merge and creates the first task PR.
 
 **Option 2: Manual trigger**
 
-1. Go to **Actions** → **ClaudeStep** → **Run workflow**
+1. Go to **Actions** → **ClaudeChain** → **Run workflow**
 2. Select your branch (usually `main`)
 3. Enter your project name (e.g., `my-refactor`)
 4. Click **Run workflow**
@@ -45,13 +45,13 @@ Subsequent tasks will auto-trigger when you merge PRs.
 
 ## PR Merge Doesn't Trigger Next Task
 
-**Symptom:** You merged a ClaudeStep PR but no new PR was created.
+**Symptom:** You merged a ClaudeChain PR but no new PR was created.
 
 ### Check 1: Verify the Label
 
-The PR must have the `claudestep` label. PRs created by ClaudeStep get this automatically, but if someone removed it:
+The PR must have the `claudechain` label. PRs created by ClaudeChain get this automatically, but if someone removed it:
 
-1. Check the merged PR for the `claudestep` label
+1. Check the merged PR for the `claudechain` label
 2. If missing, use manual trigger for the next task
 
 ### Check 2: Verify It Was Merged
@@ -65,10 +65,10 @@ Check the PR page—it should say "merged" with a purple icon, not "closed" with
 
 ### Check 3: Check Workflow Logs
 
-1. Go to **Actions** → **ClaudeStep**
+1. Go to **Actions** → **ClaudeChain**
 2. Find the run triggered by your merge
 3. Look for skip reasons or errors:
-   - "PR does not have claudestep label"
+   - "PR does not have claudechain label"
    - "PR was closed without merging"
    - "No tasks remaining"
 
@@ -92,18 +92,18 @@ Add more tasks or start a new project.
 ```
 Error: spec.md not found in branch 'main'
 Required file:
-  - claude-step/my-project/spec.md
+  - claude-chain/my-project/spec.md
 
-Please merge your spec.md file to the 'main' branch before running ClaudeStep.
+Please merge your spec.md file to the 'main' branch before running ClaudeChain.
 ```
 
 ### Solution
 
-ClaudeStep fetches spec files from your base branch via the GitHub API. They must be committed and pushed:
+ClaudeChain fetches spec files from your base branch via the GitHub API. They must be committed and pushed:
 
 1. Verify the file exists locally:
    ```bash
-   ls claude-step/my-project/spec.md
+   ls claude-chain/my-project/spec.md
    ```
 
 2. Check if it's committed:
@@ -113,7 +113,7 @@ ClaudeStep fetches spec files from your base branch via the GitHub API. They mus
 
 3. Push to your base branch:
    ```bash
-   git add claude-step/my-project/spec.md
+   git add claude-chain/my-project/spec.md
    git commit -m "Add spec.md"
    git push origin main
    ```
@@ -188,8 +188,8 @@ For high-volume usage, consider GitHub Enterprise (higher rate limits).
 **Warning:**
 ```
 ⚠️  Warning: Found 2 orphaned PR(s):
-  - PR #123 (claude-step-auth-39b1209d) - task hash no longer matches any task
-  - PR #125 (claude-step-auth-a8f3c2d1) - task hash no longer matches any task
+  - PR #123 (claude-chain-auth-39b1209d) - task hash no longer matches any task
+  - PR #125 (claude-chain-auth-a8f3c2d1) - task hash no longer matches any task
 ```
 
 ### Cause
@@ -204,7 +204,7 @@ The PR references a task hash that no longer exists in `spec.md`.
 
 1. **Review each orphaned PR** - Click the link to see what it contains
 2. **Close the PR** - The work is for an outdated task
-3. **Wait for new PR** - ClaudeStep creates a new PR for the current task
+3. **Wait for new PR** - ClaudeChain creates a new PR for the current task
 
 See [Projects Guide - Modifying Tasks](./projects.md#modifying-tasks) for how to avoid orphaned PRs.
 
@@ -219,7 +219,7 @@ Project already has an open PR. Skipping PR creation.
 
 ### Cause
 
-ClaudeStep enforces one open PR per project at a time. A PR for this project is already open and awaiting review.
+ClaudeChain enforces one open PR per project at a time. A PR for this project is already open and awaiting review.
 
 ### Solution
 
@@ -230,7 +230,7 @@ Review and merge the open PR to allow the next task to proceed.
 **Option 2: Check for the open PR**
 
 1. Go to **Pull requests** in your repository
-2. Search for PRs with the `claudestep` label
+2. Search for PRs with the `claudechain` label
 3. Find the PR for this project and review it
 
 This is working as designed—one PR at a time keeps changes focused and avoids merge conflicts.
@@ -244,7 +244,7 @@ This is working as designed—one PR at a time keeps changes focused and avoids 
 ### Check 1: Review Workflow Output
 
 1. Go to **Actions** → find the workflow run
-2. Expand the ClaudeStep step
+2. Expand the ClaudeChain step
 3. Look for outputs:
    - `skipped: true` - Check `skip_reason`
    - `all_steps_done: true` - All tasks complete
@@ -268,11 +268,11 @@ Look for error messages in the workflow logs. Common issues:
 
 ### Check 4: Verify Branch Exists
 
-ClaudeStep creates a branch before the PR. Check if the branch was created:
+ClaudeChain creates a branch before the PR. Check if the branch was created:
 
 ```bash
 git fetch origin
-git branch -r | grep claude-step
+git branch -r | grep claude-chain
 ```
 
 If the branch exists but no PR, there may have been an error during PR creation.
@@ -284,7 +284,7 @@ If the branch exists but no PR, there may have been an error during PR creation.
 If you can't resolve an issue:
 
 1. **Check workflow logs** - Detailed error messages are in Actions
-2. **Search existing issues** - [github.com/gestrich/claude-step/issues](https://github.com/gestrich/claude-step/issues)
+2. **Search existing issues** - [github.com/gestrich/claude-chain/issues](https://github.com/gestrich/claude-chain/issues)
 3. **Open a new issue** - Include:
    - Error message
    - Workflow file (sanitize secrets)

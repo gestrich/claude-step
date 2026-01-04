@@ -1,1 +1,1 @@
-"""ClaudeStep integration tests"""
+"""ClaudeChain integration tests"""

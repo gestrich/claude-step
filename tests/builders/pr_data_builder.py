@@ -14,7 +14,7 @@ class PRDataBuilder:
             .with_number(123)
             .with_title("Task 3 - Add feature")
             .with_state("open")
-            .with_branch("claude-step-my-project-3")
+            .with_branch("claude-chain-my-project-3")
             .build()
     """
 
@@ -28,9 +28,9 @@ class PRDataBuilder:
         self._user_login: str = "alice"
         self._created_at: str = "2025-01-15T10:00:00Z"
         self._updated_at: str = "2025-01-15T10:00:00Z"
-        self._head_ref: str = "claude-step-sample-project-1"
+        self._head_ref: str = "claude-chain-sample-project-1"
         self._base_ref: str = "main"
-        self._labels: List[Dict[str, str]] = [{"name": "claude-step"}]
+        self._labels: List[Dict[str, str]] = [{"name": "claude-chain"}]
         self._custom_fields: Dict[str, Any] = {}
 
     def with_number(self, number: int) -> "PRDataBuilder":
@@ -73,7 +73,7 @@ class PRDataBuilder:
             Self for method chaining
         """
         self._title = f"Task {task_index} - {description}"
-        self._head_ref = f"claude-step-{project}-{task_index}"
+        self._head_ref = f"claude-chain-{project}-{task_index}"
         return self
 
     def with_state(self, state: str, merged: bool = False) -> "PRDataBuilder":

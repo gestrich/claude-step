@@ -2,7 +2,7 @@
 
 ## Background
 
-Currently, ClaudeStep has a mix of function-based and class-based services in `src/claudestep/application/services/`:
+Currently, ClaudeChain has a mix of function-based and class-based services in `src/claudechain/application/services/`:
 
 **Already class-based:**
 - `metadata_service.py` - MetadataService class

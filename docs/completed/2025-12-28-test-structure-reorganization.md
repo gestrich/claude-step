@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the plan to reorganize ClaudeStep's test structure to align with Python ecosystem best practices by clearly separating unit, integration, and e2e tests.
+This document outlines the plan to reorganize ClaudeChain's test structure to align with Python ecosystem best practices by clearly separating unit, integration, and e2e tests.
 
 ## Current State
 
@@ -200,7 +200,7 @@ tests/
   - [x] `pytest tests/unit/ -v` (expect ~400+ tests, all pass)
   - [x] `pytest tests/integration/ -v` (expect ~19 tests from CLI commands, all pass)
   - [x] `pytest tests/e2e/ -v` (optional, takes 5-10 min)
-  - [x] `pytest tests/unit/ tests/integration/ -v --cov=src/claudestep --cov-report=term-missing` (verify coverage ≥70%)
+  - [x] `pytest tests/unit/ tests/integration/ -v --cov=src/claudechain --cov-report=term-missing` (verify coverage ≥70%)
 - [x] Commit changes with message:
   ```
   Reorganize tests: separate unit and integration tests

@@ -10,8 +10,8 @@ from unittest.mock import Mock, call, mock_open, patch
 
 import pytest
 
-from claudestep.domain.exceptions import GitHubAPIError
-from claudestep.infrastructure.github.operations import (
+from claudechain.domain.exceptions import GitHubAPIError
+from claudechain.infrastructure.github.operations import (
     compare_commits,
     detect_project_from_diff,
     download_artifact_json,
@@ -29,7 +29,7 @@ from claudestep.infrastructure.github.operations import (
 class TestRunGhCommand:
     """Test suite for run_gh_command function"""
 
-    @patch('claudestep.infrastructure.github.operations.run_command')
+    @patch('claudechain.infrastructure.github.operations.run_command')
     def test_run_gh_command_success(self, mock_run):
         """Should execute gh command and return stdout"""
         # Arrange
@@ -43,7 +43,7 @@ class TestRunGhCommand:
         assert result == "command output"
         mock_run.assert_called_once_with(["gh", "pr", "list"])
 
-    @patch('claudestep.infrastructure.github.operations.run_command')
+    @patch('claudechain.infrastructure.github.operations.run_command')
     def test_run_gh_command_strips_whitespace(self, mock_run):
         """Should strip leading and trailing whitespace from output"""
         # Arrange
@@ -56,7 +56,7 @@ class TestRunGhCommand:
         # Assert
         assert result == "PR #123"
 
-    @patch('claudestep.infrastructure.github.operations.run_command')
+    @patch('claudechain.infrastructure.github.operations.run_command')
     def test_run_gh_command_handles_empty_output(self, mock_run):
         """Should handle empty output correctly"""
         # Arrange
@@ -69,7 +69,7 @@ class TestRunGhCommand:
         # Assert
         assert result == ""
 
-    @patch('claudestep.infrastructure.github.operations.run_command')
+    @patch('claudechain.infrastructure.github.operations.run_command')
     def test_run_gh_command_raises_github_error_on_failure(self, mock_run):
         """Should raise GitHubAPIError when gh command fails"""
         # Arrange
@@ -85,7 +85,7 @@ class TestRunGhCommand:
         with pytest.raises(GitHubAPIError, match="GitHub CLI command failed"):
             run_gh_command(args)
 
-    @patch('claudestep.infrastructure.github.operations.run_command')
+    @patch('claudechain.infrastructure.github.operations.run_command')
     def test_run_gh_command_includes_stderr_in_error(self, mock_run):
         """Should include stderr output in GitHubAPIError message"""
         # Arrange
@@ -101,7 +101,7 @@ class TestRunGhCommand:
         with pytest.raises(GitHubAPIError, match="HTTP 404"):
             run_gh_command(args)
 
-    @patch('claudestep.infrastructure.github.operations.run_command')
+    @patch('claudechain.infrastructure.github.operations.run_command')
     def test_run_gh_command_includes_command_in_error(self, mock_run):
         """Should include command arguments in error message"""
         # Arrange
@@ -121,7 +121,7 @@ class TestRunGhCommand:
 class TestGhApiCall:
     """Test suite for gh_api_call function"""
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_gh_api_call_success(self, mock_run_gh):
         """Should execute API call and return parsed JSON"""
         # Arrange
@@ -135,7 +135,7 @@ class TestGhApiCall:
         assert result == {"key": "value", "number": 123}
         mock_run_gh.assert_called_once_with(["api", endpoint, "--method", "GET"])
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_gh_api_call_with_post_method(self, mock_run_gh):
         """Should execute POST request with correct method"""
         # Arrange
@@ -149,7 +149,7 @@ class TestGhApiCall:
         assert result == {"created": True}
         mock_run_gh.assert_called_once_with(["api", endpoint, "--method", "POST"])
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_gh_api_call_handles_empty_response(self, mock_run_gh):
         """Should return empty dict when response is empty"""
         # Arrange
@@ -162,7 +162,7 @@ class TestGhApiCall:
         # Assert
         assert result == {}
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_gh_api_call_raises_error_on_invalid_json(self, mock_run_gh):
         """Should raise GitHubAPIError when response is invalid JSON"""
         # Arrange
@@ -173,7 +173,7 @@ class TestGhApiCall:
         with pytest.raises(GitHubAPIError, match="Invalid JSON from API"):
             gh_api_call(endpoint)
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_gh_api_call_handles_nested_json(self, mock_run_gh):
         """Should correctly parse nested JSON structures"""
         # Arrange
@@ -186,7 +186,7 @@ class TestGhApiCall:
         # Assert
         assert result == {"data": {"nested": {"value": 42}}}
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_gh_api_call_propagates_gh_errors(self, mock_run_gh):
         """Should propagate GitHubAPIError from run_gh_command"""
         # Arrange
@@ -201,10 +201,10 @@ class TestGhApiCall:
 class TestDownloadArtifactJson:
     """Test suite for download_artifact_json function"""
 
-    @patch('claudestep.infrastructure.github.operations.subprocess.run')
-    @patch('claudestep.infrastructure.github.operations.zipfile.ZipFile')
-    @patch('claudestep.infrastructure.github.operations.os.path.exists')
-    @patch('claudestep.infrastructure.github.operations.os.remove')
+    @patch('claudechain.infrastructure.github.operations.subprocess.run')
+    @patch('claudechain.infrastructure.github.operations.zipfile.ZipFile')
+    @patch('claudechain.infrastructure.github.operations.os.path.exists')
+    @patch('claudechain.infrastructure.github.operations.os.remove')
     def test_download_artifact_json_success(self, mock_remove, mock_exists, mock_zipfile, mock_subprocess):
         """Should download, extract, and parse artifact JSON"""
         # Arrange
@@ -235,10 +235,10 @@ class TestDownloadArtifactJson:
         assert args[1] == "api"
         assert f"/repos/{repo}/actions/artifacts/{artifact_id}/zip" in args
 
-    @patch('claudestep.infrastructure.github.operations.subprocess.run')
-    @patch('claudestep.infrastructure.github.operations.zipfile.ZipFile')
-    @patch('claudestep.infrastructure.github.operations.os.path.exists')
-    @patch('claudestep.infrastructure.github.operations.os.remove')
+    @patch('claudechain.infrastructure.github.operations.subprocess.run')
+    @patch('claudechain.infrastructure.github.operations.zipfile.ZipFile')
+    @patch('claudechain.infrastructure.github.operations.os.path.exists')
+    @patch('claudechain.infrastructure.github.operations.os.remove')
     def test_download_artifact_json_cleans_up_temp_file(self, mock_remove, mock_exists, mock_zipfile, mock_subprocess):
         """Should clean up temporary zip file after processing"""
         # Arrange
@@ -263,10 +263,10 @@ class TestDownloadArtifactJson:
         # Assert
         mock_remove.assert_called_once()
 
-    @patch('claudestep.infrastructure.github.operations.subprocess.run')
-    @patch('claudestep.infrastructure.github.operations.zipfile.ZipFile')
-    @patch('claudestep.infrastructure.github.operations.os.path.exists')
-    @patch('claudestep.infrastructure.github.operations.os.remove')
+    @patch('claudechain.infrastructure.github.operations.subprocess.run')
+    @patch('claudechain.infrastructure.github.operations.zipfile.ZipFile')
+    @patch('claudechain.infrastructure.github.operations.os.path.exists')
+    @patch('claudechain.infrastructure.github.operations.os.remove')
     def test_download_artifact_json_returns_none_when_no_json_in_zip(self, mock_remove, mock_exists, mock_zipfile, mock_subprocess, capsys):
         """Should return None when no JSON file found in artifact"""
         # Arrange
@@ -289,7 +289,7 @@ class TestDownloadArtifactJson:
         captured = capsys.readouterr()
         assert "No JSON file found" in captured.out
 
-    @patch('claudestep.infrastructure.github.operations.subprocess.run')
+    @patch('claudechain.infrastructure.github.operations.subprocess.run')
     def test_download_artifact_json_returns_none_on_download_failure(self, mock_subprocess, capsys):
         """Should return None and print warning when download fails"""
         # Arrange
@@ -305,10 +305,10 @@ class TestDownloadArtifactJson:
         captured = capsys.readouterr()
         assert "Failed to download/parse artifact" in captured.out
 
-    @patch('claudestep.infrastructure.github.operations.subprocess.run')
-    @patch('claudestep.infrastructure.github.operations.zipfile.ZipFile')
-    @patch('claudestep.infrastructure.github.operations.os.path.exists')
-    @patch('claudestep.infrastructure.github.operations.os.remove')
+    @patch('claudechain.infrastructure.github.operations.subprocess.run')
+    @patch('claudechain.infrastructure.github.operations.zipfile.ZipFile')
+    @patch('claudechain.infrastructure.github.operations.os.path.exists')
+    @patch('claudechain.infrastructure.github.operations.os.remove')
     def test_download_artifact_json_returns_none_on_parse_error(self, mock_remove, mock_exists, mock_zipfile, mock_subprocess, capsys):
         """Should return None when JSON parsing fails"""
         # Arrange
@@ -339,12 +339,12 @@ class TestDownloadArtifactJson:
 class TestEnsureLabelExists:
     """Test suite for ensure_label_exists function"""
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_ensure_label_creates_new_label(self, mock_run_gh, mock_github_actions_helper):
         """Should create label when it doesn't exist"""
         # Arrange
         mock_run_gh.return_value = "Label created"
-        label = "claude-step"
+        label = "claude-chain"
         gh = mock_github_actions_helper
 
         # Act
@@ -360,12 +360,12 @@ class TestEnsureLabelExists:
         gh.write_step_summary.assert_called_once_with(f"- Label '{label}': ✅ Created")
         gh.set_notice.assert_called_once_with(f"Created label '{label}'")
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_ensure_label_handles_existing_label(self, mock_run_gh, mock_github_actions_helper):
         """Should handle label that already exists gracefully"""
         # Arrange
         mock_run_gh.side_effect = GitHubAPIError("label already exists on repository")
-        label = "claude-step"
+        label = "claude-chain"
         gh = mock_github_actions_helper
 
         # Act
@@ -374,19 +374,19 @@ class TestEnsureLabelExists:
         # Assert
         gh.write_step_summary.assert_called_once_with(f"- Label '{label}': ✅ Already exists")
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_ensure_label_reraises_other_errors(self, mock_run_gh, mock_github_actions_helper):
         """Should re-raise GitHubAPIError if not about existing label"""
         # Arrange
         mock_run_gh.side_effect = GitHubAPIError("API rate limit exceeded")
-        label = "claude-step"
+        label = "claude-chain"
         gh = mock_github_actions_helper
 
         # Act & Assert
         with pytest.raises(GitHubAPIError, match="API rate limit exceeded"):
             ensure_label_exists(label, gh)
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_ensure_label_uses_correct_color_and_description(self, mock_run_gh, mock_github_actions_helper):
         """Should create label with correct color and description"""
         # Arrange
@@ -401,7 +401,7 @@ class TestEnsureLabelExists:
         args = mock_run_gh.call_args[0][0]
         assert "--description" in args
         desc_idx = args.index("--description")
-        assert "ClaudeStep automated refactoring" == args[desc_idx + 1]
+        assert "ClaudeChain automated refactoring" == args[desc_idx + 1]
         assert "--color" in args
         color_idx = args.index("--color")
         assert "0E8A16" == args[color_idx + 1]
@@ -410,7 +410,7 @@ class TestEnsureLabelExists:
 class TestGetFileFromBranch:
     """Test suite for get_file_from_branch function"""
 
-    @patch('claudestep.infrastructure.github.operations.gh_api_call')
+    @patch('claudechain.infrastructure.github.operations.gh_api_call')
     def test_get_file_from_branch_success(self, mock_gh_api):
         """Should fetch and decode file content from branch"""
         # Arrange
@@ -421,7 +421,7 @@ class TestGetFileFromBranch:
 
         repo = "owner/repo"
         branch = "main"
-        file_path = "claude-step/project/spec.md"
+        file_path = "claude-chain/project/spec.md"
 
         # Act
         result = get_file_from_branch(repo, branch, file_path)
@@ -433,7 +433,7 @@ class TestGetFileFromBranch:
             method="GET"
         )
 
-    @patch('claudestep.infrastructure.github.operations.gh_api_call')
+    @patch('claudechain.infrastructure.github.operations.gh_api_call')
     def test_get_file_from_branch_handles_newlines_in_base64(self, mock_gh_api):
         """Should handle base64 content with newlines (GitHub adds them)"""
         # Arrange
@@ -454,7 +454,7 @@ class TestGetFileFromBranch:
         # Assert
         assert result == file_content
 
-    @patch('claudestep.infrastructure.github.operations.gh_api_call')
+    @patch('claudechain.infrastructure.github.operations.gh_api_call')
     def test_get_file_from_branch_returns_none_on_404(self, mock_gh_api):
         """Should return None when file not found (404 error)"""
         # Arrange
@@ -469,7 +469,7 @@ class TestGetFileFromBranch:
         # Assert
         assert result is None
 
-    @patch('claudestep.infrastructure.github.operations.gh_api_call')
+    @patch('claudechain.infrastructure.github.operations.gh_api_call')
     def test_get_file_from_branch_returns_none_when_not_found_in_message(self, mock_gh_api):
         """Should return None when 'Not Found' in error message"""
         # Arrange
@@ -484,7 +484,7 @@ class TestGetFileFromBranch:
         # Assert
         assert result is None
 
-    @patch('claudestep.infrastructure.github.operations.gh_api_call')
+    @patch('claudechain.infrastructure.github.operations.gh_api_call')
     def test_get_file_from_branch_reraises_other_errors(self, mock_gh_api):
         """Should re-raise GitHubAPIError for non-404 errors"""
         # Arrange
@@ -497,7 +497,7 @@ class TestGetFileFromBranch:
         with pytest.raises(GitHubAPIError, match="API rate limit exceeded"):
             get_file_from_branch(repo, branch, file_path)
 
-    @patch('claudestep.infrastructure.github.operations.gh_api_call')
+    @patch('claudechain.infrastructure.github.operations.gh_api_call')
     def test_get_file_from_branch_returns_none_when_no_content_field(self, mock_gh_api):
         """Should return None when API response lacks content field"""
         # Arrange
@@ -512,7 +512,7 @@ class TestGetFileFromBranch:
         # Assert
         assert result is None
 
-    @patch('claudestep.infrastructure.github.operations.gh_api_call')
+    @patch('claudechain.infrastructure.github.operations.gh_api_call')
     def test_get_file_from_branch_handles_unicode_content(self, mock_gh_api):
         """Should correctly decode unicode characters"""
         # Arrange
@@ -535,7 +535,7 @@ class TestGetFileFromBranch:
 class TestFileExistsInBranch:
     """Test suite for file_exists_in_branch function"""
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_file_exists_returns_true_when_file_found(self, mock_get_file):
         """Should return True when file content is returned"""
         # Arrange
@@ -551,7 +551,7 @@ class TestFileExistsInBranch:
         assert result is True
         mock_get_file.assert_called_once_with(repo, branch, file_path)
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_file_exists_returns_false_when_file_not_found(self, mock_get_file):
         """Should return False when get_file_from_branch returns None"""
         # Arrange
@@ -566,7 +566,7 @@ class TestFileExistsInBranch:
         # Assert
         assert result is False
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_file_exists_returns_true_for_empty_file(self, mock_get_file):
         """Should return True even for empty file content"""
         # Arrange
@@ -581,7 +581,7 @@ class TestFileExistsInBranch:
         # Assert
         assert result is True
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_file_exists_propagates_errors(self, mock_get_file):
         """Should propagate GitHubAPIError from get_file_from_branch"""
         # Arrange
@@ -598,7 +598,7 @@ class TestFileExistsInBranch:
 class TestListPullRequests:
     """Test suite for list_pull_requests function"""
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_list_pull_requests_success(self, mock_run_gh):
         """Should fetch PRs and return domain models"""
         # Arrange
@@ -610,7 +610,7 @@ class TestListPullRequests:
                 "createdAt": "2024-01-01T12:00:00Z",
                 "mergedAt": None,
                 "assignees": [{"login": "alice", "name": "Alice"}],
-                "labels": [{"name": "claudestep"}]
+                "labels": [{"name": "claudechain"}]
             },
             {
                 "number": 124,
@@ -619,7 +619,7 @@ class TestListPullRequests:
                 "createdAt": "2024-01-02T12:00:00Z",
                 "mergedAt": "2024-01-03T12:00:00Z",
                 "assignees": [{"login": "bob"}],
-                "labels": [{"name": "claudestep"}, {"name": "bug"}]
+                "labels": [{"name": "claudechain"}, {"name": "bug"}]
             }
         ]
         mock_run_gh.return_value = json.dumps(pr_data)
@@ -636,7 +636,7 @@ class TestListPullRequests:
         assert result[1].number == 124
         assert result[1].is_merged()
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_list_pull_requests_with_filters(self, mock_run_gh):
         """Should build command with correct filters"""
         # Arrange
@@ -644,7 +644,7 @@ class TestListPullRequests:
         repo = "owner/repo"
 
         # Act
-        list_pull_requests(repo, state="merged", label="claudestep", limit=50)
+        list_pull_requests(repo, state="merged", label="claudechain", limit=50)
 
         # Assert
         args = mock_run_gh.call_args[0][0]
@@ -655,11 +655,11 @@ class TestListPullRequests:
         assert "--state" in args
         assert "merged" in args
         assert "--label" in args
-        assert "claudestep" in args
+        assert "claudechain" in args
         assert "--limit" in args
         assert "50" in args
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_list_pull_requests_with_assignee_filter(self, mock_run_gh):
         """Should build command with assignee filter"""
         # Arrange
@@ -678,7 +678,7 @@ class TestListPullRequests:
         assert "--state" in args
         assert "open" in args
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_list_pull_requests_filters_by_date(self, mock_run_gh):
         """Should filter PRs by date when since parameter provided"""
         # Arrange
@@ -712,7 +712,7 @@ class TestListPullRequests:
         assert len(result) == 1
         assert result[0].number == 124
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_list_pull_requests_handles_empty_response(self, mock_run_gh):
         """Should handle empty PR list"""
         # Arrange
@@ -724,7 +724,7 @@ class TestListPullRequests:
         # Assert
         assert result == []
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_list_pull_requests_raises_on_invalid_json(self, mock_run_gh):
         """Should raise GitHubAPIError on invalid JSON"""
         # Arrange
@@ -734,7 +734,7 @@ class TestListPullRequests:
         with pytest.raises(GitHubAPIError, match="Invalid JSON"):
             list_pull_requests("owner/repo")
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_list_pull_requests_handles_empty_output(self, mock_run_gh):
         """Should handle empty string output"""
         # Arrange
@@ -750,7 +750,7 @@ class TestListPullRequests:
 class TestListMergedPullRequests:
     """Test suite for list_merged_pull_requests convenience function"""
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_list_merged_pull_requests_filters_by_merged_at(self, mock_run_gh):
         """Should filter merged PRs by merged_at date"""
         # Arrange
@@ -784,7 +784,7 @@ class TestListMergedPullRequests:
         assert len(result) == 1
         assert result[0].number == 124
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_list_merged_pull_requests_with_label(self, mock_run_gh):
         """Should pass label filter to list_pull_requests"""
         # Arrange
@@ -792,16 +792,16 @@ class TestListMergedPullRequests:
         cutoff = datetime.now(timezone.utc) - timedelta(days=30)
 
         # Act
-        list_merged_pull_requests("owner/repo", since=cutoff, label="claudestep")
+        list_merged_pull_requests("owner/repo", since=cutoff, label="claudechain")
 
         # Assert
         args = mock_run_gh.call_args[0][0]
         assert "--label" in args
-        assert "claudestep" in args
+        assert "claudechain" in args
         assert "--state" in args
         assert "merged" in args
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_list_merged_pull_requests_excludes_prs_without_merged_at(self, mock_run_gh):
         """Should exclude PRs that don't have merged_at timestamp"""
         # Arrange
@@ -839,7 +839,7 @@ class TestListMergedPullRequests:
 class TestListOpenPullRequests:
     """Test suite for list_open_pull_requests convenience function"""
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_list_open_pull_requests_success(self, mock_run_gh):
         """Should fetch open PRs"""
         # Arrange
@@ -863,21 +863,21 @@ class TestListOpenPullRequests:
         assert len(result) == 1
         assert result[0].is_open()
 
-    @patch('claudestep.infrastructure.github.operations.run_gh_command')
+    @patch('claudechain.infrastructure.github.operations.run_gh_command')
     def test_list_open_pull_requests_with_label(self, mock_run_gh):
         """Should filter by label"""
         # Arrange
         mock_run_gh.return_value = "[]"
 
         # Act
-        list_open_pull_requests("owner/repo", label="claudestep", limit=25)
+        list_open_pull_requests("owner/repo", label="claudechain", limit=25)
 
         # Assert
         args = mock_run_gh.call_args[0][0]
         assert "--state" in args
         assert "open" in args
         assert "--label" in args
-        assert "claudestep" in args
+        assert "claudechain" in args
         assert "--limit" in args
         assert "25" in args
 
@@ -885,7 +885,7 @@ class TestListOpenPullRequests:
 class TestCompareCommits:
     """Test suite for compare_commits function"""
 
-    @patch('claudestep.infrastructure.github.operations.gh_api_call')
+    @patch('claudechain.infrastructure.github.operations.gh_api_call')
     def test_compare_commits_success(self, mock_gh_api):
         """Should return list of changed file paths"""
         # Arrange
@@ -910,7 +910,7 @@ class TestCompareCommits:
             method="GET"
         )
 
-    @patch('claudestep.infrastructure.github.operations.gh_api_call')
+    @patch('claudechain.infrastructure.github.operations.gh_api_call')
     def test_compare_commits_with_branch_names(self, mock_gh_api):
         """Should work with branch names instead of SHAs"""
         # Arrange
@@ -933,7 +933,7 @@ class TestCompareCommits:
             method="GET"
         )
 
-    @patch('claudestep.infrastructure.github.operations.gh_api_call')
+    @patch('claudechain.infrastructure.github.operations.gh_api_call')
     def test_compare_commits_empty_files_list(self, mock_gh_api):
         """Should return empty list when no files changed"""
         # Arrange
@@ -948,7 +948,7 @@ class TestCompareCommits:
         # Assert
         assert result == []
 
-    @patch('claudestep.infrastructure.github.operations.gh_api_call')
+    @patch('claudechain.infrastructure.github.operations.gh_api_call')
     def test_compare_commits_missing_files_key(self, mock_gh_api):
         """Should return empty list when files key is missing"""
         # Arrange
@@ -967,7 +967,7 @@ class TestCompareCommits:
         # Assert
         assert result == []
 
-    @patch('claudestep.infrastructure.github.operations.gh_api_call')
+    @patch('claudechain.infrastructure.github.operations.gh_api_call')
     def test_compare_commits_propagates_api_error(self, mock_gh_api):
         """Should propagate GitHubAPIError from gh_api_call"""
         # Arrange
@@ -980,7 +980,7 @@ class TestCompareCommits:
         with pytest.raises(GitHubAPIError, match="404 Not Found"):
             compare_commits(repo, base, head)
 
-    @patch('claudestep.infrastructure.github.operations.gh_api_call')
+    @patch('claudechain.infrastructure.github.operations.gh_api_call')
     def test_compare_commits_many_files(self, mock_gh_api):
         """Should handle response with many files"""
         # Arrange
@@ -998,13 +998,13 @@ class TestCompareCommits:
         assert result[0] == "file_0.py"
         assert result[99] == "file_99.py"
 
-    @patch('claudestep.infrastructure.github.operations.gh_api_call')
+    @patch('claudechain.infrastructure.github.operations.gh_api_call')
     def test_compare_commits_spec_file_detection(self, mock_gh_api):
         """Should correctly return spec.md file paths for project detection"""
         # Arrange
         mock_gh_api.return_value = {
             "files": [
-                {"filename": "claude-step/my-project/spec.md", "status": "modified"},
+                {"filename": "claude-chain/my-project/spec.md", "status": "modified"},
                 {"filename": "README.md", "status": "modified"},
                 {"filename": "src/main.py", "status": "added"}
             ]
@@ -1017,7 +1017,7 @@ class TestCompareCommits:
         result = compare_commits(repo, base, head)
 
         # Assert
-        assert "claude-step/my-project/spec.md" in result
+        assert "claude-chain/my-project/spec.md" in result
         assert len(result) == 3
 
 
@@ -1028,7 +1028,7 @@ class TestDetectProjectFromDiff:
         """Should return project name when single spec.md changed"""
         # Arrange
         changed_files = [
-            "claude-step/my-project/spec.md",
+            "claude-chain/my-project/spec.md",
             "README.md",
             "src/main.py"
         ]
@@ -1058,8 +1058,8 @@ class TestDetectProjectFromDiff:
         """Should raise ValueError when multiple spec.md files changed"""
         # Arrange
         changed_files = [
-            "claude-step/project-a/spec.md",
-            "claude-step/project-b/spec.md",
+            "claude-chain/project-a/spec.md",
+            "claude-chain/project-b/spec.md",
             "README.md"
         ]
 
@@ -1071,8 +1071,8 @@ class TestDetectProjectFromDiff:
         """Should include project names in error message"""
         # Arrange
         changed_files = [
-            "claude-step/alpha/spec.md",
-            "claude-step/beta/spec.md"
+            "claude-chain/alpha/spec.md",
+            "claude-chain/beta/spec.md"
         ]
 
         # Act & Assert
@@ -1086,8 +1086,8 @@ class TestDetectProjectFromDiff:
         # Arrange
         changed_files = [
             "specs/project/spec.md",  # Wrong parent directory
-            "claude-step/spec.md",  # Missing project subdirectory
-            "claude-step/project/nested/spec.md",  # Too deeply nested
+            "claude-chain/spec.md",  # Missing project subdirectory
+            "claude-chain/project/nested/spec.md",  # Too deeply nested
             "other-step/project/spec.md"  # Different prefix
         ]
 
@@ -1112,7 +1112,7 @@ class TestDetectProjectFromDiff:
         """Should handle project names with hyphens"""
         # Arrange
         changed_files = [
-            "claude-step/my-awesome-project/spec.md"
+            "claude-chain/my-awesome-project/spec.md"
         ]
 
         # Act
@@ -1125,7 +1125,7 @@ class TestDetectProjectFromDiff:
         """Should handle project names with underscores"""
         # Arrange
         changed_files = [
-            "claude-step/my_project_v2/spec.md"
+            "claude-chain/my_project_v2/spec.md"
         ]
 
         # Act
@@ -1138,9 +1138,9 @@ class TestDetectProjectFromDiff:
         """Should only detect spec.md, not other files in project directory"""
         # Arrange
         changed_files = [
-            "claude-step/project/README.md",
-            "claude-step/project/metadata.json",
-            "claude-step/project/tasks/task1.md"
+            "claude-chain/project/README.md",
+            "claude-chain/project/metadata.json",
+            "claude-chain/project/tasks/task1.md"
         ]
 
         # Act
@@ -1153,8 +1153,8 @@ class TestDetectProjectFromDiff:
         """Should return project name even with multiple files from same project"""
         # Arrange
         changed_files = [
-            "claude-step/my-project/spec.md",
-            "claude-step/my-project/README.md",
+            "claude-chain/my-project/spec.md",
+            "claude-chain/my-project/README.md",
             "src/related.py"
         ]
 

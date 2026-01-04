@@ -6,8 +6,8 @@ from unittest.mock import Mock, patch, call
 
 import pytest
 
-from claudestep.cli.commands.statistics import cmd_statistics
-from claudestep.domain.models import StatisticsReport, ProjectStats, TeamMemberStats, PRReference
+from claudechain.cli.commands.statistics import cmd_statistics
+from claudechain.domain.models import StatisticsReport, ProjectStats, TeamMemberStats, PRReference
 
 
 class TestCmdStatistics:
@@ -87,9 +87,9 @@ class TestCmdStatistics:
         """Should generate statistics report in Slack format successfully"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.statistics.StatisticsService"
+            "claudechain.cli.commands.statistics.StatisticsService"
         ) as mock_service_class, patch(
-            "claudestep.cli.commands.statistics.ProjectRepository"
+            "claudechain.cli.commands.statistics.ProjectRepository"
         ):
             mock_service = Mock()
             mock_service.collect_all_statistics.return_value = sample_statistics_report
@@ -130,7 +130,7 @@ class TestCmdStatistics:
         # Verify step summary was written
         assert mock_github_helper.write_step_summary.call_count > 0
         summary_calls = mock_github_helper.write_step_summary.call_args_list
-        assert any("ClaudeStep Statistics Report" in str(c) for c in summary_calls)
+        assert any("ClaudeChain Statistics Report" in str(c) for c in summary_calls)
 
     def test_cmd_statistics_success_with_json_format(
         self, mock_github_helper, sample_statistics_report
@@ -138,8 +138,8 @@ class TestCmdStatistics:
         """Should generate statistics report in JSON format successfully"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.statistics.StatisticsService"
-        ) as mock_service_class, patch("claudestep.cli.commands.statistics.ProjectRepository"):
+            "claudechain.cli.commands.statistics.StatisticsService"
+        ) as mock_service_class, patch("claudechain.cli.commands.statistics.ProjectRepository"):
             mock_service = Mock()
             mock_service.collect_all_statistics.return_value = sample_statistics_report
             mock_service_class.return_value = mock_service
@@ -179,8 +179,8 @@ class TestCmdStatistics:
         """Should use default value of 30 days when not explicitly provided"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.statistics.StatisticsService"
-        ) as mock_service_class, patch("claudestep.cli.commands.statistics.ProjectRepository"):
+            "claudechain.cli.commands.statistics.StatisticsService"
+        ) as mock_service_class, patch("claudechain.cli.commands.statistics.ProjectRepository"):
             mock_service = Mock()
             mock_collect = mock_service.collect_all_statistics
             mock_service_class.return_value = mock_service
@@ -203,8 +203,8 @@ class TestCmdStatistics:
         """Should write leaderboard to step summary when team stats exist and enabled"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.statistics.StatisticsService"
-        ) as mock_service_class, patch("claudestep.cli.commands.statistics.ProjectRepository"):
+            "claudechain.cli.commands.statistics.StatisticsService"
+        ) as mock_service_class, patch("claudechain.cli.commands.statistics.ProjectRepository"):
             mock_service = Mock()
             mock_collect = mock_service.collect_all_statistics
             mock_service_class.return_value = mock_service
@@ -233,8 +233,8 @@ class TestCmdStatistics:
         """Should write project progress summaries in alphabetical order"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.statistics.StatisticsService"
-        ) as mock_service_class, patch("claudestep.cli.commands.statistics.ProjectRepository"):
+            "claudechain.cli.commands.statistics.StatisticsService"
+        ) as mock_service_class, patch("claudechain.cli.commands.statistics.ProjectRepository"):
             mock_service = Mock()
             mock_collect = mock_service.collect_all_statistics
             mock_service_class.return_value = mock_service
@@ -267,8 +267,8 @@ class TestCmdStatistics:
         """Should write team member activity sorted by merged count descending when enabled"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.statistics.StatisticsService"
-        ) as mock_service_class, patch("claudestep.cli.commands.statistics.ProjectRepository"):
+            "claudechain.cli.commands.statistics.StatisticsService"
+        ) as mock_service_class, patch("claudechain.cli.commands.statistics.ProjectRepository"):
             mock_service = Mock()
             mock_collect = mock_service.collect_all_statistics
             mock_service_class.return_value = mock_service
@@ -302,8 +302,8 @@ class TestCmdStatistics:
         """Should handle empty statistics report gracefully"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.statistics.StatisticsService"
-        ) as mock_service_class, patch("claudestep.cli.commands.statistics.ProjectRepository"):
+            "claudechain.cli.commands.statistics.StatisticsService"
+        ) as mock_service_class, patch("claudechain.cli.commands.statistics.ProjectRepository"):
             mock_service = Mock()
             mock_collect = mock_service.collect_all_statistics
             mock_service_class.return_value = mock_service
@@ -329,8 +329,8 @@ class TestCmdStatistics:
         """Should handle exceptions and return error code"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.statistics.StatisticsService"
-        ) as mock_service_class, patch("claudestep.cli.commands.statistics.ProjectRepository"):
+            "claudechain.cli.commands.statistics.StatisticsService"
+        ) as mock_service_class, patch("claudechain.cli.commands.statistics.ProjectRepository"):
             mock_service = Mock()
             mock_collect = mock_service.collect_all_statistics
             mock_service_class.return_value = mock_service
@@ -366,8 +366,8 @@ class TestCmdStatistics:
         """Should print collection information to console"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.statistics.StatisticsService"
-        ) as mock_service_class, patch("claudestep.cli.commands.statistics.ProjectRepository"):
+            "claudechain.cli.commands.statistics.StatisticsService"
+        ) as mock_service_class, patch("claudechain.cli.commands.statistics.ProjectRepository"):
             mock_service = Mock()
             mock_collect = mock_service.collect_all_statistics
             mock_service_class.return_value = mock_service
@@ -385,7 +385,7 @@ class TestCmdStatistics:
         # Assert
         assert result == 0
         captured = capsys.readouterr()
-        assert "ClaudeStep Statistics Collection" in captured.out
+        assert "ClaudeChain Statistics Collection" in captured.out
         assert "Days back: 15" in captured.out
         assert "Config path: /path/to/config.yml" in captured.out
         assert "Collection Complete" in captured.out
@@ -399,8 +399,8 @@ class TestCmdStatistics:
         """Should print 'All projects' mode when config_path is None"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.statistics.StatisticsService"
-        ) as mock_service_class, patch("claudestep.cli.commands.statistics.ProjectRepository"):
+            "claudechain.cli.commands.statistics.StatisticsService"
+        ) as mock_service_class, patch("claudechain.cli.commands.statistics.ProjectRepository"):
             mock_service = Mock()
             mock_collect = mock_service.collect_all_statistics
             mock_service_class.return_value = mock_service
@@ -426,8 +426,8 @@ class TestCmdStatistics:
         # Arrange
         slack_output = "Slack formatted report text"
         with patch(
-            "claudestep.cli.commands.statistics.StatisticsService"
-        ) as mock_service_class, patch("claudestep.cli.commands.statistics.ProjectRepository"):
+            "claudechain.cli.commands.statistics.StatisticsService"
+        ) as mock_service_class, patch("claudechain.cli.commands.statistics.ProjectRepository"):
             mock_service = Mock()
             mock_collect = mock_service.collect_all_statistics
             mock_service_class.return_value = mock_service
@@ -455,15 +455,15 @@ class TestCmdStatistics:
         """Should write current timestamp to step summary"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.statistics.StatisticsService"
-        ) as mock_service_class, patch("claudestep.cli.commands.statistics.ProjectRepository"):
+            "claudechain.cli.commands.statistics.StatisticsService"
+        ) as mock_service_class, patch("claudechain.cli.commands.statistics.ProjectRepository"):
             mock_service = Mock()
             mock_collect = mock_service.collect_all_statistics
             mock_service_class.return_value = mock_service
             mock_collect.return_value = sample_statistics_report
 
             with patch(
-                "claudestep.cli.commands.statistics.datetime"
+                "claudechain.cli.commands.statistics.datetime"
             ) as mock_datetime:
                 mock_datetime.now.return_value.isoformat.return_value = (
                     "2024-01-15T10:30:00"
@@ -487,8 +487,8 @@ class TestCmdStatistics:
         """Should output valid JSON data when format is json or slack"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.statistics.StatisticsService"
-        ) as mock_service_class, patch("claudestep.cli.commands.statistics.ProjectRepository"):
+            "claudechain.cli.commands.statistics.StatisticsService"
+        ) as mock_service_class, patch("claudechain.cli.commands.statistics.ProjectRepository"):
             mock_service = Mock()
             mock_collect = mock_service.collect_all_statistics
             mock_service_class.return_value = mock_service
@@ -519,8 +519,8 @@ class TestCmdStatistics:
         """Should accept days_back as integer parameter"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.statistics.StatisticsService"
-        ) as mock_service_class, patch("claudestep.cli.commands.statistics.ProjectRepository"):
+            "claudechain.cli.commands.statistics.StatisticsService"
+        ) as mock_service_class, patch("claudechain.cli.commands.statistics.ProjectRepository"):
             mock_service = Mock()
             mock_collect = mock_service.collect_all_statistics
             mock_service_class.return_value = mock_service
@@ -544,8 +544,8 @@ class TestCmdStatistics:
         """Should not write leaderboard section when format_leaderboard returns empty"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.statistics.StatisticsService"
-        ) as mock_service_class, patch("claudestep.cli.commands.statistics.ProjectRepository"):
+            "claudechain.cli.commands.statistics.StatisticsService"
+        ) as mock_service_class, patch("claudechain.cli.commands.statistics.ProjectRepository"):
             mock_service = Mock()
             mock_collect = mock_service.collect_all_statistics
             mock_service_class.return_value = mock_service

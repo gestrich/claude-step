@@ -4,8 +4,8 @@ import json
 import pytest
 from unittest.mock import Mock, patch
 
-from claudestep.services.core.project_service import ProjectService
-from claudestep.domain.exceptions import GitHubAPIError
+from claudechain.services.core.project_service import ProjectService
+from claudechain.domain.exceptions import GitHubAPIError
 
 
 class TestDetectProjectFromPR:
@@ -14,7 +14,7 @@ class TestDetectProjectFromPR:
     @pytest.fixture
     def mock_run_gh_command(self):
         """Fixture providing mocked run_gh_command"""
-        with patch('claudestep.services.core.project_service.run_gh_command') as mock:
+        with patch('claudechain.services.core.project_service.run_gh_command') as mock:
             yield mock
 
     def test_detect_project_from_pr_success(self, mock_run_gh_command):
@@ -22,7 +22,7 @@ class TestDetectProjectFromPR:
         # Arrange
         pr_number = "123"
         repo = "owner/repo"
-        branch_name = "claude-step-my-project-a3f2b891"
+        branch_name = "claude-chain-my-project-a3f2b891"
         pr_data = {"headRefName": branch_name}
         mock_run_gh_command.return_value = json.dumps(pr_data)
         service = ProjectService(repo)
@@ -43,7 +43,7 @@ class TestDetectProjectFromPR:
         # Arrange
         pr_number = "456"
         repo = "owner/repo"
-        branch_name = "claude-step-my-complex-project-name-f7c4d3e2"
+        branch_name = "claude-chain-my-complex-project-name-f7c4d3e2"
         pr_data = {"headRefName": branch_name}
         mock_run_gh_command.return_value = json.dumps(pr_data)
         service = ProjectService(repo)
@@ -101,7 +101,7 @@ class TestDetectProjectFromPR:
         assert result is None
 
     def test_detect_project_from_pr_with_wrong_prefix(self, mock_run_gh_command):
-        """Should return None when branch doesn't start with claude-step-"""
+        """Should return None when branch doesn't start with claude-chain-"""
         # Arrange
         pr_number = "111"
         repo = "owner/repo"
@@ -149,7 +149,7 @@ class TestDetectProjectFromPR:
         # Arrange
         pr_number = "555"
         repo = "owner/repo"
-        branch_name = "claude-step-x-a3f2b891"
+        branch_name = "claude-chain-x-a3f2b891"
         pr_data = {"headRefName": branch_name}
         mock_run_gh_command.return_value = json.dumps(pr_data)
         service = ProjectService(repo)
@@ -165,7 +165,7 @@ class TestDetectProjectFromPR:
         # Arrange
         pr_number = "666"
         repo = "owner/repo"
-        branch_name = "claude-step-project-123-test-a3f2b891"
+        branch_name = "claude-chain-project-123-test-a3f2b891"
         pr_data = {"headRefName": branch_name}
         mock_run_gh_command.return_value = json.dumps(pr_data)
         service = ProjectService(repo)
@@ -189,10 +189,10 @@ class TestDetectProjectPaths:
         config_path, spec_path, pr_template_path, project_path = ProjectService.detect_project_paths(project_name)
 
         # Assert
-        assert config_path == "claude-step/my-project/configuration.yml"
-        assert spec_path == "claude-step/my-project/spec.md"
-        assert pr_template_path == "claude-step/my-project/pr-template.md"
-        assert project_path == "claude-step/my-project"
+        assert config_path == "claude-chain/my-project/configuration.yml"
+        assert spec_path == "claude-chain/my-project/spec.md"
+        assert pr_template_path == "claude-chain/my-project/pr-template.md"
+        assert project_path == "claude-chain/my-project"
 
     def test_detect_project_paths_with_complex_name(self):
         """Should generate correct paths for complex project name with hyphens"""
@@ -203,10 +203,10 @@ class TestDetectProjectPaths:
         config_path, spec_path, pr_template_path, project_path = ProjectService.detect_project_paths(project_name)
 
         # Assert
-        assert config_path == "claude-step/my-complex-project-name/configuration.yml"
-        assert spec_path == "claude-step/my-complex-project-name/spec.md"
-        assert pr_template_path == "claude-step/my-complex-project-name/pr-template.md"
-        assert project_path == "claude-step/my-complex-project-name"
+        assert config_path == "claude-chain/my-complex-project-name/configuration.yml"
+        assert spec_path == "claude-chain/my-complex-project-name/spec.md"
+        assert pr_template_path == "claude-chain/my-complex-project-name/pr-template.md"
+        assert project_path == "claude-chain/my-complex-project-name"
 
     def test_detect_project_paths_with_single_char_name(self):
         """Should generate correct paths for single character project name"""
@@ -217,10 +217,10 @@ class TestDetectProjectPaths:
         config_path, spec_path, pr_template_path, project_path = ProjectService.detect_project_paths(project_name)
 
         # Assert
-        assert config_path == "claude-step/x/configuration.yml"
-        assert spec_path == "claude-step/x/spec.md"
-        assert pr_template_path == "claude-step/x/pr-template.md"
-        assert project_path == "claude-step/x"
+        assert config_path == "claude-chain/x/configuration.yml"
+        assert spec_path == "claude-chain/x/spec.md"
+        assert pr_template_path == "claude-chain/x/pr-template.md"
+        assert project_path == "claude-chain/x"
 
     def test_detect_project_paths_returns_tuple(self):
         """Should return a tuple of exactly 4 elements"""
@@ -243,10 +243,10 @@ class TestDetectProjectPaths:
         config_path, spec_path, pr_template_path, project_path = ProjectService.detect_project_paths(project_name)
 
         # Assert
-        assert config_path == "claude-step/project-123/configuration.yml"
-        assert spec_path == "claude-step/project-123/spec.md"
-        assert pr_template_path == "claude-step/project-123/pr-template.md"
-        assert project_path == "claude-step/project-123"
+        assert config_path == "claude-chain/project-123/configuration.yml"
+        assert spec_path == "claude-chain/project-123/spec.md"
+        assert pr_template_path == "claude-chain/project-123/pr-template.md"
+        assert project_path == "claude-chain/project-123"
 
     def test_detect_project_paths_all_paths_use_same_directory(self):
         """Should ensure all paths are in the same project directory"""
@@ -257,7 +257,7 @@ class TestDetectProjectPaths:
         config_path, spec_path, pr_template_path, project_path = ProjectService.detect_project_paths(project_name)
 
         # Assert
-        expected_base = "claude-step/consistency-test"
+        expected_base = "claude-chain/consistency-test"
         assert config_path.startswith(expected_base)
         assert spec_path.startswith(expected_base)
         assert pr_template_path.startswith(expected_base)

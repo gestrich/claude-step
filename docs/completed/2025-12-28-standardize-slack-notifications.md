@@ -2,7 +2,7 @@
 
 ## Background
 
-Currently, ClaudeStep has two different patterns for handling Slack notifications:
+Currently, ClaudeChain has two different patterns for handling Slack notifications:
 
 1. **Main action** (`action.yml`): Accepts `slack_webhook_url` as an input parameter and internally calls the Slack action. Users just pass the webhook URL and the action handles posting.
 
@@ -31,7 +31,7 @@ Add the `slack_webhook_url` input parameter to `statistics/action.yml` to match 
 
 **Files modified:**
 - `statistics/action.yml` - Added input, output, and environment variable
-- `src/claudestep/cli/commands/statistics.py` - Read env var and write output
+- `src/claudechain/cli/commands/statistics.py` - Read env var and write output
 
 **Outcome:**
 - ✅ Statistics action accepts `slack_webhook_url` as an input parameter
@@ -47,7 +47,7 @@ Move the Slack notification step from the workflow into the statistics action it
 - Add a new step in `statistics/action.yml` after the "Generate statistics" step
 - Name it "Post to Slack"
 - Add condition: `if: steps.stats.outputs.has_statistics == 'true' && steps.stats.outputs.slack_webhook_url != ''`
-- Use `slackapi/slack-github-action@v2` with the same webhook-type and payload structure as currently in `claudestep-statistics.yml`
+- Use `slackapi/slack-github-action@v2` with the same webhook-type and payload structure as currently in `claudechain-statistics.yml`
 - Use `webhook: ${{ steps.stats.outputs.slack_webhook_url }}` to get the URL from step outputs
 - Add `continue-on-error: true` to prevent failures from blocking the workflow
 
@@ -61,20 +61,20 @@ Move the Slack notification step from the workflow into the statistics action it
 - ✅ Condition checks both `has_statistics` and `slack_webhook_url` to ensure posting only when appropriate
 - ✅ All existing tests pass with the new changes (93% coverage maintained)
 
-- [x] Phase 3: Update claudestep-statistics.yml workflow ✅
+- [x] Phase 3: Update claudechain-statistics.yml workflow ✅
 
 Update the example statistics workflow to pass the webhook URL as an action input instead of using job-level environment variables and manual Slack posting.
 
 **Tasks:**
 - Remove the job-level `env:` section with `SLACK_WEBHOOK_URL` (line 21-23)
 - Remove the entire "Post to Slack" step (lines 35-71)
-- Add `slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}` to the "Generate ClaudeStep Statistics" step inputs (after `days_back`)
+- Add `slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}` to the "Generate ClaudeChain Statistics" step inputs (after `days_back`)
 - Update the workflow comment at the top to reflect the new pattern:
   - Change "2. Posting results to Slack using the official Slack GitHub Action" to "2. Automatic Slack notifications via action input"
 - Update the commented-out project-specific example to use the same pattern (pass webhook as input, remove manual Slack step)
 
 **Files modified:**
-- `.github/workflows/claudestep-statistics.yml`
+- `.github/workflows/claudechain-statistics.yml`
 
 **Outcome:**
 - ✅ Statistics workflow now uses the same pattern as the main action workflow
@@ -160,7 +160,7 @@ Validate that both Slack notification types work correctly with the new consiste
 
 1. **Manual testing** (preferred for this workflow-based change):
    - Test main action Slack notifications:
-     - Trigger a ClaudeStep run with `slack_webhook_url` input
+     - Trigger a ClaudeChain run with `slack_webhook_url` input
      - Verify PR creation notification is posted to Slack
    - Test statistics action Slack notifications:
      - Trigger the statistics workflow with `slack_webhook_url` input
@@ -173,7 +173,7 @@ Validate that both Slack notification types work correctly with the new consiste
 2. **Code review**:
    - Verify the patterns are identical in both `action.yml` and `statistics/action.yml`
    - Verify documentation accurately reflects the implementation
-   - Check that the example workflow in `claudestep-statistics.yml` follows best practices
+   - Check that the example workflow in `claudechain-statistics.yml` follows best practices
 
 **Files modified:**
 - `statistics/action.yml` - Fixed Slack webhook parameter to use `with.webhook` instead of `env.SLACK_WEBHOOK_URL`
@@ -186,7 +186,7 @@ Validate that both Slack notification types work correctly with the new consiste
   - Slack step: `webhook: ${{ steps.*.outputs.slack_webhook_url }}`
 - **Bug Fixed**: Statistics action was incorrectly passing the webhook URL via environment variable instead of the `with.webhook` parameter. The slackapi/slack-github-action@v2 requires the webhook in the `with` block.
 - **Documentation**: All documentation (README.md, architecture.md) accurately reflects the standardized implementation
-- **Workflow**: The example claudestep-statistics.yml workflow follows best practices
+- **Workflow**: The example claudechain-statistics.yml workflow follows best practices
 - **Testing**: All 507 unit and integration tests pass (93% coverage maintained). 3 e2e tests failed due to unrelated git push issues.
 
 **Success criteria:**

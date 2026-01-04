@@ -1,12 +1,12 @@
 """Unit tests for GitHub event context module.
 
-Tests GitHubEventContext from src/claudestep/domain/github_event.py.
+Tests GitHubEventContext from src/claudechain/domain/github_event.py.
 Tests cover parsing of different event types, skip logic, and project extraction.
 """
 
 import json
 import pytest
-from claudestep.domain.github_event import GitHubEventContext
+from claudechain.domain.github_event import GitHubEventContext
 
 
 class TestGitHubEventContextParsing:
@@ -55,9 +55,9 @@ class TestGitHubEventContextParsing:
                 "number": 42,
                 "merged": True,
                 "base": {"ref": "main"},
-                "head": {"ref": "claude-step-my-project-a3f2b891"},
+                "head": {"ref": "claude-chain-my-project-a3f2b891"},
                 "labels": [
-                    {"name": "claudestep"},
+                    {"name": "claudechain"},
                     {"name": "enhancement"}
                 ]
             }
@@ -71,8 +71,8 @@ class TestGitHubEventContextParsing:
         assert context.pr_number == 42
         assert context.pr_merged is True
         assert context.base_ref == "main"
-        assert context.head_ref == "claude-step-my-project-a3f2b891"
-        assert "claudestep" in context.pr_labels
+        assert context.head_ref == "claude-chain-my-project-a3f2b891"
+        assert "claudechain" in context.pr_labels
         assert "enhancement" in context.pr_labels
 
     def test_parse_pull_request_closed_not_merged(self):
@@ -170,7 +170,7 @@ class TestGitHubEventContextShouldSkip:
         context = GitHubEventContext(
             event_name="pull_request",
             pr_merged=False,
-            pr_labels=["claudestep"]
+            pr_labels=["claudechain"]
         )
 
         # Act
@@ -194,7 +194,7 @@ class TestGitHubEventContextShouldSkip:
 
         # Assert
         assert should_skip is True
-        assert "claudestep" in reason
+        assert "claudechain" in reason
 
     def test_should_not_skip_merged_pr_with_label(self):
         """Should not skip when PR is merged and has required label."""
@@ -202,7 +202,7 @@ class TestGitHubEventContextShouldSkip:
         context = GitHubEventContext(
             event_name="pull_request",
             pr_merged=True,
-            pr_labels=["claudestep", "enhancement"]
+            pr_labels=["claudechain", "enhancement"]
         )
 
         # Act
@@ -218,7 +218,7 @@ class TestGitHubEventContextShouldSkip:
         context = GitHubEventContext(
             event_name="pull_request",
             pr_merged=True,
-            pr_labels=["claudestep"]
+            pr_labels=["claudechain"]
         )
 
         # Act
@@ -312,7 +312,7 @@ class TestGitHubEventContextCheckoutRef:
         context = GitHubEventContext(
             event_name="pull_request",
             base_ref="develop",
-            head_ref="claude-step-test-12345678"
+            head_ref="claude-chain-test-12345678"
         )
 
         # Act
@@ -561,11 +561,11 @@ class TestGitHubEventContextHasLabel:
         # Arrange
         context = GitHubEventContext(
             event_name="pull_request",
-            pr_labels=["claudestep", "bug", "enhancement"]
+            pr_labels=["claudechain", "bug", "enhancement"]
         )
 
         # Act & Assert
-        assert context.has_label("claudestep") is True
+        assert context.has_label("claudechain") is True
         assert context.has_label("bug") is True
 
     def test_has_label_when_absent(self):
@@ -573,7 +573,7 @@ class TestGitHubEventContextHasLabel:
         # Arrange
         context = GitHubEventContext(
             event_name="pull_request",
-            pr_labels=["claudestep"]
+            pr_labels=["claudechain"]
         )
 
         # Act & Assert
@@ -603,8 +603,8 @@ class TestGitHubEventContextIntegration:
                 "number": 123,
                 "merged": True,
                 "base": {"ref": "main"},
-                "head": {"ref": "claude-step-auth-refactor-f7c4d3e2"},
-                "labels": [{"name": "claudestep"}]
+                "head": {"ref": "claude-chain-auth-refactor-f7c4d3e2"},
+                "labels": [{"name": "claudechain"}]
             }
         })
 
@@ -616,7 +616,7 @@ class TestGitHubEventContextIntegration:
         assert context.get_checkout_ref() == "main"
         assert context.get_default_base_branch() == "main"
         # PR events have changed files context (base/head refs for compare API)
-        assert context.get_changed_files_context() == ("main", "claude-step-auth-refactor-f7c4d3e2")
+        assert context.get_changed_files_context() == ("main", "claude-chain-auth-refactor-f7c4d3e2")
 
     def test_full_push_workflow(self):
         """Should correctly process a push event end-to-end."""

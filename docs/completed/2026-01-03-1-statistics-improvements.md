@@ -11,11 +11,11 @@ The goals for this plan:
 4. **Open PR details** - Show assignee and age for each open PR
 
 Key existing components:
-- `StatisticsService` ([services/composite/statistics_service.py](src/claudestep/services/composite/statistics_service.py)) - Collects project and team stats
-- `StatisticsReport` ([domain/models.py](src/claudestep/domain/models.py)) - Domain model with formatting methods
-- `ProjectStats` ([domain/models.py](src/claudestep/domain/models.py)) - Per-project statistics
-- `ProjectConfiguration` ([domain/project_configuration.py](src/claudestep/domain/project_configuration.py)) - Project config schema
-- `GitHubPullRequest` ([domain/github_models.py](src/claudestep/domain/github_models.py)) - PR domain model with `created_at`
+- `StatisticsService` ([services/composite/statistics_service.py](src/claudechain/services/composite/statistics_service.py)) - Collects project and team stats
+- `StatisticsReport` ([domain/models.py](src/claudechain/domain/models.py)) - Domain model with formatting methods
+- `ProjectStats` ([domain/models.py](src/claudechain/domain/models.py)) - Per-project statistics
+- `ProjectConfiguration` ([domain/project_configuration.py](src/claudechain/domain/project_configuration.py)) - Project config schema
+- `GitHubPullRequest` ([domain/github_models.py](src/claudechain/domain/github_models.py)) - PR domain model with `created_at`
 
 ## Phases
 
@@ -24,9 +24,9 @@ Key existing components:
 Add `show_reviewer_stats` parameter to control whether reviewer statistics are shown. Default to `false` (disabled).
 
 **Files to modify:**
-- [src/claudestep/cli/commands/statistics.py](src/claudestep/cli/commands/statistics.py) - Add `--show-reviewer-stats` CLI flag
-- [src/claudestep/services/composite/statistics_service.py](src/claudestep/services/composite/statistics_service.py) - Add `show_reviewer_stats` parameter to `collect_all_statistics()`
-- [src/claudestep/domain/models.py](src/claudestep/domain/models.py) - Update `format_for_slack()` and `format_leaderboard()` to conditionally include leaderboard
+- [src/claudechain/cli/commands/statistics.py](src/claudechain/cli/commands/statistics.py) - Add `--show-reviewer-stats` CLI flag
+- [src/claudechain/services/composite/statistics_service.py](src/claudechain/services/composite/statistics_service.py) - Add `show_reviewer_stats` parameter to `collect_all_statistics()`
+- [src/claudechain/domain/models.py](src/claudechain/domain/models.py) - Update `format_for_slack()` and `format_leaderboard()` to conditionally include leaderboard
 - [statistics/action.yml](statistics/action.yml) - Add `show_reviewer_stats` input (default: `false`)
 
 **Implementation details:**
@@ -53,7 +53,7 @@ def collect_all_statistics(
 Add new configuration field to define when PRs are considered stale.
 
 **Files to modify:**
-- [src/claudestep/domain/project_configuration.py](src/claudestep/domain/project_configuration.py) - Add `stale_pr_days` field to `ProjectConfiguration`
+- [src/claudechain/domain/project_configuration.py](src/claudechain/domain/project_configuration.py) - Add `stale_pr_days` field to `ProjectConfiguration`
 
 **Implementation details:**
 - Add `stale_pr_days: Optional[int] = None` field to `ProjectConfiguration`
@@ -76,8 +76,8 @@ stalePRDays: 7
 Extend statistics collection to identify stale PRs and include them in reports.
 
 **Files to modify:**
-- [src/claudestep/domain/models.py](src/claudestep/domain/models.py) - Add `OpenPRInfo` dataclass and update `ProjectStats`
-- [src/claudestep/services/composite/statistics_service.py](src/claudestep/services/composite/statistics_service.py) - Collect open PR details with age calculation
+- [src/claudechain/domain/models.py](src/claudechain/domain/models.py) - Add `OpenPRInfo` dataclass and update `ProjectStats`
+- [src/claudechain/services/composite/statistics_service.py](src/claudechain/services/composite/statistics_service.py) - Collect open PR details with age calculation
 
 **New domain model:**
 ```python
@@ -112,7 +112,7 @@ class ProjectStats:
 Alert when a project has remaining tasks but no open PRs.
 
 **Files to modify:**
-- [src/claudestep/domain/models.py](src/claudestep/domain/models.py) - Add warning tracking to `ProjectStats` and `StatisticsReport`
+- [src/claudechain/domain/models.py](src/claudechain/domain/models.py) - Add warning tracking to `ProjectStats` and `StatisticsReport`
 
 **Implementation details:**
 - Add `has_remaining_capacity: bool` property to `ProjectStats`:
@@ -126,7 +126,7 @@ Alert when a project has remaining tasks but no open PRs.
 Update Slack and GitHub output to show stale indicators and warnings.
 
 **Files to modify:**
-- [src/claudestep/domain/models.py](src/claudestep/domain/models.py) - Update formatting methods
+- [src/claudechain/domain/models.py](src/claudechain/domain/models.py) - Update formatting methods
 
 **Output changes:**
 
@@ -197,6 +197,6 @@ python3 -m pytest tests/unit/domain/test_project_configuration.py -v
 python3 -m pytest tests/unit/services/test_statistics_service.py -v
 
 # Run statistics with different options
-python -m claudestep statistics --repo "gestrich/claude-step" --format slack
-python -m claudestep statistics --repo "gestrich/claude-step" --show-reviewer-stats --format slack
+python -m claudechain statistics --repo "gestrich/claude-chain" --format slack
+python -m claudechain statistics --repo "gestrich/claude-chain" --show-reviewer-stats --format slack
 ```

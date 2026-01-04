@@ -11,8 +11,8 @@ When working with structured data (YAML files, JSON responses, markdown files, e
 class StatisticsService:
     def collect_project_stats(self, project_name: str):
         # String-based path construction
-        config_path = f"claude-step/{project_name}/configuration.yml"
-        spec_path = f"claude-step/{project_name}/spec.md"
+        config_path = f"claude-chain/{project_name}/configuration.yml"
+        spec_path = f"claude-chain/{project_name}/spec.md"
 
         # Fetch raw strings from API
         config_content = get_file_from_branch(repo, branch, config_path)
@@ -49,17 +49,17 @@ class StatisticsService:
 # 1. Domain Model (domain/project.py)
 @dataclass
 class Project:
-    """Domain model representing a ClaudeStep project"""
+    """Domain model representing a ClaudeChain project"""
     name: str
 
     @property
     def config_path(self) -> str:
         """Centralized path construction"""
-        return f"claude-step/{self.name}/configuration.yml"
+        return f"claude-chain/{self.name}/configuration.yml"
 
     @property
     def spec_path(self) -> str:
-        return f"claude-step/{self.name}/spec.md"
+        return f"claude-chain/{self.name}/spec.md"
 
 # 2. Configuration Model (domain/project_configuration.py)
 @dataclass

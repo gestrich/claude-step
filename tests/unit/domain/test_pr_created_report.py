@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import Mock
 
-from claudestep.domain.pr_created_report import PullRequestCreatedReport
-from claudestep.domain.formatters import (
+from claudechain.domain.pr_created_report import PullRequestCreatedReport
+from claudechain.domain.formatters import (
     Section,
     Header,
     TextBlock,
@@ -234,7 +234,7 @@ class TestBuildWorkflowSummaryElements:
         formatter = MarkdownReportFormatter()
         result = formatter.format(elements)
 
-        assert "ClaudeStep Complete" in result
+        assert "ClaudeChain Complete" in result
         assert "#123" in result
         assert "Cost" in result
 

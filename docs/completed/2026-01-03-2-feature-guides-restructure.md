@@ -27,12 +27,12 @@ docs/feature-guides/
 - [x] Phase 1: Create `how-it-works.md`
 
 Core mental model guide covering:
-- What ClaudeStep does (high-level overview)
+- What ClaudeChain does (high-level overview)
 - The PR chain: Task → PR → Merge → Next Task
 - Hash-based task identification (why reordering is safe)
-- Branch naming conventions (`claude-step-{project}-{hash}`)
+- Branch naming conventions (`claude-chain-{project}-{hash}`)
 - What Claude Code does vs what the GitHub Action does
-- Automatic continuation flow (claudestep label + merge triggers next)
+- Automatic continuation flow (claudechain label + merge triggers next)
 - Orphaned PR detection (when task descriptions change)
 
 This is the conceptual foundation that helps users understand everything else.
@@ -41,7 +41,7 @@ This is the conceptual foundation that helps users understand everything else.
 
 One-time setup guide covering:
 - Prerequisites (Anthropic API key)
-- Creating the workflow file (`.github/workflows/claude-step.yml`)
+- Creating the workflow file (`.github/workflows/claude-chain.yml`)
   - Simplified workflow format
   - Required inputs (`anthropic_api_key`, `github_token`, etc.)
   - Triggers (`workflow_dispatch`, `pull_request: types: [closed]`)
@@ -50,12 +50,12 @@ One-time setup guide covering:
   - Adding `ANTHROPIC_API_KEY` secret
   - Enabling "Allow GitHub Actions to create and approve pull requests"
   - Installing Claude Code GitHub App (`/install-github-app`)
-- Starting ClaudeStep for the first time (manual trigger or labeled PR)
+- Starting ClaudeChain for the first time (manual trigger or labeled PR)
 
 - [x] Phase 3: Create `projects.md`
 
 Project authoring guide covering:
-- Project structure (`claude-step/{project-name}/`)
+- Project structure (`claude-chain/{project-name}/`)
 - `spec.md` format:
   - Combining instructions and steps
   - Checkbox syntax (`- [ ]`, `- [x]`)
@@ -86,7 +86,7 @@ Notifications and visibility guide covering:
   - What summaries contain
   - Cost (~$0.002-0.005 per summary)
 - Statistics reports:
-  - Setting up the statistics workflow (`.github/workflows/claudestep-statistics.yml`)
+  - Setting up the statistics workflow (`.github/workflows/claudechain-statistics.yml`)
   - Statistics action inputs (`days_back`, `base_branch`, `slack_webhook_url`)
   - What reports include (leaderboard, project progress, cost tracking)
   - Scheduling (cron for weekly reports)
@@ -122,7 +122,7 @@ Content from these has been absorbed into `setup.md` and `projects.md`.
 Restructure README.md to mirror the feature guides:
 
 ```markdown
-# ClaudeStep
+# ClaudeChain
 
 ## Overview
 [Brief intro - what it does, why it exists, key features]

@@ -1,8 +1,8 @@
-# ClaudeStep
+# ClaudeChain
 
 ## Overview
 
-ClaudeStep runs Claude Code on individual steps that you define for your project, creating pull requests for each step one at a time. When you merge a PR, it automatically stages the next PR, creating a chain of incremental improvements.
+ClaudeChain runs Claude Code on individual steps that you define for your project, creating pull requests for each step one at a time. When you merge a PR, it automatically stages the next PR, creating a chain of incremental improvements.
 
 Built on Claude Code and GitHub Actions, it automates the tedious refactoring work that never gets prioritized—migrations, refactoring, code cleanup, and documentation that would otherwise sit on the backlog forever.
 
@@ -15,7 +15,7 @@ Built on Claude Code and GitHub Actions, it automates the tedious refactoring wo
 
 ## How It Works
 
-ClaudeStep creates a chain of PRs, one task at a time:
+ClaudeChain creates a chain of PRs, one task at a time:
 
 ```
 spec.md tasks          PRs                        Result
@@ -36,10 +36,10 @@ Each task is identified by a hash of its description, so you can freely reorder,
 ### 1. Create a Project
 
 ```bash
-mkdir -p claude-step/my-refactor
+mkdir -p claude-chain/my-refactor
 ```
 
-Create `claude-step/my-refactor/spec.md`:
+Create `claude-chain/my-refactor/spec.md`:
 
 ```markdown
 # My Refactoring Project
@@ -55,16 +55,16 @@ Describe what you want to refactor and how to do it.
 
 ### 2. Add the Workflow
 
-Create `.github/workflows/claudestep.yml`:
+Create `.github/workflows/claudechain.yml`:
 
 ```yaml
-name: ClaudeStep
+name: ClaudeChain
 
 on:
   workflow_dispatch:
     inputs:
       project_name:
-        description: 'Project name (folder under claude-step/)'
+        description: 'Project name (folder under claude-chain/)'
         required: true
         type: string
   pull_request:
@@ -78,10 +78,10 @@ permissions:
   actions: read
 
 jobs:
-  run-claudestep:
+  run-claudechain:
     runs-on: ubuntu-latest
     steps:
-      - uses: gestrich/claude-step@v2
+      - uses: gestrich/claude-chain@v2
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -96,17 +96,17 @@ jobs:
 2. **Enable PRs:** Settings → Actions → "Allow GitHub Actions to create and approve pull requests"
 3. **Install app:** Run `/install-github-app` in Claude Code
 
-### 4. Start ClaudeStep
+### 4. Start ClaudeChain
 
 Push your project to main, then either:
-- Create a PR with the `claudestep` label and merge it, or
-- Manual trigger: Actions → ClaudeStep → Run workflow
+- Create a PR with the `claudechain` label and merge it, or
+- Manual trigger: Actions → ClaudeChain → Run workflow
 
 → **[Full guide: Setup](docs/feature-guides/setup.md)**
 
 ## Projects
 
-Each project lives in `claude-step/{project-name}/` with:
+Each project lives in `claude-chain/{project-name}/` with:
 
 | File | Required | Purpose |
 |------|----------|---------|
@@ -140,7 +140,7 @@ Enable Slack by adding `slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}` to 
 
 **First task not starting?** The first task requires manual trigger or a labeled PR merge.
 
-**PR merge doesn't trigger next task?** Check that the PR has the `claudestep` label and was merged (not just closed).
+**PR merge doesn't trigger next task?** Check that the PR has the `claudechain` label and was merged (not just closed).
 
 **Spec file not found?** Ensure `spec.md` is committed and pushed to your base branch.
 
@@ -175,8 +175,8 @@ Contributions welcome! Open an issue to discuss changes. Add tests and update do
 
 ## Support & Credits
 
-- 🐛 [Report Issues](https://github.com/gestrich/claude-step/issues)
-- 💬 [Discussions](https://github.com/gestrich/claude-step/discussions)
+- 🐛 [Report Issues](https://github.com/gestrich/claude-chain/issues)
+- 💬 [Discussions](https://github.com/gestrich/claude-chain/discussions)
 
 Created by [gestrich](https://github.com/gestrich). Built with [Claude Code](https://github.com/anthropics/claude-code-action).
 

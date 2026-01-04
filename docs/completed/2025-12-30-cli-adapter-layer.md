@@ -4,7 +4,7 @@ The current architecture has both CLI commands and services that read environmen
 
 **Current Issues at CLI Layer:**
 - Commands have implicit dependencies on environment variables (not visible in function signatures)
-- Local usage requires setting env vars: `GITHUB_REPOSITORY=owner/repo python -m claudestep statistics`
+- Local usage requires setting env vars: `GITHUB_REPOSITORY=owner/repo python -m claudechain statistics`
 - Function signatures use `argparse.Namespace` which hides what parameters are actually needed
 - Testing requires mocking environment variables
 - Type safety is limited with `Namespace` objects
@@ -42,7 +42,7 @@ GitHub Actions env vars → __main__.py (adapter) → cmd_*(explicit params) →
 
 - [x] Phase 1: Add CLI arguments to parser for statistics command
 
-Update `src/claudestep/cli/parser.py` to add argument definitions for the statistics command:
+Update `src/claudechain/cli/parser.py` to add argument definitions for the statistics command:
 - `--repo`: GitHub repository (owner/name)
 - `--base-branch`: Base branch to fetch specs from (default: main)
 - `--config-path`: Path to configuration file
@@ -51,19 +51,19 @@ Update `src/claudestep/cli/parser.py` to add argument definitions for the statis
 
 Each argument should have a help message describing its purpose.
 
-**Expected outcome:** `python -m claudestep statistics --help` shows all available options including `--base-branch`
+**Expected outcome:** `python -m claudechain statistics --help` shows all available options including `--base-branch`
 
 **Status: ✅ Completed**
-- Added all five CLI arguments to `parser_statistics` in `src/claudestep/cli/parser.py:58-79`
+- Added all five CLI arguments to `parser_statistics` in `src/claudechain/cli/parser.py:58-79`
 - All arguments include descriptive help messages
 - The `--format` argument uses `choices=["slack", "json"]` for validation
 - The `--days-back` argument uses `type=int` for proper type conversion
-- Verified help text displays correctly with `python -m claudestep statistics --help`
+- Verified help text displays correctly with `python -m claudechain statistics --help`
 - Parser module imports and builds successfully
 
 - [x] Phase 2: Refactor cmd_statistics to use explicit parameters
 
-Update `src/claudestep/cli/commands/statistics.py`:
+Update `src/claudechain/cli/commands/statistics.py`:
 
 **Old signature:**
 ```python
@@ -104,7 +104,7 @@ Changes needed:
 
 - [x] Phase 3: Update __main__.py adapter for statistics command
 
-Update `src/claudestep/__main__.py` to add the adapter logic for statistics:
+Update `src/claudechain/__main__.py` to add the adapter logic for statistics:
 
 ```python
 elif args.command == "statistics":
@@ -123,12 +123,12 @@ Add `os` import to `__main__.py` if not already present.
 
 **Expected outcome:**
 - GitHub Actions usage works unchanged (reads env vars)
-- CLI usage works: `python -m claudestep statistics --repo owner/repo --days-back 90`
-- Hybrid usage works: `GITHUB_REPOSITORY=owner/repo python -m claudestep statistics --days-back 90`
+- CLI usage works: `python -m claudechain statistics --repo owner/repo --days-back 90`
+- Hybrid usage works: `GITHUB_REPOSITORY=owner/repo python -m claudechain statistics --days-back 90`
 
 **Status: ✅ Completed**
-- Added `import os` to the imports in `src/claudestep/__main__.py:9`
-- Updated the statistics command handler in `src/claudestep/__main__.py:55-64` to use the adapter pattern
+- Added `import os` to the imports in `src/claudechain/__main__.py:9`
+- Updated the statistics command handler in `src/claudechain/__main__.py:55-64` to use the adapter pattern
 - All seven parameters are now passed explicitly to `cmd_statistics`:
   - `gh`: Passed directly (no env var fallback needed)
   - `repo`: Falls back to `GITHUB_REPOSITORY` env var
@@ -144,7 +144,7 @@ Add `os` import to `__main__.py` if not already present.
 
 - [x] Phase 4: Refactor StatisticsService to use explicit parameters
 
-Update `src/claudestep/services/statistics_service.py`:
+Update `src/claudechain/services/statistics_service.py`:
 
 **Changes to constructor:**
 ```python
@@ -179,11 +179,11 @@ statistics_service = StatisticsService(repo, metadata_service, base_branch)
 **Expected outcome:** `StatisticsService` no longer reads environment variables directly
 
 **Status: ✅ Completed**
-- Updated `StatisticsService.__init__()` to accept `base_branch` parameter with default value "main" in `src/claudestep/services/statistics_service.py:30`
+- Updated `StatisticsService.__init__()` to accept `base_branch` parameter with default value "main" in `src/claudechain/services/statistics_service.py:30`
 - Added `self.base_branch = base_branch` to store the parameter as an instance variable in line 40
 - Removed `os.environ.get("BASE_BRANCH", "main")` call from `collect_all_statistics` method (line 63)
 - Replaced with `base_branch = self.base_branch` to use the instance variable
-- Updated `cmd_statistics` in `src/claudestep/cli/commands/statistics.py:57` to pass `base_branch` parameter when instantiating `StatisticsService`
+- Updated `cmd_statistics` in `src/claudechain/cli/commands/statistics.py:57` to pass `base_branch` parameter when instantiating `StatisticsService`
 - Verified syntax with `python3 -m py_compile` - no errors
 - Verified modules import successfully
 - Confirmed no `os.environ` calls remain in `statistics_service.py`
@@ -192,7 +192,7 @@ statistics_service = StatisticsService(repo, metadata_service, base_branch)
 
 - [x] Phase 5: Review other services for consistency
 
-Review all other services in `src/claudestep/services/` to ensure they follow the pattern:
+Review all other services in `src/claudechain/services/` to ensure they follow the pattern:
 - `task_management_service.py`
 - `pr_operations_service.py`
 - `reviewer_management_service.py`
@@ -458,13 +458,13 @@ BASE_BRANCH="main" \
 CONFIG_PATH="test/config.json" \
 STATS_DAYS_BACK="7" \
 STATS_FORMAT="slack" \
-python -m claudestep statistics
+python -m claudechain statistics
 ```
 Should work exactly as before
 
 **3. CLI Usage - Local CLI mode (args only):**
 ```bash
-python -m claudestep statistics \
+python -m claudechain statistics \
   --repo owner/repo \
   --base-branch main \
   --config-path test/config.json \
@@ -477,20 +477,20 @@ Should produce same result as env var mode
 ```bash
 GITHUB_REPOSITORY="owner/repo" \
 BASE_BRANCH="develop" \
-python -m claudestep statistics --days-back 90
+python -m claudechain statistics --days-back 90
 ```
 Args should override env vars where specified
 
 **5. Test help text:**
 ```bash
-python -m claudestep statistics --help
+python -m claudechain statistics --help
 ```
 Should show all available arguments including `--base-branch` with descriptions
 
 **6. Code verification:**
 ```bash
 # Verify no environment variable access in services
-grep -r "os.environ.get" src/claudestep/services/
+grep -r "os.environ.get" src/claudechain/services/
 
 # Should only show imports or comments, no actual usage
 ```
@@ -534,7 +534,7 @@ grep -r "os.environ.get" src/claudestep/services/
    - ✅ No regressions introduced by the CLI adapter layer changes
 
 4. **Help Text Verification:**
-   - ✅ `python3 -m claudestep statistics --help` displays all arguments correctly:
+   - ✅ `python3 -m claudechain statistics --help` displays all arguments correctly:
      - `--repo REPO`: GitHub repository (owner/name)
      - `--base-branch BASE_BRANCH`: Base branch to fetch specs from (default: main)
      - `--config-path CONFIG_PATH`: Path to configuration file
@@ -542,7 +542,7 @@ grep -r "os.environ.get" src/claudestep/services/
      - `--format {slack,json}`: Output format (default: slack)
 
 5. **Code Verification:**
-   - ✅ **Services layer**: `grep -r "os.environ.get" src/claudestep/services/` returned no results
+   - ✅ **Services layer**: `grep -r "os.environ.get" src/claudechain/services/` returned no results
    - ✅ **Statistics command**: `statistics.py` does not appear in the list of commands using `os.environ.get`
    - ✅ Confirmed that only `__main__.py` reads environment variables for the statistics command
    - ✅ All configuration flows through the adapter pattern: `env vars → __main__.py → cmd_statistics → StatisticsService`

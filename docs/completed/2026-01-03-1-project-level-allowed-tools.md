@@ -1,6 +1,6 @@
 ## Background
 
-ClaudeStep currently supports `claude_allowed_tools` as an action input (workflow-level configuration), allowing users to specify which tools Claude Code can use during task execution. The current default is `Write,Read,Bash,Edit`.
+ClaudeChain currently supports `claude_allowed_tools` as an action input (workflow-level configuration), allowing users to specify which tools Claude Code can use during task execution. The current default is `Write,Read,Bash,Edit`.
 
 The user wants to extend this to support **per-project configuration overrides** via `configuration.yml`, following the same pattern used for `baseBranch` (workflow default → project override). This follows the established hierarchy:
 
@@ -28,7 +28,7 @@ The summary step currently uses `Bash,Write` which is overly permissive. It only
 
 **Main task execution minimum requirements:**
 
-The standard ClaudeStep prompt (in `prepare.py`) instructs Claude to:
+The standard ClaudeChain prompt (in `prepare.py`) instructs Claude to:
 > "When you're done, use git add and git commit to commit your changes."
 
 This means the **minimum required tools** for main task execution are:
@@ -47,14 +47,14 @@ Per [Claude Code Action documentation](https://github.com/anthropics/claude-code
 - Comment management
 - Basic GitHub operations
 
-ClaudeStep's current default `Write,Read,Bash,Edit` is more permissive than Claude Code Action's baseline. This was chosen because many refactoring tasks require running tests/builds, but it's worth reconsidering.
+ClaudeChain's current default `Write,Read,Bash,Edit` is more permissive than Claude Code Action's baseline. This was chosen because many refactoring tasks require running tests/builds, but it's worth reconsidering.
 
-**Decision:** Match Claude Code Action's minimal default, plus only the specific Bash commands ClaudeStep requires:
+**Decision:** Match Claude Code Action's minimal default, plus only the specific Bash commands ClaudeChain requires:
 ```
 Read,Write,Edit,Bash(git add:*),Bash(git commit:*)
 ```
 
-This aligns with Claude Code Action's security-first philosophy while adding only what's necessary for the core ClaudeStep workflow (staging and committing changes). Users who need additional Bash access (for tests, builds, etc.) can explicitly add it via `allowedTools` config.
+This aligns with Claude Code Action's security-first philosophy while adding only what's necessary for the core ClaudeChain workflow (staging and committing changes). Users who need additional Bash access (for tests, builds, etc.) can explicitly add it via `allowedTools` config.
 
 **Breaking change:** The current default `Write,Read,Bash,Edit` will be replaced. Existing users relying on full Bash access will need to add `Bash` to their workflow input or project config.
 
@@ -62,7 +62,7 @@ This aligns with Claude Code Action's security-first philosophy while adding onl
 
 - [x] Phase 1: Extend ProjectConfiguration domain model
 
-Add `allowed_tools` field to the `ProjectConfiguration` dataclass in `src/claudestep/domain/project_configuration.py`:
+Add `allowed_tools` field to the `ProjectConfiguration` dataclass in `src/claudechain/domain/project_configuration.py`:
 
 ```python
 @dataclass
@@ -80,7 +80,7 @@ Add factory method updates:
 - Update `to_dict()` to include `allowedTools` when set
 
 **Files to modify:**
-- `src/claudestep/domain/project_configuration.py`
+- `src/claudechain/domain/project_configuration.py`
 
 - [x] Phase 2: Pass allowed_tools through prepare command
 
@@ -90,7 +90,7 @@ Update the following files:
 
 **Files to modify:**
 
-1. `src/claudestep/__main__.py`
+1. `src/claudechain/__main__.py`
    - Read env var and pass to command:
      ```python
      elif args.command == "prepare":
@@ -101,7 +101,7 @@ Update the following files:
          )
      ```
 
-2. `src/claudestep/cli/commands/prepare.py`
+2. `src/claudechain/cli/commands/prepare.py`
    - Add `default_allowed_tools: str` parameter to `cmd_prepare()` function signature
    - Resolve with config: `allowed_tools = config.get_allowed_tools(default_allowed_tools)`
    - Add output: `gh.write_output("allowed_tools", allowed_tools)`
@@ -152,7 +152,7 @@ claude_args: '--allowedTools "Bash(gh pr diff:*),Bash(cat:*),Write" --model ${{ 
 - `Bash(cat:*)` - Required to verify summary file was written via `cat {SUMMARY_FILE_PATH}`
 - `Write` - Required to save summary to the temp file
 
-**Important:** This is NOT user-configurable. The summary step is an internal ClaudeStep operation that should always use minimal, fixed permissions regardless of project configuration.
+**Important:** This is NOT user-configurable. The summary step is an internal ClaudeChain operation that should always use minimal, fixed permissions regardless of project configuration.
 
 **Files to modify:**
 - `action.yml` (line 259)
@@ -203,7 +203,7 @@ allowedTools: Write,Read,Edit  # Restrict to safe tools (no Bash)
 ```markdown
 ### Tool Permissions
 
-ClaudeStep uses two Claude Code invocations with different permission scopes:
+ClaudeChain uses two Claude Code invocations with different permission scopes:
 
 **Main Task Execution** (user-configurable):
 - Default: `Read,Write,Edit,Bash(git add:*),Bash(git commit:*)`
@@ -213,8 +213,8 @@ ClaudeStep uses two Claude Code invocations with different permission scopes:
 |------|---------|
 | `Read` | Read spec.md and codebase files |
 | `Write` / `Edit` | Make code changes |
-| `Bash(git add:*)` | Stage changes (required by ClaudeStep prompt) |
-| `Bash(git commit:*)` | Commit changes (required by ClaudeStep prompt) |
+| `Bash(git add:*)` | Stage changes (required by ClaudeChain prompt) |
+| `Bash(git commit:*)` | Commit changes (required by ClaudeChain prompt) |
 
 To enable additional Bash commands (e.g., for running tests or builds), add them to your configuration:
 ```yaml
@@ -253,7 +253,7 @@ PYTHONPATH=src:scripts pytest tests/unit/ -v
 PYTHONPATH=src:scripts pytest tests/integration/ -v
 
 # Verify coverage is maintained
-PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-fail-under=70
+PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudechain --cov-fail-under=70
 ```
 
 **Success criteria:**

@@ -2,10 +2,10 @@
 
 ## Entry Point: `__main__.py`
 
-ClaudeStep uses a **command dispatcher** pattern with a single Python entry point:
+ClaudeChain uses a **command dispatcher** pattern with a single Python entry point:
 
 ```
-python3 -m claudestep <command>
+python3 -m claudechain <command>
 ```
 
 ## Available Commands
@@ -19,7 +19,7 @@ python3 -m claudestep <command>
 
 ## Command Structure
 
-**Dispatcher** (`scripts/claudestep/__main__.py`):
+**Dispatcher** (`scripts/claudechain/__main__.py`):
 ```python
 def main():
     parser = argparse.ArgumentParser()
@@ -33,7 +33,7 @@ def main():
     # ... route to other commands
 ```
 
-**Command Implementation** (`scripts/claudestep/commands/statistics.py`):
+**Command Implementation** (`scripts/claudechain/commands/statistics.py`):
 ```python
 def cmd_statistics(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
     """Command logic - returns exit code (0 = success)"""
@@ -51,16 +51,16 @@ def cmd_statistics(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
 4. **Easy extension** - Add new commands without touching existing ones
 5. **Local testing** - Run commands outside GitHub Actions:
    ```bash
-   PYTHONPATH=scripts python3 -m claudestep statistics
+   PYTHONPATH=scripts python3 -m claudechain statistics
    ```
 
 ## Module Organization
 
 ### Python Package Structure
 
-**Modern Structure** (`src/claudestep/` - Layered Architecture):
+**Modern Structure** (`src/claudechain/` - Layered Architecture):
 ```
-src/claudestep/
+src/claudechain/
 ├── __init__.py
 ├── __main__.py              # Entry point
 │
@@ -102,7 +102,7 @@ src/claudestep/
     └── parser.py
 ```
 
-**Legacy Structure** (`scripts/claudestep/` - For backward compatibility):
+**Legacy Structure** (`scripts/claudechain/` - For backward compatibility):
 - Maintained during migration
 - Will be removed in future releases
 - Contains compatibility shims that import from new structure
@@ -230,7 +230,7 @@ elif args.command == "statistics":
 
 ### Convention: Class-Based Services with Dependency Injection
 
-ClaudeStep uses a **class-based service architecture** where:
+ClaudeChain uses a **class-based service architecture** where:
 
 - **Services are classes** with constructor-based dependency injection
 - **Services encapsulate** business logic for a specific domain area

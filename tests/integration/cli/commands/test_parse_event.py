@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from claudestep.cli.commands.parse_event import cmd_parse_event
+from claudechain.cli.commands.parse_event import cmd_parse_event
 
 
 class TestCmdParseEvent:
@@ -21,15 +21,15 @@ class TestCmdParseEvent:
 
     @pytest.fixture
     def pull_request_merged_event(self):
-        """Fixture providing a merged PR event with claudestep label"""
+        """Fixture providing a merged PR event with claudechain label"""
         return json.dumps({
             "action": "closed",
             "pull_request": {
                 "number": 42,
                 "merged": True,
-                "labels": [{"name": "claudestep"}, {"name": "enhancement"}],
+                "labels": [{"name": "claudechain"}, {"name": "enhancement"}],
                 "base": {"ref": "main"},
-                "head": {"ref": "claude-step-my-project-a1b2c3d4"}
+                "head": {"ref": "claude-chain-my-project-a1b2c3d4"}
             }
         })
 
@@ -41,15 +41,15 @@ class TestCmdParseEvent:
             "pull_request": {
                 "number": 42,
                 "merged": False,
-                "labels": [{"name": "claudestep"}],
+                "labels": [{"name": "claudechain"}],
                 "base": {"ref": "main"},
-                "head": {"ref": "claude-step-my-project-a1b2c3d4"}
+                "head": {"ref": "claude-chain-my-project-a1b2c3d4"}
             }
         })
 
     @pytest.fixture
     def pull_request_no_label_event(self):
-        """Fixture providing a merged PR without claudestep label"""
+        """Fixture providing a merged PR without claudechain label"""
         return json.dumps({
             "action": "closed",
             "pull_request": {
@@ -57,7 +57,7 @@ class TestCmdParseEvent:
                 "merged": True,
                 "labels": [{"name": "bug"}],
                 "base": {"ref": "main"},
-                "head": {"ref": "claude-step-my-project-a1b2c3d4"}
+                "head": {"ref": "claude-chain-my-project-a1b2c3d4"}
             }
         })
 
@@ -87,7 +87,7 @@ class TestCmdParseEvent:
     def test_pull_request_merged_detects_project_from_branch_name(
         self, mock_github_helper, pull_request_merged_event, capsys
     ):
-        """Should detect project from ClaudeStep branch name without calling compare API"""
+        """Should detect project from ClaudeChain branch name without calling compare API"""
         # No mocking needed - branch name detection should avoid compare API entirely
         result = cmd_parse_event(
             gh=mock_github_helper,
@@ -95,7 +95,7 @@ class TestCmdParseEvent:
             event_json=pull_request_merged_event,
             project_name=None,
             default_base_branch="main",
-            pr_label="claudestep",
+            pr_label="claudechain",
             repo="owner/repo"
         )
 
@@ -110,14 +110,14 @@ class TestCmdParseEvent:
         assert "Detected project from branch: my-project" in captured.out
         assert "Event parsing complete" in captured.out
 
-    @patch("claudestep.cli.commands.parse_event.compare_commits")
-    @patch("claudestep.cli.commands.parse_event.detect_project_from_diff")
+    @patch("claudechain.cli.commands.parse_event.compare_commits")
+    @patch("claudechain.cli.commands.parse_event.detect_project_from_diff")
     def test_pull_request_merged_with_label_succeeds(
         self, mock_detect, mock_compare, mock_github_helper, pull_request_merged_event, capsys
     ):
-        """Should process merged PR with claudestep label, detecting project from branch name (not diff)"""
+        """Should process merged PR with claudechain label, detecting project from branch name (not diff)"""
         # These mocks won't be called because branch name detection takes precedence
-        mock_compare.return_value = ["claude-step/my-project/spec.md", "README.md"]
+        mock_compare.return_value = ["claude-chain/my-project/spec.md", "README.md"]
         mock_detect.return_value = "my-project"
 
         result = cmd_parse_event(
@@ -126,7 +126,7 @@ class TestCmdParseEvent:
             event_json=pull_request_merged_event,
             project_name=None,
             default_base_branch="main",
-            pr_label="claudestep",
+            pr_label="claudechain",
             repo="owner/repo"
         )
 
@@ -153,7 +153,7 @@ class TestCmdParseEvent:
             event_json=pull_request_not_merged_event,
             project_name=None,
             default_base_branch="main",
-            pr_label="claudestep"
+            pr_label="claudechain"
         )
 
         assert result == 0
@@ -173,13 +173,13 @@ class TestCmdParseEvent:
             event_json=pull_request_no_label_event,
             project_name=None,
             default_base_branch="main",
-            pr_label="claudestep"
+            pr_label="claudechain"
         )
 
         assert result == 0
         mock_github_helper.write_output.assert_any_call("skip", "true")
         mock_github_helper.write_output.assert_any_call(
-            "skip_reason", "PR does not have required label 'claudestep'"
+            "skip_reason", "PR does not have required label 'claudechain'"
         )
 
     def test_pull_request_custom_label_requirement(
@@ -193,7 +193,7 @@ class TestCmdParseEvent:
                 "merged": True,
                 "labels": [{"name": "auto-refactor"}],
                 "base": {"ref": "develop"},
-                "head": {"ref": "claude-step-proj-12345678"}
+                "head": {"ref": "claude-chain-proj-12345678"}
             }
         })
 
@@ -214,15 +214,15 @@ class TestCmdParseEvent:
     def test_pull_request_detects_project_from_branch_pattern(
         self, mock_github_helper, capsys
     ):
-        """Should detect project name from ClaudeStep branch name pattern"""
+        """Should detect project name from ClaudeChain branch name pattern"""
         event = json.dumps({
             "action": "closed",
             "pull_request": {
                 "number": 123,
                 "merged": True,
-                "labels": [{"name": "claudestep"}],
+                "labels": [{"name": "claudechain"}],
                 "base": {"ref": "main"},
-                "head": {"ref": "claude-step-complex-project-name-abcd1234"}
+                "head": {"ref": "claude-chain-complex-project-name-abcd1234"}
             }
         })
 
@@ -239,13 +239,13 @@ class TestCmdParseEvent:
         captured = capsys.readouterr()
         assert "Detected project from branch" in captured.out
 
-    @patch("claudestep.cli.commands.parse_event.compare_commits")
-    @patch("claudestep.cli.commands.parse_event.detect_project_from_diff")
-    def test_pull_request_detects_project_from_diff_when_branch_not_claudestep(
+    @patch("claudechain.cli.commands.parse_event.compare_commits")
+    @patch("claudechain.cli.commands.parse_event.detect_project_from_diff")
+    def test_pull_request_detects_project_from_diff_when_branch_not_claudechain(
         self, mock_detect, mock_compare, mock_github_helper, capsys
     ):
-        """Should fall back to diff detection when branch name is not ClaudeStep pattern"""
-        mock_compare.return_value = ["claude-step/some-project/spec.md", "src/code.py"]
+        """Should fall back to diff detection when branch name is not ClaudeChain pattern"""
+        mock_compare.return_value = ["claude-chain/some-project/spec.md", "src/code.py"]
         mock_detect.return_value = "some-project"
 
         event = json.dumps({
@@ -253,7 +253,7 @@ class TestCmdParseEvent:
             "pull_request": {
                 "number": 123,
                 "merged": True,
-                "labels": [{"name": "claudestep"}],
+                "labels": [{"name": "claudechain"}],
                 "base": {"ref": "main"},
                 "head": {"ref": "feature/some-random-feature"}
             }
@@ -270,8 +270,8 @@ class TestCmdParseEvent:
         mock_compare.assert_called_once_with("owner/repo", "main", "feature/some-random-feature")
         mock_github_helper.write_output.assert_any_call("project_name", "some-project")
 
-    @patch("claudestep.cli.commands.parse_event.compare_commits")
-    @patch("claudestep.cli.commands.parse_event.detect_project_from_diff")
+    @patch("claudechain.cli.commands.parse_event.compare_commits")
+    @patch("claudechain.cli.commands.parse_event.detect_project_from_diff")
     def test_pull_request_no_spec_changes_skips(
         self, mock_detect, mock_compare, mock_github_helper, capsys
     ):
@@ -284,7 +284,7 @@ class TestCmdParseEvent:
             "pull_request": {
                 "number": 123,
                 "merged": True,
-                "labels": [{"name": "claudestep"}],
+                "labels": [{"name": "claudechain"}],
                 "base": {"ref": "main"},
                 "head": {"ref": "feature/some-feature"}
             }
@@ -386,13 +386,13 @@ class TestCmdParseEvent:
         mock_github_helper.write_output.assert_any_call("checkout_ref", "main")
         mock_github_helper.write_output.assert_any_call("base_branch", "main")
 
-    @patch("claudestep.cli.commands.parse_event.compare_commits")
-    @patch("claudestep.cli.commands.parse_event.detect_project_from_diff")
+    @patch("claudechain.cli.commands.parse_event.compare_commits")
+    @patch("claudechain.cli.commands.parse_event.detect_project_from_diff")
     def test_push_event_detects_project_from_spec_changes(
         self, mock_detect, mock_compare, mock_github_helper, push_event, capsys
     ):
         """Should detect project from spec.md changes in push event"""
-        mock_compare.return_value = ["claude-step/my-project/spec.md", "README.md"]
+        mock_compare.return_value = ["claude-chain/my-project/spec.md", "README.md"]
         mock_detect.return_value = "my-project"
 
         result = cmd_parse_event(
@@ -409,8 +409,8 @@ class TestCmdParseEvent:
         mock_github_helper.write_output.assert_any_call("skip", "false")
         mock_github_helper.write_output.assert_any_call("project_name", "my-project")
 
-    @patch("claudestep.cli.commands.parse_event.compare_commits")
-    @patch("claudestep.cli.commands.parse_event.detect_project_from_diff")
+    @patch("claudechain.cli.commands.parse_event.compare_commits")
+    @patch("claudechain.cli.commands.parse_event.detect_project_from_diff")
     def test_push_event_without_spec_changes_skips(
         self, mock_detect, mock_compare, mock_github_helper, push_event, capsys
     ):
@@ -432,15 +432,15 @@ class TestCmdParseEvent:
             "skip_reason", "No spec.md changes detected in push"
         )
 
-    @patch("claudestep.cli.commands.parse_event.compare_commits")
-    @patch("claudestep.cli.commands.parse_event.detect_project_from_diff")
+    @patch("claudechain.cli.commands.parse_event.compare_commits")
+    @patch("claudechain.cli.commands.parse_event.detect_project_from_diff")
     def test_push_event_multiple_projects_skips(
         self, mock_detect, mock_compare, mock_github_helper, push_event, capsys
     ):
         """Should skip when multiple projects modified in single push"""
         mock_compare.return_value = [
-            "claude-step/project-a/spec.md",
-            "claude-step/project-b/spec.md"
+            "claude-chain/project-a/spec.md",
+            "claude-chain/project-b/spec.md"
         ]
         mock_detect.side_effect = ValueError(
             "Multiple projects modified in single push: ['project-a', 'project-b']. "
@@ -579,12 +579,12 @@ class TestCmdParseEvent:
             gh=mock_github_helper,
             event_name="pull_request",
             event_json=pull_request_merged_event,
-            pr_label="claudestep",
+            pr_label="claudechain",
             repo="owner/repo"
         )
 
         captured = capsys.readouterr()
-        assert "ClaudeStep Event Parsing" in captured.out
+        assert "ClaudeChain Event Parsing" in captured.out
         assert "Event name: pull_request" in captured.out
         assert "PR number: 42" in captured.out
 
@@ -609,9 +609,9 @@ class TestCmdParseEventEdgeCases:
             "pull_request": {
                 "number": 1,
                 "merged": True,
-                "labels": [{"name": "claudestep"}],
+                "labels": [{"name": "claudechain"}],
                 "base": {"ref": "main"},
-                "head": {"ref": "claude-step-my-very-long-project-name-12345678"}
+                "head": {"ref": "claude-chain-my-very-long-project-name-12345678"}
             }
         })
 
@@ -636,9 +636,9 @@ class TestCmdParseEventEdgeCases:
             "pull_request": {
                 "number": 1,
                 "merged": True,
-                "labels": [{"name": "claudestep"}],
+                "labels": [{"name": "claudechain"}],
                 "base": {"ref": "develop"},
-                "head": {"ref": "claude-step-test-abcd1234"}
+                "head": {"ref": "claude-chain-test-abcd1234"}
             }
         })
 
@@ -662,9 +662,9 @@ class TestCmdParseEventEdgeCases:
             "pull_request": {
                 "number": 1,
                 "merged": True,
-                "labels": [{"name": "claudestep"}],
+                "labels": [{"name": "claudechain"}],
                 "base": {"ref": "main"},
-                "head": {"ref": "claude-step-branch-project-abcd1234"}
+                "head": {"ref": "claude-chain-branch-project-abcd1234"}
             }
         })
 
@@ -688,7 +688,7 @@ class TestCmdParseEventEdgeCases:
                 "merged": True,
                 "labels": [],
                 "base": {"ref": "main"},
-                "head": {"ref": "claude-step-test-abcd1234"}
+                "head": {"ref": "claude-chain-test-abcd1234"}
             }
         })
 

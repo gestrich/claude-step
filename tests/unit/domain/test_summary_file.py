@@ -5,7 +5,7 @@ import tempfile
 
 import pytest
 
-from claudestep.domain.summary_file import SummaryFile
+from claudechain.domain.summary_file import SummaryFile
 
 
 class TestSummaryFileConstruction:

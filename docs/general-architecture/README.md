@@ -1,6 +1,6 @@
 # General Architecture
 
-General architectural patterns, conventions, and principles used across the ClaudeStep codebase. These documents explain how we build software in this project.
+General architectural patterns, conventions, and principles used across the ClaudeChain codebase. These documents explain how we build software in this project.
 
 ## What Belongs Here
 

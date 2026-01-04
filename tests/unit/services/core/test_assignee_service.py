@@ -9,11 +9,11 @@ import pytest
 from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
-from claudestep.services.core.assignee_service import AssigneeService
-from claudestep.services.core.pr_service import PRService
-from claudestep.domain.project import Project
-from claudestep.domain.project_configuration import ProjectConfiguration
-from claudestep.domain.github_models import GitHubPullRequest, GitHubUser
+from claudechain.services.core.assignee_service import AssigneeService
+from claudechain.services.core.pr_service import PRService
+from claudechain.domain.project import Project
+from claudechain.domain.project_configuration import ProjectConfiguration
+from claudechain.domain.github_models import GitHubPullRequest, GitHubUser
 
 
 def create_github_pr(pr_number, task_hash, project="myproject", task_desc=None):
@@ -23,13 +23,13 @@ def create_github_pr(pr_number, task_hash, project="myproject", task_desc=None):
 
     return GitHubPullRequest(
         number=pr_number,
-        title=f"ClaudeStep: {task_desc}",
+        title=f"ClaudeChain: {task_desc}",
         state="open",
         created_at=datetime.now(timezone.utc),
         merged_at=None,
         assignees=[],
-        labels=["claudestep"],
-        head_ref_name=f"claude-step-{project}-{task_hash}"
+        labels=["claudechain"],
+        head_ref_name=f"claude-chain-{project}-{task_hash}"
     )
 
 
@@ -79,7 +79,7 @@ class TestCheckCapacity:
 
         # Act
         result = assignee_service.check_capacity(
-            config_with_assignee, "claudestep", "myproject"
+            config_with_assignee, "claudechain", "myproject"
         )
 
         # Assert
@@ -98,7 +98,7 @@ class TestCheckCapacity:
 
         # Act
         result = assignee_service.check_capacity(
-            config_with_assignee, "claudestep", "myproject"
+            config_with_assignee, "claudechain", "myproject"
         )
 
         # Assert
@@ -114,7 +114,7 @@ class TestCheckCapacity:
 
         # Act
         result = assignee_service.check_capacity(
-            config_with_assignee, "claudestep", "myproject"
+            config_with_assignee, "claudechain", "myproject"
         )
 
         # Assert
@@ -129,7 +129,7 @@ class TestCheckCapacity:
 
         # Act
         result = assignee_service.check_capacity(
-            config_without_assignee, "claudestep", "myproject"
+            config_without_assignee, "claudechain", "myproject"
         )
 
         # Assert
@@ -147,7 +147,7 @@ class TestCheckCapacity:
 
         # Act
         result = assignee_service.check_capacity(
-            config_with_assignee, "claudestep", "myproject"
+            config_with_assignee, "claudechain", "myproject"
         )
 
         # Assert
@@ -180,7 +180,7 @@ class TestCheckCapacity:
 
         # Act
         result = assignee_service.check_capacity(
-            config_with_assignee, "claudestep", "test-project"
+            config_with_assignee, "claudechain", "test-project"
         )
 
         # Assert
@@ -192,7 +192,7 @@ class TestCapacityResultFormatSummary:
 
     def test_format_summary_shows_capacity_available(self):
         """Should format summary correctly when capacity available"""
-        from claudestep.domain.models import CapacityResult
+        from claudechain.domain.models import CapacityResult
 
         result = CapacityResult(
             has_capacity=True,
@@ -210,7 +210,7 @@ class TestCapacityResultFormatSummary:
 
     def test_format_summary_shows_at_capacity(self):
         """Should format summary correctly when at capacity"""
-        from claudestep.domain.models import CapacityResult
+        from claudechain.domain.models import CapacityResult
 
         result = CapacityResult(
             has_capacity=False,
@@ -227,7 +227,7 @@ class TestCapacityResultFormatSummary:
 
     def test_format_summary_shows_no_assignee_message(self):
         """Should show appropriate message when no assignee configured"""
-        from claudestep.domain.models import CapacityResult
+        from claudechain.domain.models import CapacityResult
 
         result = CapacityResult(
             has_capacity=True,

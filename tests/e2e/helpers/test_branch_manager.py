@@ -66,8 +66,8 @@ class TestBranchManager:
         )
 
     def create_test_workspace(self) -> None:
-        """Create claude-step/ directory for test projects."""
-        workspace = self.repo_root / "claude-step"
+        """Create claude-chain/ directory for test projects."""
+        workspace = self.repo_root / "claude-chain"
         workspace.mkdir(exist_ok=True)
 
         readme = workspace / "README.md"
@@ -80,7 +80,7 @@ Test projects are created here during test runs and cleaned up afterwards.
 """)
 
         subprocess.run(
-            ["git", "add", "claude-step/"],
+            ["git", "add", "claude-chain/"],
             cwd=self.repo_root, check=True
         )
         # Only commit if there are staged changes (directory may already exist)

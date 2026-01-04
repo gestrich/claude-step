@@ -2,7 +2,7 @@
 
 ## Overview
 
-Simplify ClaudeStep's branch naming by using a single, consistent format: `claude-step-{project_name}-{index}`. This eliminates complexity from custom branch prefixes and date-based naming while making PR fetching more efficient and maintainable.
+Simplify ClaudeChain's branch naming by using a single, consistent format: `claude-chain-{project_name}-{index}`. This eliminates complexity from custom branch prefixes and date-based naming while making PR fetching more efficient and maintainable.
 
 ## Current Problems
 
@@ -24,15 +24,15 @@ Simplify ClaudeStep's branch naming by using a single, consistent format: `claud
 
 ### Single Branch Format
 
-All ClaudeStep PR branches will use:
+All ClaudeChain PR branches will use:
 ```
-claude-step-{project_name}-{index}
+claude-chain-{project_name}-{index}
 ```
 
 Examples:
-- `claude-step-my-refactor-1`
-- `claude-step-swift-migration-5`
-- `claude-step-api-refactor-12`
+- `claude-chain-my-refactor-1`
+- `claude-chain-swift-migration-5`
+- `claude-chain-api-refactor-12`
 
 ### Centralized PR Fetching
 
@@ -50,7 +50,7 @@ def get_project_prs(project_name: str, repo: str, state: str = "all") -> List[di
     Returns:
         List of PR data dicts with number, state, labels, etc.
     """
-    # Search for branches starting with claude-step-{project_name}
+    # Search for branches starting with claude-chain-{project_name}
     # Filter by state if needed
     # Return standardized PR data
 ```
@@ -60,14 +60,14 @@ All code that fetches PRs will use this centralized function instead of duplicat
 ## Changes Required
 
 ### Phase 1: Create Centralized Utilities ✅
-- [x] Create `scripts/claudestep/pr_operations.py` with `get_project_prs()` function
+- [x] Create `scripts/claudechain/pr_operations.py` with `get_project_prs()` function
 - [x] Add `format_branch_name(project_name: str, index: int) -> str` utility
 - [x] Add `parse_branch_name(branch: str) -> Optional[Tuple[str, int]]` utility
 - [x] Add tests for new utilities
 
 **Technical Notes:**
-- Created `scripts/claudestep/pr_operations.py` with three core utilities:
-  - `format_branch_name()`: Generates branch names in format `claude-step-{project}-{index}`
+- Created `scripts/claudechain/pr_operations.py` with three core utilities:
+  - `format_branch_name()`: Generates branch names in format `claude-chain-{project}-{index}`
   - `parse_branch_name()`: Extracts project name and index from branch names
   - `get_project_prs()`: Fetches and filters PRs by project using branch name prefix matching
 - All utilities include comprehensive docstrings with examples
@@ -99,12 +99,12 @@ All code that fetches PRs will use this centralized function instead of duplicat
 - [x] Update `prepare.py` branch creation to use `format_branch_name()`
 - [x] Update `project_detection.py` to use `parse_branch_name()` and new format
 - [x] Remove date-based and custom prefix logic from branch creation
-- [x] Update project detection to only check `claude-step-{project}` format
+- [x] Update project detection to only check `claude-chain-{project}` format
 
 **Technical Notes:**
 - Updated `prepare.py` to use `format_branch_name()` from `pr_operations.py`
 - Removed old branch creation logic that supported both date-based format (`YYYY-MM-{project}-{index}`) and custom prefix format (`{branchPrefix}-{index}`)
-- All branch creation now uses the single standard format: `claude-step-{project}-{index}`
+- All branch creation now uses the single standard format: `claude-chain-{project}-{index}`
 - Removed unused `datetime` import from `prepare.py`
 - Updated `project_detection.py` to use `parse_branch_name()` utility for extracting project names from branch names
 - Simplified `detect_project_from_pr()` to directly parse branch names instead of checking multiple formats and scanning config files
@@ -139,18 +139,18 @@ All code that fetches PRs will use this centralized function instead of duplicat
 - [x] Update tests to use new branch format
 - [x] Add migration note to CHANGELOG or release notes
 - [ ] **Push all changes to the repo** (required before running e2e tests)
-- [ ] Run end-to-end tests from demo project (`claude-step-demo/tests/integration/`) to verify everything works
+- [ ] Run end-to-end tests from demo project (`claude-chain-demo/tests/integration/`) to verify everything works
 
 **Technical Notes:**
 - Updated README.md:
   - Removed `branchPrefix` field from initial configuration example
   - Removed `branchPrefix` field from Configuration Reference table and example
-  - Added new "Branch Naming" section documenting the standard `claude-step-{project_name}-{index}` format
+  - Added new "Branch Naming" section documenting the standard `claude-chain-{project_name}-{index}` format
 - Verified `docs/architecture/architecture.md` - already accurate, only mentions branch creation in general terms
 - Verified `examples/configuration.yml` - already updated in Phase 4
 - Updated `examples/advanced/workflow.yml`:
-  - Changed branch parsing regex from `^[0-9]{4}-[0-9]{2}-([^-]+)-[0-9]+$` to `^claude-step-([^-]+)-[0-9]+$`
-  - Updated comment to reflect new format: `claude-step-{project}-{index}`
+  - Changed branch parsing regex from `^[0-9]{4}-[0-9]{2}-([^-]+)-[0-9]+$` to `^claude-chain-([^-]+)-[0-9]+$`
+  - Updated comment to reflect new format: `claude-chain-{project}-{index}`
 - Verified tests - no test changes needed:
   - Tests already use the new branch format utilities
   - No hardcoded references to old date-based or custom prefix formats
@@ -161,10 +161,10 @@ All code that fetches PRs will use this centralized function instead of duplicat
 ## Benefits
 
 1. **Simpler mental model** - one format, always predictable
-2. **Easier PR filtering** - search for `claude-step-{project}*` branches
+2. **Easier PR filtering** - search for `claude-chain-{project}*` branches
 3. **Less code** - eliminate custom prefix and date logic
 4. **Maintainable** - centralized PR fetching reduces duplication
-5. **Clearer** - branch name clearly indicates it's from ClaudeStep
+5. **Clearer** - branch name clearly indicates it's from ClaudeChain
 
 ## Migration Notes
 
@@ -173,15 +173,15 @@ No backward compatibility support needed. We treat this as if it was always the 
 ## Files Affected
 
 ### Core Logic
-- `scripts/claudestep/commands/prepare.py` - branch creation
-- `scripts/claudestep/project_detection.py` - project detection from branch
-- `scripts/claudestep/reviewer_management.py` - PR fetching for capacity
-- `scripts/claudestep/task_management.py` - PR fetching for in-progress tasks
-- `scripts/claudestep/statistics_collector.py` - PR fetching for costs
-- `scripts/claudestep/config.py` - configuration validation
+- `scripts/claudechain/commands/prepare.py` - branch creation
+- `scripts/claudechain/project_detection.py` - project detection from branch
+- `scripts/claudechain/reviewer_management.py` - PR fetching for capacity
+- `scripts/claudechain/task_management.py` - PR fetching for in-progress tasks
+- `scripts/claudechain/statistics_collector.py` - PR fetching for costs
+- `scripts/claudechain/config.py` - configuration validation
 
 ### New Files
-- `scripts/claudestep/pr_operations.py` - centralized PR utilities (NEW)
+- `scripts/claudechain/pr_operations.py` - centralized PR utilities (NEW)
 
 ### Documentation
 - `README.md` - remove branchPrefix from configuration examples
@@ -189,7 +189,7 @@ No backward compatibility support needed. We treat this as if it was always the 
 - `examples/*/workflow.yml` - update any branch parsing logic
 
 ### Configuration
-- `claude-step/*/configuration.yml` - remove branchPrefix field from schema
+- `claude-chain/*/configuration.yml` - remove branchPrefix field from schema
 
 ### Tests
 - All test files that reference branch names or branchPrefix

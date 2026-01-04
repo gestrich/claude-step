@@ -1,12 +1,12 @@
 """Unit tests for GitHub domain models
 
 Tests GitHubUser, GitHubPullRequest, and GitHubPullRequestList models
-from src/claudestep/domain/github_models.py
+from src/claudechain/domain/github_models.py
 """
 
 import pytest
 from datetime import datetime, timezone, timedelta
-from claudestep.domain.github_models import (
+from claudechain.domain.github_models import (
     GitHubUser,
     GitHubPullRequest,
     GitHubPullRequestList,
@@ -89,7 +89,7 @@ class TestGitHubPullRequest:
             created_at=created_at,
             merged_at=merged_at,
             assignees=[assignee],
-            labels=["claudestep", "enhancement"]
+            labels=["claudechain", "enhancement"]
         )
 
         # Assert
@@ -100,7 +100,7 @@ class TestGitHubPullRequest:
         assert pr.merged_at == merged_at
         assert len(pr.assignees) == 1
         assert pr.assignees[0].login == "reviewer1"
-        assert pr.labels == ["claudestep", "enhancement"]
+        assert pr.labels == ["claudechain", "enhancement"]
 
     def test_pr_from_dict_with_open_state(self):
         """Should parse open PR from GitHub API response"""
@@ -115,7 +115,7 @@ class TestGitHubPullRequest:
                 {"login": "reviewer2", "name": "Reviewer Two"}
             ],
             "labels": [
-                {"name": "claudestep"},
+                {"name": "claudechain"},
                 {"name": "bug"}
             ]
         }
@@ -131,7 +131,7 @@ class TestGitHubPullRequest:
         assert pr.merged_at is None
         assert len(pr.assignees) == 1
         assert pr.assignees[0].login == "reviewer2"
-        assert pr.labels == ["claudestep", "bug"]
+        assert pr.labels == ["claudechain", "bug"]
 
     def test_pr_from_dict_with_merged_state(self):
         """Should parse merged PR from GitHub API response"""
@@ -314,11 +314,11 @@ class TestGitHubPullRequest:
             created_at=datetime.now(timezone.utc),
             merged_at=None,
             assignees=[],
-            labels=["claudestep", "bug", "enhancement"]
+            labels=["claudechain", "bug", "enhancement"]
         )
 
         # Act & Assert
-        assert pr.has_label("claudestep") is True
+        assert pr.has_label("claudechain") is True
         assert pr.has_label("bug") is True
 
     def test_has_label_without_matching_label(self):
@@ -331,7 +331,7 @@ class TestGitHubPullRequest:
             created_at=datetime.now(timezone.utc),
             merged_at=None,
             assignees=[],
-            labels=["claudestep"]
+            labels=["claudechain"]
         )
 
         # Act & Assert
@@ -458,17 +458,17 @@ class TestGitHubPullRequestList:
         """Should filter PRs by label"""
         # Arrange
         pr_list = GitHubPullRequestList(pull_requests=[
-            GitHubPullRequest(1, "PR 1", "open", datetime.now(timezone.utc), None, [], ["claudestep"]),
+            GitHubPullRequest(1, "PR 1", "open", datetime.now(timezone.utc), None, [], ["claudechain"]),
             GitHubPullRequest(2, "PR 2", "open", datetime.now(timezone.utc), None, [], ["other"]),
-            GitHubPullRequest(3, "PR 3", "open", datetime.now(timezone.utc), None, [], ["claudestep", "bug"]),
+            GitHubPullRequest(3, "PR 3", "open", datetime.now(timezone.utc), None, [], ["claudechain", "bug"]),
         ])
 
         # Act
-        filtered = pr_list.filter_by_label("claudestep")
+        filtered = pr_list.filter_by_label("claudechain")
 
         # Assert
         assert filtered.count() == 2
-        assert all(pr.has_label("claudestep") for pr in filtered.pull_requests)
+        assert all(pr.has_label("claudechain") for pr in filtered.pull_requests)
 
     def test_filter_merged(self):
         """Should filter only merged PRs"""
@@ -618,14 +618,14 @@ class TestGitHubPullRequestList:
         # Arrange
         now = datetime.now(timezone.utc)
         pr_list = GitHubPullRequestList(pull_requests=[
-            GitHubPullRequest(1, "PR 1", "open", now, None, [], ["claudestep"]),
-            GitHubPullRequest(2, "PR 2", "merged", now, now, [], ["claudestep"]),
+            GitHubPullRequest(1, "PR 1", "open", now, None, [], ["claudechain"]),
+            GitHubPullRequest(2, "PR 2", "merged", now, now, [], ["claudechain"]),
             GitHubPullRequest(3, "PR 3", "merged", now, now, [], ["other"]),
-            GitHubPullRequest(4, "PR 4", "merged", now, now, [], ["claudestep"]),
+            GitHubPullRequest(4, "PR 4", "merged", now, now, [], ["claudechain"]),
         ])
 
-        # Act - Chain filters: merged + has label "claudestep"
-        filtered = pr_list.filter_merged().filter_by_label("claudestep")
+        # Act - Chain filters: merged + has label "claudechain"
+        filtered = pr_list.filter_merged().filter_by_label("claudechain")
 
         # Assert
         assert filtered.count() == 2
@@ -636,21 +636,21 @@ class TestGitHubPullRequestList:
 class TestGitHubPullRequestPropertyEnhancements:
     """Tests for new properties added to GitHubPullRequest in Phase 2
 
-    Tests the domain model enhancements for parsing ClaudeStep-specific
+    Tests the domain model enhancements for parsing ClaudeChain-specific
     information from branch names and PR titles.
     """
 
-    def test_project_name_with_valid_claudestep_branch(self):
-        """Should extract project name from valid ClaudeStep branch"""
+    def test_project_name_with_valid_claudechain_branch(self):
+        """Should extract project name from valid ClaudeChain branch"""
         # Arrange
         pr = GitHubPullRequest(
             number=1,
-            title="ClaudeStep: Test task",
+            title="ClaudeChain: Test task",
             state="open",
             created_at=datetime.now(timezone.utc),
             merged_at=None,
             assignees=[],
-            head_ref_name="claude-step-my-refactor-a3f2b891"
+            head_ref_name="claude-chain-my-refactor-a3f2b891"
         )
 
         # Act & Assert
@@ -666,14 +666,14 @@ class TestGitHubPullRequestPropertyEnhancements:
             created_at=datetime.now(timezone.utc),
             merged_at=None,
             assignees=[],
-            head_ref_name="claude-step-my-complex-refactor-project-f7c4d3e2"
+            head_ref_name="claude-chain-my-complex-refactor-project-f7c4d3e2"
         )
 
         # Act & Assert
         assert pr.project_name == "my-complex-refactor-project"
 
     def test_project_name_with_invalid_branch_name(self):
-        """Should return None for non-ClaudeStep branch names"""
+        """Should return None for non-ClaudeChain branch names"""
         # Arrange
         pr = GitHubPullRequest(
             number=1,
@@ -720,12 +720,12 @@ class TestGitHubPullRequestPropertyEnhancements:
         # Act & Assert
         assert pr.project_name is None
 
-    def test_task_description_strips_claudestep_prefix(self):
-        """Should strip 'ClaudeStep: ' prefix from title"""
+    def test_task_description_strips_claudechain_prefix(self):
+        """Should strip 'ClaudeChain: ' prefix from title"""
         # Arrange
         pr = GitHubPullRequest(
             number=1,
-            title="ClaudeStep: Add user authentication",
+            title="ClaudeChain: Add user authentication",
             state="open",
             created_at=datetime.now(timezone.utc),
             merged_at=None,
@@ -736,7 +736,7 @@ class TestGitHubPullRequestPropertyEnhancements:
         assert pr.task_description == "Add user authentication"
 
     def test_task_description_handles_title_without_prefix(self):
-        """Should return title as-is when no ClaudeStep prefix"""
+        """Should return title as-is when no ClaudeChain prefix"""
         # Arrange
         pr = GitHubPullRequest(
             number=1,
@@ -770,7 +770,7 @@ class TestGitHubPullRequestPropertyEnhancements:
         # Arrange
         pr = GitHubPullRequest(
             number=1,
-            title="ClaudeStep: ",
+            title="ClaudeChain: ",
             state="open",
             created_at=datetime.now(timezone.utc),
             merged_at=None,
@@ -785,7 +785,7 @@ class TestGitHubPullRequestPropertyEnhancements:
         # Arrange
         pr = GitHubPullRequest(
             number=1,
-            title="claudestep: Add feature",
+            title="claudechain: Add feature",
             state="open",
             created_at=datetime.now(timezone.utc),
             merged_at=None,
@@ -793,10 +793,10 @@ class TestGitHubPullRequestPropertyEnhancements:
         )
 
         # Act & Assert
-        assert pr.task_description == "claudestep: Add feature"
+        assert pr.task_description == "claudechain: Add feature"
 
-    def test_is_claudestep_pr_with_valid_branch(self):
-        """Should return True for valid ClaudeStep branch names"""
+    def test_is_claudechain_pr_with_valid_branch(self):
+        """Should return True for valid ClaudeChain branch names"""
         # Arrange
         pr = GitHubPullRequest(
             number=1,
@@ -805,13 +805,13 @@ class TestGitHubPullRequestPropertyEnhancements:
             created_at=datetime.now(timezone.utc),
             merged_at=None,
             assignees=[],
-            head_ref_name="claude-step-my-refactor-a3f2b891"
+            head_ref_name="claude-chain-my-refactor-a3f2b891"
         )
 
         # Act & Assert
-        assert pr.is_claudestep_pr is True
+        assert pr.is_claudechain_pr is True
 
-    def test_is_claudestep_pr_with_feature_branch(self):
+    def test_is_claudechain_pr_with_feature_branch(self):
         """Should return False for feature branch"""
         # Arrange
         pr = GitHubPullRequest(
@@ -825,9 +825,9 @@ class TestGitHubPullRequestPropertyEnhancements:
         )
 
         # Act & Assert
-        assert pr.is_claudestep_pr is False
+        assert pr.is_claudechain_pr is False
 
-    def test_is_claudestep_pr_with_main_branch(self):
+    def test_is_claudechain_pr_with_main_branch(self):
         """Should return False for main branch"""
         # Arrange
         pr = GitHubPullRequest(
@@ -841,9 +841,9 @@ class TestGitHubPullRequestPropertyEnhancements:
         )
 
         # Act & Assert
-        assert pr.is_claudestep_pr is False
+        assert pr.is_claudechain_pr is False
 
-    def test_is_claudestep_pr_with_no_branch_name(self):
+    def test_is_claudechain_pr_with_no_branch_name(self):
         """Should return False when head_ref_name is None"""
         # Arrange
         pr = GitHubPullRequest(
@@ -857,9 +857,9 @@ class TestGitHubPullRequestPropertyEnhancements:
         )
 
         # Act & Assert
-        assert pr.is_claudestep_pr is False
+        assert pr.is_claudechain_pr is False
 
-    def test_is_claudestep_pr_with_similar_branch_name(self):
+    def test_is_claudechain_pr_with_similar_branch_name(self):
         """Should return False for branch names similar to but not matching pattern"""
         # Arrange
         pr = GitHubPullRequest(
@@ -869,8 +869,8 @@ class TestGitHubPullRequestPropertyEnhancements:
             created_at=datetime.now(timezone.utc),
             merged_at=None,
             assignees=[],
-            head_ref_name="claude-step-invalid"  # Missing task index
+            head_ref_name="claude-chain-invalid"  # Missing task index
         )
 
         # Act & Assert
-        assert pr.is_claudestep_pr is False
+        assert pr.is_claudechain_pr is False

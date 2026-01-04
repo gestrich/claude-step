@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from claudestep.domain.github_models import GitHubPullRequest, GitHubUser, PRState
-from claudestep.domain.models import ProjectStats, TaskStatus, TaskWithPR
+from claudechain.domain.github_models import GitHubPullRequest, GitHubUser, PRState
+from claudechain.domain.models import ProjectStats, TaskStatus, TaskWithPR
 
 
 class TestPRState:
@@ -74,13 +74,13 @@ class TestTaskWithPR:
         """Create a sample GitHubPullRequest for testing"""
         return GitHubPullRequest(
             number=42,
-            title="ClaudeStep: Add user authentication",
+            title="ClaudeChain: Add user authentication",
             state="open",
             created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
             merged_at=None,
             assignees=[GitHubUser(login="alice")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-my-project-a3f2b891",
+            labels=["claudechain"],
+            head_ref_name="claude-chain-my-project-a3f2b891",
         )
 
     @pytest.fixture
@@ -88,13 +88,13 @@ class TestTaskWithPR:
         """Create a merged GitHubPullRequest for testing"""
         return GitHubPullRequest(
             number=41,
-            title="ClaudeStep: Add input validation",
+            title="ClaudeChain: Add input validation",
             state="merged",
             created_at=datetime(2025, 1, 1, 10, 0, 0, tzinfo=timezone.utc),
             merged_at=datetime(2025, 1, 2, 15, 0, 0, tzinfo=timezone.utc),
             assignees=[GitHubUser(login="bob")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-my-project-b4c3d2e1",
+            labels=["claudechain"],
+            head_ref_name="claude-chain-my-project-b4c3d2e1",
         )
 
     def test_task_with_pr_creation(self, sample_pr):
@@ -225,32 +225,32 @@ class TestProjectStatsTaskFields:
         """Create a sample GitHubPullRequest for testing"""
         return GitHubPullRequest(
             number=42,
-            title="ClaudeStep: Add feature",
+            title="ClaudeChain: Add feature",
             state="open",
             created_at=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
             merged_at=None,
             assignees=[GitHubUser(login="alice")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-my-project-a3f2b891",
+            labels=["claudechain"],
+            head_ref_name="claude-chain-my-project-a3f2b891",
         )
 
     def test_project_stats_initializes_empty_tasks_list(self):
         """Should initialize with empty tasks list"""
-        stats = ProjectStats("my-project", "claude-step/my-project/spec.md")
+        stats = ProjectStats("my-project", "claude-chain/my-project/spec.md")
 
         assert stats.tasks == []
         assert isinstance(stats.tasks, list)
 
     def test_project_stats_initializes_empty_orphaned_prs_list(self):
         """Should initialize with empty orphaned_prs list"""
-        stats = ProjectStats("my-project", "claude-step/my-project/spec.md")
+        stats = ProjectStats("my-project", "claude-chain/my-project/spec.md")
 
         assert stats.orphaned_prs == []
         assert isinstance(stats.orphaned_prs, list)
 
     def test_project_stats_can_add_tasks(self, sample_pr):
         """Should allow adding TaskWithPR to tasks list"""
-        stats = ProjectStats("my-project", "claude-step/my-project/spec.md")
+        stats = ProjectStats("my-project", "claude-chain/my-project/spec.md")
 
         task = TaskWithPR(
             task_hash="a3f2b891",
@@ -266,7 +266,7 @@ class TestProjectStatsTaskFields:
 
     def test_project_stats_can_add_orphaned_prs(self, sample_pr):
         """Should allow adding GitHubPullRequest to orphaned_prs list"""
-        stats = ProjectStats("my-project", "claude-step/my-project/spec.md")
+        stats = ProjectStats("my-project", "claude-chain/my-project/spec.md")
 
         stats.orphaned_prs.append(sample_pr)
 
@@ -275,7 +275,7 @@ class TestProjectStatsTaskFields:
 
     def test_project_stats_tasks_and_orphaned_prs_independent(self, sample_pr):
         """Should maintain tasks and orphaned_prs as independent lists"""
-        stats = ProjectStats("my-project", "claude-step/my-project/spec.md")
+        stats = ProjectStats("my-project", "claude-chain/my-project/spec.md")
 
         task = TaskWithPR(
             task_hash="a3f2b891",

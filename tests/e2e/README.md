@@ -1,6 +1,6 @@
 # End-to-End Test Suite
 
-This directory contains end-to-end integration tests for ClaudeStep using a recursive workflow pattern where the action tests itself.
+This directory contains end-to-end integration tests for ClaudeChain using a recursive workflow pattern where the action tests itself.
 
 ## E2E Testing Philosophy
 
@@ -8,7 +8,7 @@ This directory contains end-to-end integration tests for ClaudeStep using a recu
 
 E2E tests should verify **integration points**, not individual features:
 
-- **Integration between ClaudeStep components** - How the action coordinates prepare → claude_code → finalize → summary steps
+- **Integration between ClaudeChain components** - How the action coordinates prepare → claude_code → finalize → summary steps
 - **GitHub API interactions** - PR creation, comments, branch management, workflow triggers
 - **End-to-end workflow execution** - Complete workflow runs from trigger to PR creation
 - **Critical integration scenarios** - Reviewer assignment, capacity limits, merge triggers
@@ -59,27 +59,27 @@ For comprehensive coverage without E2E overhead:
 ## Quick Start
 
 ```bash
-# From the claude-step repository root
+# From the claude-chain repository root
 ./tests/e2e/run_test.sh
 ```
 
 ## Overview
 
-The E2E tests validate the complete ClaudeStep workflow by:
-- Creating temporary test projects in `claude-step/test-*`
-- Triggering the ClaudeStep workflow on itself via `claudestep.yml`
+The E2E tests validate the complete ClaudeChain workflow by:
+- Creating temporary test projects in `claude-chain/test-*`
+- Triggering the ClaudeChain workflow on itself via `claudechain.yml`
 - Verifying PRs are created with AI-generated summaries and cost info
 - Testing reviewer capacity limits and merge triggers
 - Automatically cleaning up all test resources
 
 ### Recursive Workflow Pattern
 
-Unlike traditional testing approaches that require a separate demo repository, these tests use a **recursive pattern** where ClaudeStep tests itself:
+Unlike traditional testing approaches that require a separate demo repository, these tests use a **recursive pattern** where ClaudeChain tests itself:
 
 1. **E2E Test** creates a test project and commits it to the repository
-2. **E2E Test** triggers `.github/workflows/claudestep.yml`
-3. **Workflow** runs ClaudeStep using `uses: ./` (the current repository)
-4. **ClaudeStep** creates PRs for the test project's tasks
+2. **E2E Test** triggers `.github/workflows/claudechain.yml`
+3. **Workflow** runs ClaudeChain using `uses: ./` (the current repository)
+4. **ClaudeChain** creates PRs for the test project's tasks
 5. **E2E Test** verifies the PRs and cleans up
 
 This enables self-contained testing without external dependencies.
@@ -121,7 +121,7 @@ Before running the tests, ensure you have:
    ```
 
 5. **Repository access**
-   - Write access to `gestrich/claude-step` repository
+   - Write access to `gestrich/claude-chain` repository
    - Tests will create/delete branches, PRs, and test projects
 
 6. **API Key (optional)**
@@ -164,7 +164,7 @@ pytest tests/e2e/ -k "summary" -v -s
 
 ### test_workflow_e2e.py
 
-Tests the main ClaudeStep workflow functionality:
+Tests the main ClaudeChain workflow functionality:
 
 - **test_creates_pr_with_summary** - Verifies PR creation with AI summary
 - **test_creates_pr_with_cost_info** - Validates cost information in PRs
@@ -263,7 +263,7 @@ E2E tests use the following timeout values (configured in tests/e2e/test_workflo
 tests/e2e/test_workflow_e2e.py::test_creates_pr_with_summary
 Creating test project: test-project-a1b2c3d4
 Committing and pushing test project...
-Triggering workflow: claudestep.yml
+Triggering workflow: claudechain.yml
 Workflow run ID: 12345678
 Waiting for workflow completion...
   Status: queued
@@ -306,7 +306,7 @@ git config --global user.email "your.email@example.com"
 - Check that `gh auth status` shows you're authenticated
 
 ### "Workflow not found"
-- Ensure `.github/workflows/claudestep.yml` exists
+- Ensure `.github/workflows/claudechain.yml` exists
 - Check that you're on the correct branch
 
 ### "Test hangs during workflow wait"
@@ -319,13 +319,13 @@ git config --global user.email "your.email@example.com"
 - Manually check for leftover resources:
   ```bash
   # List test PRs
-  gh pr list --label claude-step
+  gh pr list --label claude-chain
 
   # List test branches
   git branch -r | grep refactor/test-project-
 
   # Check for test projects
-  ls -la claude-step/ | grep test-project-
+  ls -la claude-chain/ | grep test-project-
   ```
 
 ## Debugging E2E Test Failures
@@ -345,9 +345,9 @@ The E2E test suite includes comprehensive diagnostics added in Phase 6:
 Test output includes detailed logging of all operations:
 
 ```
-2025-12-28 10:15:23 [INFO] Triggering workflow 'claudestep.yml' with inputs: {'projectId': 'test-project-abc123', ...}
+2025-12-28 10:15:23 [INFO] Triggering workflow 'claudechain.yml' with inputs: {'projectId': 'test-project-abc123', ...}
 2025-12-28 10:15:24 [INFO] Workflow triggered successfully. Run ID: 12345678
-2025-12-28 10:15:24 [INFO] Workflow URL: https://github.com/gestrich/claude-step/actions/runs/12345678
+2025-12-28 10:15:24 [INFO] Workflow URL: https://github.com/gestrich/claude-chain/actions/runs/12345678
 2025-12-28 10:15:24 [DEBUG] Waiting for workflow to start (timeout: 30s)...
 2025-12-28 10:15:26 [DEBUG] Workflow started (poll 1, elapsed 2.1s)
 2025-12-28 10:15:26 [INFO] Waiting for workflow completion (timeout: 900s)...
@@ -366,7 +366,7 @@ Test output includes detailed logging of all operations:
 1. **Check workflow URL** in the error message:
    ```
    TimeoutError: Workflow did not complete within 900 seconds.
-   Workflow URL: https://github.com/gestrich/claude-step/actions/runs/12345678
+   Workflow URL: https://github.com/gestrich/claude-chain/actions/runs/12345678
    ```
 2. **View workflow logs**:
    ```bash
@@ -405,7 +405,7 @@ Test output includes detailed logging of all operations:
 1. **Check PR URL** in error message for comment count:
    ```
    AssertionError: PR should have an AI-generated summary comment.
-   Found 1 comments on PR https://github.com/gestrich/claude-step/pull/123
+   Found 1 comments on PR https://github.com/gestrich/claude-chain/pull/123
    ```
 2. **View PR comments**:
    ```bash
@@ -471,14 +471,14 @@ Error messages now include full diagnostic context:
 ```python
 # Example: PR state assertion
 AssertionError: Expected PR to be open
-  PR #123: https://github.com/gestrich/claude-step/pull/123
+  PR #123: https://github.com/gestrich/claude-chain/pull/123
   Actual state: closed
-  Workflow: https://github.com/gestrich/claude-step/actions/runs/12345678
+  Workflow: https://github.com/gestrich/claude-chain/actions/runs/12345678
 
 # Example: Comment verification
 AssertionError: PR should have an AI-generated summary comment
-  Found 1 comments on PR https://github.com/gestrich/claude-step/pull/123
-  Workflow: https://github.com/gestrich/claude-step/actions/runs/12345678
+  Found 1 comments on PR https://github.com/gestrich/claude-chain/pull/123
+  Workflow: https://github.com/gestrich/claude-chain/actions/runs/12345678
 ```
 
 ### Accessing Workflow Artifacts
@@ -506,7 +506,7 @@ During or after a test run:
 gh run view <run_id> --log
 
 # List recent workflow runs
-gh run list --workflow=claudestep.yml --limit 10
+gh run list --workflow=claudechain.yml --limit 10
 
 # View specific PR
 gh pr view <pr_number> --comments
@@ -518,7 +518,7 @@ gh pr diff <pr_number>
 git branch -r | grep "refactor/test-project-"
 
 # List test PRs
-gh pr list --search "ClaudeStep" --state all --limit 20
+gh pr list --search "ClaudeChain" --state all --limit 20
 ```
 
 ### Common Debugging Workflow

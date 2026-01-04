@@ -1,14 +1,14 @@
 ## Background
 
-The current ClaudeStep workflow has two separate jobs: `auto-start` and `run-claudestep`. The `auto-start` job detects changed spec.md files and then programmatically triggers `workflow_dispatch` to invoke `run-claudestep` for each project.
+The current ClaudeChain workflow has two separate jobs: `auto-start` and `run-claudechain`. The `auto-start` job detects changed spec.md files and then programmatically triggers `workflow_dispatch` to invoke `run-claudechain` for each project.
 
 **Problem:** GitHub does not allow triggering workflows with the standard `GITHUB_TOKEN` due to recursive execution risks. This requires a PAT or GitHub App token, which adds complexity and security concerns.
 
-**Solution:** Simplify the flow by having `auto-start` only detect projects and pass the list to `run-claudestep` via job outputs. The `run-claudestep` job then loops through all identified projects sequentially. This eliminates the need for programmatic workflow dispatch entirely.
+**Solution:** Simplify the flow by having `auto-start` only detect projects and pass the list to `run-claudechain` via job outputs. The `run-claudechain` job then loops through all identified projects sequentially. This eliminates the need for programmatic workflow dispatch entirely.
 
 **New flow:**
-- **Push trigger:** `auto-start` detects projects → outputs project list → `run-claudestep` (needs: auto-start) loops through projects
-- **workflow_dispatch trigger:** `run-claudestep` uses the explicit `project_name` input directly
+- **Push trigger:** `auto-start` detects projects → outputs project list → `run-claudechain` (needs: auto-start) loops through projects
+- **workflow_dispatch trigger:** `run-claudechain` uses the explicit `project_name` input directly
 
 ## Phases
 
@@ -21,9 +21,9 @@ Remove the workflow triggering logic from the Python code. The `auto-start` comm
 - **Remove:** Step 4 that triggers workflows via `WorkflowService`
 
 Files to modify:
-- `src/claudestep/cli/commands/auto_start.py` - Remove workflow triggering step (lines 108-120)
-- `src/claudestep/services/composite/workflow_service.py` - Can be deleted entirely (only used for auto-start workflow dispatch)
-- `src/claudestep/services/composite/__init__.py` - Remove WorkflowService export if present
+- `src/claudechain/cli/commands/auto_start.py` - Remove workflow triggering step (lines 108-120)
+- `src/claudechain/services/composite/workflow_service.py` - Can be deleted entirely (only used for auto-start workflow dispatch)
+- `src/claudechain/services/composite/__init__.py` - Remove WorkflowService export if present
 
 The command should still output `projects_to_trigger` (space-separated list) for the workflow to consume.
 
@@ -39,11 +39,11 @@ The command should still output `projects_to_trigger` (space-separated list) for
 
 - [x] Phase 2: Update auto-start job to output project list
 
-Modify the `auto-start` job in `claudestep.yml` to:
+Modify the `auto-start` job in `claudechain.yml` to:
 - Add job outputs that expose the detected projects
 - Keep the summary generation step
 
-Changes to `.github/workflows/claudestep.yml`:
+Changes to `.github/workflows/claudechain.yml`:
 ```yaml
 auto-start:
   if: github.event_name == 'push'
@@ -59,9 +59,9 @@ auto-start:
 - Summary now shows projects to process and total count, with helpful messaging when no projects need processing
 - All 741 unit/integration tests pass
 
-- [x] Phase 3: Update run-claudestep job to handle both triggers
+- [x] Phase 3: Update run-claudechain job to handle both triggers
 
-Modify `run-claudestep` to:
+Modify `run-claudechain` to:
 1. Run on **both** push (after auto-start) and workflow_dispatch
 2. For push: depend on `auto-start` job, loop through `needs.auto-start.outputs.projects`
 3. For workflow_dispatch: use the single `project_name` input
@@ -69,11 +69,11 @@ Modify `run-claudestep` to:
 The job should:
 - Use conditional logic to determine project source
 - Loop through projects sequentially (user preference)
-- Run the ClaudeStep action for each project
+- Run the ClaudeChain action for each project
 
 Key workflow changes:
 ```yaml
-run-claudestep:
+run-claudechain:
   needs: [auto-start]
   if: |
     (github.event_name == 'workflow_dispatch') ||
@@ -89,23 +89,23 @@ run-claudestep:
           echo "projects=${{ needs.auto-start.outputs.projects }}" >> $GITHUB_OUTPUT
         fi
 
-    # Loop through projects and run ClaudeStep for each
-    - name: Run ClaudeStep for each project
+    # Loop through projects and run ClaudeChain for each
+    - name: Run ClaudeChain for each project
       run: |
         for project in ${{ steps.projects.outputs.projects }}; do
           echo "Processing project: $project"
-          # Run ClaudeStep action logic here
+          # Run ClaudeChain action logic here
         done
 ```
 
 Note: Since GitHub Actions doesn't support dynamic matrix from job outputs in the same workflow easily, we'll use a bash loop for sequential processing.
 
 **Completed:** 2026-01-01
-- Updated `run-claudestep` job to depend on `auto-start` with `needs: [auto-start]`
+- Updated `run-claudechain` job to depend on `auto-start` with `needs: [auto-start]`
 - Added `always()` to the `if` condition to allow job to run even when auto-start is skipped (workflow_dispatch case)
 - Added "Determine projects to process" step that outputs projects based on trigger type
 - Changed from `uses: ./` action invocation to direct Python CLI loop for flexibility
-- Runs `python3 -m claudestep run` for each project sequentially
+- Runs `python3 -m claudechain run` for each project sequentially
 - Also implemented checkout_ref handling (originally Phase 4 scope) since it was required for the workflow to function
 - Updated integration tests to reflect new behavior (test now validates both triggers instead of workflow_dispatch only)
 - All 741 unit/integration tests pass
@@ -125,7 +125,7 @@ Update the checkout step to handle both cases:
 
 **Completed:** 2026-01-01
 - This was already implemented in Phase 3 (see Phase 3 notes: "Also implemented checkout_ref handling (originally Phase 4 scope) since it was required for the workflow to function")
-- Verified the checkout step in `claudestep.yml` at lines 158-163 correctly handles both cases:
+- Verified the checkout step in `claudechain.yml` at lines 158-163 correctly handles both cases:
   - workflow_dispatch: uses `github.event.inputs.checkout_ref`
   - push: uses `github.sha` (the commit that was pushed)
 - All 721 unit/integration tests pass
@@ -138,9 +138,9 @@ Update the checkout step to handle both cases:
 - Clean up any obsolete summary generation that references "triggered" vs "failed" triggers
 
 **Completed:** 2026-01-01
-- Updated `claudestep-auto-start.yml` header comments to describe the new detection-only flow
-- Updated `claudestep-auto-start.yml` summary generation step to use `projects_to_trigger` and `project_count` outputs (removed `triggered_projects` and `failed_projects` references)
-- Updated `claudestep.yml` header comments to remove "Auto-start trigger" reference and clarify trigger modes
+- Updated `claudechain-auto-start.yml` header comments to describe the new detection-only flow
+- Updated `claudechain-auto-start.yml` summary generation step to use `projects_to_trigger` and `project_count` outputs (removed `triggered_projects` and `failed_projects` references)
+- Updated `claudechain.yml` header comments to remove "Auto-start trigger" reference and clarify trigger modes
 - Updated `docs/general-architecture/github-actions.md` Auto-Start Workflow section to reflect the new design
 - All 721 unit/integration tests pass
 
@@ -151,7 +151,7 @@ Update the checkout step to handle both cases:
 - Run integration tests: `python3 -m pytest tests/integration/`
 
 **Manual validation (if e2e environment available):**
-- Test push trigger: Push a change to a spec.md file, verify auto-start detects it and run-claudestep processes it
+- Test push trigger: Push a change to a spec.md file, verify auto-start detects it and run-claudechain processes it
 - Test workflow_dispatch: Manually trigger with a project_name, verify it processes correctly
 - Test multiple projects: Push changes to multiple spec.md files, verify all are processed sequentially
 
@@ -163,8 +163,8 @@ Update the checkout step to handle both cases:
 
 **Completed:** 2026-01-01
 - All 721 tests pass (592 unit tests, 129 integration tests)
-- Workflow files (`claudestep.yml`, `claudestep-auto-start.yml`) are properly configured
-- `claudestep-auto-start.yml` generates summary using simplified `projects_to_trigger` and `project_count` outputs
-- `claudestep.yml` handles both `workflow_dispatch` and `pull_request` close triggers correctly
+- Workflow files (`claudechain.yml`, `claudechain-auto-start.yml`) are properly configured
+- `claudechain-auto-start.yml` generates summary using simplified `projects_to_trigger` and `project_count` outputs
+- `claudechain.yml` handles both `workflow_dispatch` and `pull_request` close triggers correctly
 
 **Note:** During validation, it was observed that the Python code in `auto_start.py` still contains `WorkflowService` usage (lines 14, 114-119) and the Step 4 workflow triggering logic. The document claims Phase 1 removed this code, but the current implementation still includes it. This should be addressed in a follow-up task if the simplified flow is to be fully implemented. However, the workflow YAML files have been updated to use the new output-based pattern, and all tests pass with the current code.

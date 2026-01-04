@@ -2,20 +2,20 @@
 
 ## Background
 
-ClaudeStep uses content-based hashing to identify tasks in spec.md files, replacing the previous positional index system. This approach provides stable task identifiers that remain consistent even when tasks are reordered, inserted, or deleted.
+ClaudeChain uses content-based hashing to identify tasks in spec.md files, replacing the previous positional index system. This approach provides stable task identifiers that remain consistent even when tasks are reordered, inserted, or deleted.
 
 ## Problem Solved
 
 **Previous approach** (positional indices):
 - Tasks identified by position: task 1, task 2, task 3
-- Indices embedded in branch names: `claude-step-<project>-3`
+- Indices embedded in branch names: `claude-chain-<project>-3`
 - Fragile: inserting, deleting, or reordering tasks broke PR/task mapping
 
 **Example of the problem**:
 ```markdown
 <!-- Original spec.md -->
 - [ ] Task at position 1
-- [ ] Task at position 2  ← PR created: claude-step-myproject-2
+- [ ] Task at position 2  ← PR created: claude-chain-myproject-2
 - [ ] Task at position 3
 
 <!-- Someone inserts a new task -->
@@ -35,7 +35,7 @@ ClaudeStep uses content-based hashing to identify tasks in spec.md files, replac
 
 **Implementation**:
 ```python
-# src/claudestep/domain/spec_content.py
+# src/claudechain/domain/spec_content.py
 def generate_task_hash(description: str) -> str:
     """Generate stable hash from task description."""
     normalized = " ".join(description.split())
@@ -44,13 +44,13 @@ def generate_task_hash(description: str) -> str:
 
 ### Branch Naming Convention
 
-**New format**: `claude-step-<project>-<task-hash>`
-- Example: `claude-step-auth-refactor-a3f2b891`
+**New format**: `claude-chain-<project>-<task-hash>`
+- Example: `claude-chain-auth-refactor-a3f2b891`
 - Task hash provides stable identifier regardless of task position
 
 **Format Detection**:
-- Old format: `claude-step-project-3` (all digits → index)
-- New format: `claude-step-project-a3f2b891` (8 hex chars → hash)
+- Old format: `claude-chain-project-3` (all digits → index)
+- New format: `claude-chain-project-a3f2b891` (8 hex chars → hash)
 
 ### Domain Model
 
@@ -128,7 +128,7 @@ def detect_orphaned_prs(project: str) -> List[GitHubPullRequest]:
 
 **Migration helper command**:
 ```bash
-python -m claudestep migrate-to-hashes --project my-refactor
+python -m claudechain migrate-to-hashes --project my-refactor
 ```
 
 Provides:
@@ -148,9 +148,9 @@ Provides:
 
 | File | Purpose |
 |------|---------|
-| `src/claudestep/domain/spec_content.py` | Hash generation and SpecTask model |
-| `src/claudestep/services/core/task_service.py` | Task finding with hash-based skip lists |
-| `src/claudestep/services/core/pr_service.py` | Branch name formatting and parsing |
-| `src/claudestep/domain/github_models.py` | GitHubPullRequest with task_hash property |
-| `src/claudestep/cli/commands/prepare.py` | Orphaned PR detection and warnings |
+| `src/claudechain/domain/spec_content.py` | Hash generation and SpecTask model |
+| `src/claudechain/services/core/task_service.py` | Task finding with hash-based skip lists |
+| `src/claudechain/services/core/pr_service.py` | Branch name formatting and parsing |
+| `src/claudechain/domain/github_models.py` | GitHubPullRequest with task_hash property |
+| `src/claudechain/cli/commands/prepare.py` | Orphaned PR detection and warnings |
 | `tests/unit/services/test_task_hashing.py` | Comprehensive hash-based task tests |

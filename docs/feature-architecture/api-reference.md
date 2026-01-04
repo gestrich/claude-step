@@ -1,6 +1,6 @@
-# ClaudeStep CLI API Reference
+# ClaudeChain CLI API Reference
 
-This document provides quick reference commands for running ClaudeStep CLI operations locally.
+This document provides quick reference commands for running ClaudeChain CLI operations locally.
 
 ## Prerequisites
 
@@ -18,28 +18,28 @@ Before running any commands, ensure you have:
 
 ## Statistics Command
 
-Generate statistics and reports for ClaudeStep projects.
+Generate statistics and reports for ClaudeChain projects.
 
 ### Quick Start
 
-For the `gestrich/claude-step` repository:
+For the `gestrich/claude-chain` repository:
 
 ```bash
 # Statistics for a specific project
-source .venv/bin/activate && python -m claudestep statistics \
-  --repo "gestrich/claude-step" \
-  --config-path claude-step/e2e-test-project/configuration.yml
+source .venv/bin/activate && python -m claudechain statistics \
+  --repo "gestrich/claude-chain" \
+  --config-path claude-chain/e2e-test-project/configuration.yml
 
 # Statistics for all projects (scans entire repository)
-source .venv/bin/activate && python -m claudestep statistics \
-  --repo "gestrich/claude-step"
+source .venv/bin/activate && python -m claudechain statistics \
+  --repo "gestrich/claude-chain"
 ```
 
 ### All Options
 
 ```bash
-python -m claudestep statistics \
-  --repo "gestrich/claude-step" \           # GitHub repository (owner/name)
+python -m claudechain statistics \
+  --repo "gestrich/claude-chain" \           # GitHub repository (owner/name)
   --base-branch main \                       # Base branch to fetch specs from (default: main)
   --config-path <path> \                     # Optional: path to specific project config
   --days-back 30 \                           # Days to look back for statistics (default: 30)
@@ -50,14 +50,14 @@ python -m claudestep statistics \
 ### Parameters
 
 - `--repo`: **Required** - GitHub repository in `owner/name` format
-  - For this repository, use: `gestrich/claude-step`
+  - For this repository, use: `gestrich/claude-chain`
   - The repository must exist on GitHub and be accessible via your `gh` CLI authentication
 
 - `--base-branch`: Branch to fetch project specs from (default: `main`)
 
 - `--config-path`: Optional path to a specific project configuration file
   - If provided, only that project will be analyzed
-  - Example: `claude-step/e2e-test-project/configuration.yml`
+  - Example: `claude-chain/e2e-test-project/configuration.yml`
   - If omitted, all projects in the repository will be scanned
 
 - `--days-back`: Number of days to look back for PR statistics (default: 30)
@@ -91,11 +91,11 @@ The command generates:
 ### Example Output
 
 ```
-=== ClaudeStep Statistics Collection ===
+=== ClaudeChain Statistics Collection ===
 Days back: 30
-Config path: claude-step/e2e-test-project/configuration.yml
+Config path: claude-chain/e2e-test-project/configuration.yml
 
-Single project mode: claude-step/e2e-test-project/configuration.yml
+Single project mode: claude-chain/e2e-test-project/configuration.yml
 
 Processing 1 project(s)...
 Tracking 1 unique reviewer(s)
@@ -129,10 +129,10 @@ With `--show-reviewer-stats`, the leaderboard appears before project progress:
 
 ## Other Commands
 
-See `python -m claudestep --help` for a full list of available commands:
+See `python -m claudechain --help` for a full list of available commands:
 
 ```bash
-python -m claudestep --help
+python -m claudechain --help
 ```
 
 Available commands:
@@ -146,6 +146,6 @@ Available commands:
 ## Notes
 
 - All commands that interact with GitHub require the `gh` CLI to be authenticated
-- The `--repo` parameter should always use `gestrich/claude-step` for this repository
+- The `--repo` parameter should always use `gestrich/claude-chain` for this repository
 - Statistics are fetched from the GitHub API, not from local files
 - Files must be committed and pushed to the specified branch (default: `main`) to be included in statistics

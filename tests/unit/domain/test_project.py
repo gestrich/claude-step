@@ -4,7 +4,7 @@ import os
 import pytest
 from pathlib import Path
 
-from claudestep.domain.project import Project
+from claudechain.domain.project import Project
 
 
 class TestProjectInitialization:
@@ -17,7 +17,7 @@ class TestProjectInitialization:
 
         # Assert
         assert project.name == "my-project"
-        assert project.base_path == "claude-step/my-project"
+        assert project.base_path == "claude-chain/my-project"
 
     def test_create_project_with_custom_base_path(self):
         """Should create project with custom base path"""
@@ -41,7 +41,7 @@ class TestProjectPathProperties:
         config_path = project.config_path
 
         # Assert
-        assert config_path == "claude-step/my-project/configuration.yml"
+        assert config_path == "claude-chain/my-project/configuration.yml"
 
     def test_spec_path_property(self):
         """Should return correct spec path"""
@@ -52,7 +52,7 @@ class TestProjectPathProperties:
         spec_path = project.spec_path
 
         # Assert
-        assert spec_path == "claude-step/my-project/spec.md"
+        assert spec_path == "claude-chain/my-project/spec.md"
 
     def test_pr_template_path_property(self):
         """Should return correct PR template path"""
@@ -63,7 +63,7 @@ class TestProjectPathProperties:
         pr_template_path = project.pr_template_path
 
         # Assert
-        assert pr_template_path == "claude-step/my-project/pr-template.md"
+        assert pr_template_path == "claude-chain/my-project/pr-template.md"
 
     def test_metadata_file_path_property(self):
         """Should return correct metadata file path"""
@@ -95,14 +95,14 @@ class TestProjectFromConfigPath:
     def test_from_config_path_standard_format(self):
         """Should extract project name from standard config path"""
         # Arrange
-        config_path = "claude-step/my-project/configuration.yml"
+        config_path = "claude-chain/my-project/configuration.yml"
 
         # Act
         project = Project.from_config_path(config_path)
 
         # Assert
         assert project.name == "my-project"
-        assert project.base_path == "claude-step/my-project"
+        assert project.base_path == "claude-chain/my-project"
 
     def test_from_config_path_with_different_base_dir(self):
         """Should extract project name from config path with different base directory"""
@@ -115,7 +115,7 @@ class TestProjectFromConfigPath:
         # Assert
         assert project.name == "my-project"
         # Note: from_config_path uses default base_path construction
-        assert project.base_path == "claude-step/my-project"
+        assert project.base_path == "claude-chain/my-project"
 
     def test_from_config_path_with_nested_directories(self):
         """Should extract project name from deeply nested config path"""
@@ -135,7 +135,7 @@ class TestProjectFromBranchName:
     def test_from_branch_name_valid_hash_based_branch(self):
         """Should extract project from valid hash-based branch name"""
         # Arrange
-        branch_name = "claude-step-my-project-a1b2c3d4"
+        branch_name = "claude-chain-my-project-a1b2c3d4"
 
         # Act
         project = Project.from_branch_name(branch_name)
@@ -143,12 +143,12 @@ class TestProjectFromBranchName:
         # Assert
         assert project is not None
         assert project.name == "my-project"
-        assert project.base_path == "claude-step/my-project"
+        assert project.base_path == "claude-chain/my-project"
 
     def test_from_branch_name_with_hyphenated_project_name(self):
         """Should extract project with hyphens from hash-based branch name"""
         # Arrange
-        branch_name = "claude-step-my-complex-project-name-12345678"
+        branch_name = "claude-chain-my-complex-project-name-12345678"
 
         # Act
         project = Project.from_branch_name(branch_name)
@@ -162,16 +162,16 @@ class TestProjectFromBranchName:
         # Arrange
         invalid_branches = [
             "invalid-branch-name",
-            "claude-step-project",  # Missing hash
-            "claude-step-abc",  # Missing project name
+            "claude-chain-project",  # Missing hash
+            "claude-chain-abc",  # Missing project name
             "main",
             "feature/something",
-            "claude-step-project-5",  # Index instead of hash
-            "claude-step-project-123",  # Index instead of hash
-            "claude-step-project-abcdefg",  # Hash too short (7 chars)
-            "claude-step-project-abcdefghi",  # Hash too long (9 chars)
-            "claude-step-project-ABCDEF12",  # Uppercase not allowed
-            "claude-step-project-xyz12345",  # Invalid hex chars (x, y, z)
+            "claude-chain-project-5",  # Index instead of hash
+            "claude-chain-project-123",  # Index instead of hash
+            "claude-chain-project-abcdefg",  # Hash too short (7 chars)
+            "claude-chain-project-abcdefghi",  # Hash too long (9 chars)
+            "claude-chain-project-ABCDEF12",  # Uppercase not allowed
+            "claude-chain-project-xyz12345",  # Invalid hex chars (x, y, z)
         ]
 
         # Act & Assert
@@ -183,10 +183,10 @@ class TestProjectFromBranchName:
         """Should extract project from branch with various valid hex hashes"""
         # Arrange - Test multiple valid 8-char hex hashes
         test_cases = [
-            ("claude-step-my-project-00000000", "my-project"),
-            ("claude-step-my-project-ffffffff", "my-project"),
-            ("claude-step-my-project-12abcdef", "my-project"),
-            ("claude-step-other-proj-a1b2c3d4", "other-proj"),
+            ("claude-chain-my-project-00000000", "my-project"),
+            ("claude-chain-my-project-ffffffff", "my-project"),
+            ("claude-chain-my-project-12abcdef", "my-project"),
+            ("claude-chain-other-proj-a1b2c3d4", "other-proj"),
         ]
 
         # Act & Assert
@@ -202,7 +202,7 @@ class TestProjectFindAll:
     def test_find_all_discovers_multiple_projects(self, tmp_path):
         """Should discover all valid projects in directory"""
         # Arrange
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         # Create valid projects (projects are discovered by spec.md)
@@ -224,7 +224,7 @@ class TestProjectFindAll:
     def test_find_all_returns_sorted_projects(self, tmp_path):
         """Should return projects sorted by name"""
         # Arrange
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         # Create projects in non-alphabetical order
@@ -243,7 +243,7 @@ class TestProjectFindAll:
     def test_find_all_ignores_directories_without_spec(self, tmp_path):
         """Should ignore directories without spec.md"""
         # Arrange
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         # Valid project (has spec.md)
@@ -265,7 +265,7 @@ class TestProjectFindAll:
     def test_find_all_discovers_projects_without_config(self, tmp_path):
         """Should discover projects that have spec.md but no configuration.yml"""
         # Arrange
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         # Project with spec.md only (no configuration.yml)
@@ -291,7 +291,7 @@ class TestProjectFindAll:
     def test_find_all_ignores_directories_with_only_config(self, tmp_path):
         """Should ignore directories that have configuration.yml but no spec.md"""
         # Arrange
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         # Directory with only configuration.yml (not a valid project)
@@ -314,7 +314,7 @@ class TestProjectFindAll:
     def test_find_all_ignores_files_in_base_dir(self, tmp_path):
         """Should ignore files (not directories) in base directory"""
         # Arrange
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         # Create a valid project
@@ -386,7 +386,7 @@ class TestProjectEquality:
     def test_equality_different_base_paths(self):
         """Should not be equal when base paths differ"""
         # Arrange
-        project1 = Project("my-project", base_path="claude-step/my-project")
+        project1 = Project("my-project", base_path="claude-chain/my-project")
         project2 = Project("my-project", base_path="custom/my-project")
 
         # Act & Assert
@@ -467,7 +467,7 @@ class TestProjectRepr:
         # Assert
         assert "Project" in repr_str
         assert "my-project" in repr_str
-        assert "claude-step/my-project" in repr_str
+        assert "claude-chain/my-project" in repr_str
 
     def test_repr_with_custom_base_path(self):
         """Should include custom base path in representation"""

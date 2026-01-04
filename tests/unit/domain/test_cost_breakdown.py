@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from claudestep.domain.cost_breakdown import (
+from claudechain.domain.cost_breakdown import (
     CLAUDE_MODELS,
     ClaudeModel,
     CostBreakdown,

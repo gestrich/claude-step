@@ -37,7 +37,7 @@ Generate CLAUDE.md by synthesizing information from the architecture and user do
 
    ## Project Overview
 
-   [Brief description of what ClaudeStep is and how users interact with it]
+   [Brief description of what ClaudeChain is and how users interact with it]
 
    ## Code Architecture
 

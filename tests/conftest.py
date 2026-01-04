@@ -1,4 +1,4 @@
-"""Common pytest fixtures for ClaudeStep tests
+"""Common pytest fixtures for ClaudeChain tests
 
 This module provides shared fixtures used across the test suite.
 Fixtures are organized by category: file system, git, GitHub, and configuration.
@@ -26,19 +26,19 @@ def tmp_project_dir(tmp_path):
     """Fixture providing a temporary project directory structure
 
     Creates:
-        - claude-step/ directory
-        - claude-step/project-name/ subdirectory
+        - claude-chain/ directory
+        - claude-chain/project-name/ subdirectory
 
     Returns:
-        Path to the claude-step directory
+        Path to the claude-chain directory
     """
-    claude_step_dir = tmp_path / "claude-step"
-    claude_step_dir.mkdir()
+    claude_chain_dir = tmp_path / "claude-chain"
+    claude_chain_dir.mkdir()
 
-    project_dir = claude_step_dir / "project-name"
+    project_dir = claude_chain_dir / "project-name"
     project_dir.mkdir()
 
-    return claude_step_dir
+    return claude_chain_dir
 
 
 @pytest.fixture
@@ -230,7 +230,7 @@ def mock_github_actions_helper():
     Returns:
         MagicMock with GitHub Actions helper methods
     """
-    from claudestep.infrastructure.github.actions import GitHubActionsHelper
+    from claudechain.infrastructure.github.actions import GitHubActionsHelper
 
     mock = MagicMock(spec=GitHubActionsHelper)
     mock.write_output = MagicMock()
@@ -340,7 +340,7 @@ def sample_task_metadata():
         "task_description": "Implement feature X",
         "project": "my-project",
         "reviewer": "alice",
-        "branch": "claude-step-my-project-3",
+        "branch": "claude-chain-my-project-3",
         "created_at": "2025-01-15T10:00:00Z"
     }
 
@@ -363,24 +363,24 @@ def sample_pr_list():
             "title": "Task 1 - First task",
             "state": "closed",
             "merged": True,
-            "head": {"ref": "claude-step-my-project-1"},
-            "labels": [{"name": "claude-step"}]
+            "head": {"ref": "claude-chain-my-project-1"},
+            "labels": [{"name": "claude-chain"}]
         },
         {
             "number": 102,
             "title": "Task 2 - Second task",
             "state": "open",
             "merged": False,
-            "head": {"ref": "claude-step-my-project-2"},
-            "labels": [{"name": "claude-step"}]
+            "head": {"ref": "claude-chain-my-project-2"},
+            "labels": [{"name": "claude-chain"}]
         },
         {
             "number": 103,
             "title": "Task 3 - Third task",
             "state": "open",
             "merged": False,
-            "head": {"ref": "claude-step-my-project-3"},
-            "labels": [{"name": "claude-step"}]
+            "head": {"ref": "claude-chain-my-project-3"},
+            "labels": [{"name": "claude-chain"}]
         }
     ]
 

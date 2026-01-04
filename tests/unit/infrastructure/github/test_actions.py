@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from claudestep.infrastructure.github.actions import GitHubActionsHelper
+from claudechain.infrastructure.github.actions import GitHubActionsHelper
 
 
 class TestGitHubActionsHelper:

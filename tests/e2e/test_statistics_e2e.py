@@ -1,9 +1,9 @@
-"""End-to-End tests for ClaudeStep statistics collection.
+"""End-to-End tests for ClaudeChain statistics collection.
 
-This module contains E2E integration tests that verify the ClaudeStep statistics
+This module contains E2E integration tests that verify the ClaudeChain statistics
 workflow runs successfully and generates the expected output format.
 
-The test triggers the claudestep-statistics.yml workflow and verifies that it:
+The test triggers the claudechain-statistics.yml workflow and verifies that it:
 - Completes successfully
 - Generates statistics output
 - Produces properly formatted Slack messages (when statistics exist)
@@ -29,20 +29,20 @@ from .constants import E2E_TEST_BRANCH
 
 
 def test_z_statistics_end_to_end(gh: GitHubHelper) -> None:
-    """Test that the ClaudeStep statistics workflow collects data from E2E tests.
+    """Test that the ClaudeChain statistics workflow collects data from E2E tests.
 
     This test runs LAST (after all other E2E tests) to validate that the statistics
     workflow can successfully collect and report on the PRs created by previous tests.
 
     This test:
-    1. Triggers the claudestep-statistics.yml workflow on main-e2e branch
+    1. Triggers the claudechain-statistics.yml workflow on main-e2e branch
     2. Waits for workflow completion
     3. Verifies the workflow completes successfully
     4. Validates the workflow found and processed PRs from previous E2E tests
     5. Validates cost information is present in the logs
 
     The test validates the complete end-to-end flow:
-    - Other E2E tests create PRs with ClaudeStep on main-e2e
+    - Other E2E tests create PRs with ClaudeChain on main-e2e
     - This test runs statistics collection on those PRs
     - Validates the workflow infrastructure works with real data
 
@@ -52,7 +52,7 @@ def test_z_statistics_end_to_end(gh: GitHubHelper) -> None:
     # Trigger the statistics workflow on main-e2e branch
     # This will collect statistics from PRs targeting main-e2e
     gh.trigger_workflow(
-        workflow_name="claudestep-statistics.yml",
+        workflow_name="claudechain-statistics.yml",
         inputs={"base_branch": E2E_TEST_BRANCH},  # Target main-e2e branch for E2E test PRs
         ref="main"  # Run the workflow from main branch
     )
@@ -62,7 +62,7 @@ def test_z_statistics_end_to_end(gh: GitHubHelper) -> None:
 
     # Wait for workflow to complete on MAIN branch (workflow runs from main, but targets main-e2e PRs)
     workflow_run = gh.wait_for_workflow_completion(
-        workflow_name="claudestep-statistics.yml",
+        workflow_name="claudechain-statistics.yml",
         timeout=300,  # 5 minutes should be plenty for statistics
         branch="main"  # Workflow runs on main, but analyzes main-e2e PRs
     )
@@ -85,7 +85,7 @@ def test_z_statistics_end_to_end(gh: GitHubHelper) -> None:
         "Workflow logs should contain cost/total information from PR statistics"
 
     # Note: We validate the workflow:
-    # 1. Successfully queries for ClaudeStep PRs targeting main-e2e
+    # 1. Successfully queries for ClaudeChain PRs targeting main-e2e
     # 2. Finds at least some PRs (from previous E2E tests)
     # 3. Generates statistics with cost information
     # 4. Completes successfully

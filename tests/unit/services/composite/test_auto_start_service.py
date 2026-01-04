@@ -3,19 +3,19 @@
 import pytest
 from unittest.mock import Mock, patch
 
-from claudestep.domain.auto_start import AutoStartProject, AutoStartDecision, ProjectChangeType
-from claudestep.services.composite.auto_start_service import AutoStartService
+from claudechain.domain.auto_start import AutoStartProject, AutoStartDecision, ProjectChangeType
+from claudechain.services.composite.auto_start_service import AutoStartService
 
 
 class TestDetectChangedProjects:
     """Test detect_changed_projects() method"""
 
-    @patch('claudestep.services.composite.auto_start_service.detect_changed_files')
-    @patch('claudestep.services.composite.auto_start_service.detect_deleted_files')
+    @patch('claudechain.services.composite.auto_start_service.detect_changed_files')
+    @patch('claudechain.services.composite.auto_start_service.detect_deleted_files')
     def test_detect_added_project(self, mock_deleted, mock_changed):
         """Test detecting a newly added project"""
         # Mock git operations
-        mock_changed.return_value = ['claude-step/new-project/spec.md']
+        mock_changed.return_value = ['claude-chain/new-project/spec.md']
         mock_deleted.return_value = []
 
         # Create service and test
@@ -26,17 +26,17 @@ class TestDetectChangedProjects:
         assert len(projects) == 1
         assert projects[0].name == "new-project"
         assert projects[0].change_type == ProjectChangeType.MODIFIED
-        assert projects[0].spec_path == "claude-step/new-project/spec.md"
+        assert projects[0].spec_path == "claude-chain/new-project/spec.md"
 
         # Verify git operations were called correctly
-        mock_changed.assert_called_once_with("abc123", "def456", "claude-step/*/spec.md")
-        mock_deleted.assert_called_once_with("abc123", "def456", "claude-step/*/spec.md")
+        mock_changed.assert_called_once_with("abc123", "def456", "claude-chain/*/spec.md")
+        mock_deleted.assert_called_once_with("abc123", "def456", "claude-chain/*/spec.md")
 
-    @patch('claudestep.services.composite.auto_start_service.detect_changed_files')
-    @patch('claudestep.services.composite.auto_start_service.detect_deleted_files')
+    @patch('claudechain.services.composite.auto_start_service.detect_changed_files')
+    @patch('claudechain.services.composite.auto_start_service.detect_deleted_files')
     def test_detect_modified_project(self, mock_deleted, mock_changed):
         """Test detecting a modified project"""
-        mock_changed.return_value = ['claude-step/existing-project/spec.md']
+        mock_changed.return_value = ['claude-chain/existing-project/spec.md']
         mock_deleted.return_value = []
 
         mock_pr_service = Mock()
@@ -47,12 +47,12 @@ class TestDetectChangedProjects:
         assert projects[0].name == "existing-project"
         assert projects[0].change_type == ProjectChangeType.MODIFIED
 
-    @patch('claudestep.services.composite.auto_start_service.detect_changed_files')
-    @patch('claudestep.services.composite.auto_start_service.detect_deleted_files')
+    @patch('claudechain.services.composite.auto_start_service.detect_changed_files')
+    @patch('claudechain.services.composite.auto_start_service.detect_deleted_files')
     def test_detect_deleted_project(self, mock_deleted, mock_changed):
         """Test detecting a deleted project"""
         mock_changed.return_value = []
-        mock_deleted.return_value = ['claude-step/old-project/spec.md']
+        mock_deleted.return_value = ['claude-chain/old-project/spec.md']
 
         mock_pr_service = Mock()
         service = AutoStartService("owner/repo", mock_pr_service)
@@ -61,17 +61,17 @@ class TestDetectChangedProjects:
         assert len(projects) == 1
         assert projects[0].name == "old-project"
         assert projects[0].change_type == ProjectChangeType.DELETED
-        assert projects[0].spec_path == "claude-step/old-project/spec.md"
+        assert projects[0].spec_path == "claude-chain/old-project/spec.md"
 
-    @patch('claudestep.services.composite.auto_start_service.detect_changed_files')
-    @patch('claudestep.services.composite.auto_start_service.detect_deleted_files')
+    @patch('claudechain.services.composite.auto_start_service.detect_changed_files')
+    @patch('claudechain.services.composite.auto_start_service.detect_deleted_files')
     def test_detect_multiple_projects(self, mock_deleted, mock_changed):
         """Test detecting multiple changed projects"""
         mock_changed.return_value = [
-            'claude-step/project-a/spec.md',
-            'claude-step/project-b/spec.md'
+            'claude-chain/project-a/spec.md',
+            'claude-chain/project-b/spec.md'
         ]
-        mock_deleted.return_value = ['claude-step/project-c/spec.md']
+        mock_deleted.return_value = ['claude-chain/project-c/spec.md']
 
         mock_pr_service = Mock()
         service = AutoStartService("owner/repo", mock_pr_service)
@@ -89,8 +89,8 @@ class TestDetectChangedProjects:
         assert len(deleted) == 1
         assert deleted[0].name == "project-c"
 
-    @patch('claudestep.services.composite.auto_start_service.detect_changed_files')
-    @patch('claudestep.services.composite.auto_start_service.detect_deleted_files')
+    @patch('claudechain.services.composite.auto_start_service.detect_changed_files')
+    @patch('claudechain.services.composite.auto_start_service.detect_deleted_files')
     def test_detect_no_changes(self, mock_deleted, mock_changed):
         """Test detecting no changes"""
         mock_changed.return_value = []
@@ -102,11 +102,11 @@ class TestDetectChangedProjects:
 
         assert len(projects) == 0
 
-    @patch('claudestep.services.composite.auto_start_service.detect_changed_files')
-    @patch('claudestep.services.composite.auto_start_service.detect_deleted_files')
+    @patch('claudechain.services.composite.auto_start_service.detect_changed_files')
+    @patch('claudechain.services.composite.auto_start_service.detect_deleted_files')
     def test_detect_invalid_path(self, mock_deleted, mock_changed):
         """Test detecting changes with invalid path (should be filtered out)"""
-        # Invalid path that doesn't match claude-step/*/spec.md pattern
+        # Invalid path that doesn't match claude-chain/*/spec.md pattern
         mock_changed.return_value = ['invalid/path/spec.md']
         mock_deleted.return_value = []
 
@@ -117,8 +117,8 @@ class TestDetectChangedProjects:
         # parse_spec_path_to_project returns None for invalid paths
         assert len(projects) == 0
 
-    @patch('claudestep.services.composite.auto_start_service.detect_changed_files')
-    @patch('claudestep.services.composite.auto_start_service.detect_deleted_files')
+    @patch('claudechain.services.composite.auto_start_service.detect_changed_files')
+    @patch('claudechain.services.composite.auto_start_service.detect_deleted_files')
     def test_detect_custom_pattern(self, mock_deleted, mock_changed):
         """Test detecting changes with custom pattern"""
         mock_changed.return_value = ['custom-path/project/spec.md']
@@ -142,8 +142,8 @@ class TestDetermineNewProjects:
         mock_pr_service.get_project_prs.return_value = []
 
         projects = [
-            AutoStartProject("project-a", ProjectChangeType.MODIFIED, "claude-step/project-a/spec.md"),
-            AutoStartProject("project-b", ProjectChangeType.MODIFIED, "claude-step/project-b/spec.md")
+            AutoStartProject("project-a", ProjectChangeType.MODIFIED, "claude-chain/project-a/spec.md"),
+            AutoStartProject("project-b", ProjectChangeType.MODIFIED, "claude-chain/project-b/spec.md")
         ]
 
         service = AutoStartService("owner/repo", mock_pr_service)
@@ -167,7 +167,7 @@ class TestDetermineNewProjects:
         mock_pr_service.get_project_prs.return_value = [Mock(), Mock()]  # 2 existing PRs
 
         projects = [
-            AutoStartProject("project-a", ProjectChangeType.MODIFIED, "claude-step/project-a/spec.md"),
+            AutoStartProject("project-a", ProjectChangeType.MODIFIED, "claude-chain/project-a/spec.md"),
         ]
 
         service = AutoStartService("owner/repo", mock_pr_service)
@@ -193,8 +193,8 @@ class TestDetermineNewProjects:
         mock_pr_service.get_project_prs.side_effect = get_prs_side_effect
 
         projects = [
-            AutoStartProject("new-project", ProjectChangeType.MODIFIED, "claude-step/new-project/spec.md"),
-            AutoStartProject("existing-project", ProjectChangeType.MODIFIED, "claude-step/existing-project/spec.md")
+            AutoStartProject("new-project", ProjectChangeType.MODIFIED, "claude-chain/new-project/spec.md"),
+            AutoStartProject("existing-project", ProjectChangeType.MODIFIED, "claude-chain/existing-project/spec.md")
         ]
 
         service = AutoStartService("owner/repo", mock_pr_service)
@@ -209,8 +209,8 @@ class TestDetermineNewProjects:
         mock_pr_service.get_project_prs.return_value = []
 
         projects = [
-            AutoStartProject("deleted-project", ProjectChangeType.DELETED, "claude-step/deleted-project/spec.md"),
-            AutoStartProject("modified-project", ProjectChangeType.MODIFIED, "claude-step/modified-project/spec.md")
+            AutoStartProject("deleted-project", ProjectChangeType.DELETED, "claude-chain/deleted-project/spec.md"),
+            AutoStartProject("modified-project", ProjectChangeType.MODIFIED, "claude-chain/modified-project/spec.md")
         ]
 
         service = AutoStartService("owner/repo", mock_pr_service)
@@ -230,7 +230,7 @@ class TestDetermineNewProjects:
         mock_pr_service.get_project_prs.side_effect = Exception("GitHub API error")
 
         projects = [
-            AutoStartProject("project-a", ProjectChangeType.MODIFIED, "claude-step/project-a/spec.md"),
+            AutoStartProject("project-a", ProjectChangeType.MODIFIED, "claude-chain/project-a/spec.md"),
         ]
 
         service = AutoStartService("owner/repo", mock_pr_service)
@@ -262,7 +262,7 @@ class TestDetermineNewProjects:
         project = AutoStartProject(
             "completed-project",
             ProjectChangeType.MODIFIED,
-            "claude-step/completed-project/spec.md"
+            "claude-chain/completed-project/spec.md"
         )
 
         service = AutoStartService("owner/repo", mock_pr_service)
@@ -284,7 +284,7 @@ class TestDetermineNewProjects:
         mock_pr_service = Mock()
         mock_pr_service.get_project_prs.return_value = [Mock()]  # Has open PRs
 
-        project = AutoStartProject("project-a", ProjectChangeType.MODIFIED, "claude-step/project-a/spec.md")
+        project = AutoStartProject("project-a", ProjectChangeType.MODIFIED, "claude-chain/project-a/spec.md")
 
         service = AutoStartService("owner/repo", mock_pr_service)
         service.determine_new_projects([project])
@@ -302,7 +302,7 @@ class TestShouldAutoTrigger:
         mock_pr_service = Mock()
         mock_pr_service.get_project_prs.return_value = []
 
-        project = AutoStartProject("new-project", ProjectChangeType.MODIFIED, "claude-step/new-project/spec.md")
+        project = AutoStartProject("new-project", ProjectChangeType.MODIFIED, "claude-chain/new-project/spec.md")
 
         service = AutoStartService("owner/repo", mock_pr_service)
         decision = service.should_auto_trigger(project)
@@ -317,7 +317,7 @@ class TestShouldAutoTrigger:
         mock_pr_service = Mock()
         mock_pr_service.get_project_prs.return_value = [Mock(), Mock(), Mock()]  # 3 open PRs
 
-        project = AutoStartProject("existing-project", ProjectChangeType.MODIFIED, "claude-step/existing-project/spec.md")
+        project = AutoStartProject("existing-project", ProjectChangeType.MODIFIED, "claude-chain/existing-project/spec.md")
 
         service = AutoStartService("owner/repo", mock_pr_service)
         decision = service.should_auto_trigger(project)
@@ -330,7 +330,7 @@ class TestShouldAutoTrigger:
         """Test skipping deleted project"""
         mock_pr_service = Mock()
 
-        project = AutoStartProject("deleted-project", ProjectChangeType.DELETED, "claude-step/deleted-project/spec.md")
+        project = AutoStartProject("deleted-project", ProjectChangeType.DELETED, "claude-chain/deleted-project/spec.md")
 
         service = AutoStartService("owner/repo", mock_pr_service)
         decision = service.should_auto_trigger(project)
@@ -348,7 +348,7 @@ class TestShouldAutoTrigger:
         mock_pr_service = Mock()
         mock_pr_service.get_project_prs.side_effect = Exception("API timeout")
 
-        project = AutoStartProject("project-a", ProjectChangeType.MODIFIED, "claude-step/project-a/spec.md")
+        project = AutoStartProject("project-a", ProjectChangeType.MODIFIED, "claude-chain/project-a/spec.md")
 
         service = AutoStartService("owner/repo", mock_pr_service)
         decision = service.should_auto_trigger(project)
@@ -361,7 +361,7 @@ class TestShouldAutoTrigger:
         mock_pr_service = Mock()
         mock_pr_service.get_project_prs.return_value = [Mock()]  # 1 open PR
 
-        project = AutoStartProject("project-a", ProjectChangeType.MODIFIED, "claude-step/project-a/spec.md")
+        project = AutoStartProject("project-a", ProjectChangeType.MODIFIED, "claude-chain/project-a/spec.md")
 
         service = AutoStartService("owner/repo", mock_pr_service)
         decision = service.should_auto_trigger(project)
@@ -378,7 +378,7 @@ class TestShouldAutoTrigger:
         project = AutoStartProject(
             "completed-project",
             ProjectChangeType.MODIFIED,
-            "claude-step/completed-project/spec.md"
+            "claude-chain/completed-project/spec.md"
         )
 
         service = AutoStartService("owner/repo", mock_pr_service)
@@ -397,7 +397,7 @@ class TestShouldAutoTrigger:
         mock_pr_service = Mock()
         mock_pr_service.get_project_prs.return_value = [Mock()]  # Has open PRs
 
-        project = AutoStartProject("project-a", ProjectChangeType.MODIFIED, "claude-step/project-a/spec.md")
+        project = AutoStartProject("project-a", ProjectChangeType.MODIFIED, "claude-chain/project-a/spec.md")
 
         service = AutoStartService("owner/repo", mock_pr_service)
         service.should_auto_trigger(project)
@@ -414,7 +414,7 @@ class TestAutoStartDisabledConfiguration:
         mock_pr_service = Mock()
         mock_pr_service.get_project_prs.return_value = []
 
-        project = AutoStartProject("new-project", ProjectChangeType.MODIFIED, "claude-step/new-project/spec.md")
+        project = AutoStartProject("new-project", ProjectChangeType.MODIFIED, "claude-chain/new-project/spec.md")
 
         # Create service with auto_start_enabled=False
         service = AutoStartService("owner/repo", mock_pr_service, auto_start_enabled=False)
@@ -430,7 +430,7 @@ class TestAutoStartDisabledConfiguration:
         """Test that existing projects are also skipped when disabled"""
         mock_pr_service = Mock()
 
-        project = AutoStartProject("existing-project", ProjectChangeType.MODIFIED, "claude-step/existing-project/spec.md")
+        project = AutoStartProject("existing-project", ProjectChangeType.MODIFIED, "claude-chain/existing-project/spec.md")
 
         service = AutoStartService("owner/repo", mock_pr_service, auto_start_enabled=False)
         decision = service.should_auto_trigger(project)
@@ -442,7 +442,7 @@ class TestAutoStartDisabledConfiguration:
         """Test that deleted projects show disabled message (not deleted message)"""
         mock_pr_service = Mock()
 
-        project = AutoStartProject("deleted-project", ProjectChangeType.DELETED, "claude-step/deleted-project/spec.md")
+        project = AutoStartProject("deleted-project", ProjectChangeType.DELETED, "claude-chain/deleted-project/spec.md")
 
         service = AutoStartService("owner/repo", mock_pr_service, auto_start_enabled=False)
         decision = service.should_auto_trigger(project)
@@ -456,7 +456,7 @@ class TestAutoStartDisabledConfiguration:
         mock_pr_service = Mock()
         mock_pr_service.get_project_prs.return_value = []
 
-        project = AutoStartProject("new-project", ProjectChangeType.MODIFIED, "claude-step/new-project/spec.md")
+        project = AutoStartProject("new-project", ProjectChangeType.MODIFIED, "claude-chain/new-project/spec.md")
 
         # Create service without specifying auto_start_enabled (should default to True)
         service = AutoStartService("owner/repo", mock_pr_service)
@@ -471,7 +471,7 @@ class TestAutoStartDisabledConfiguration:
         mock_pr_service = Mock()
         mock_pr_service.get_project_prs.return_value = []
 
-        project = AutoStartProject("new-project", ProjectChangeType.MODIFIED, "claude-step/new-project/spec.md")
+        project = AutoStartProject("new-project", ProjectChangeType.MODIFIED, "claude-chain/new-project/spec.md")
 
         service = AutoStartService("owner/repo", mock_pr_service, auto_start_enabled=True)
         decision = service.should_auto_trigger(project)

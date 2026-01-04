@@ -1,4 +1,4 @@
-name: 'ClaudeStep'
+name: 'ClaudeChain'
 description: 'Automate code refactoring with AI using Claude Code. Creates incremental PRs for systematic codebase improvements.'
 author: 'gestrich'
 
@@ -25,10 +25,10 @@ inputs:
 
   # Project configuration
   project_name:
-    description: 'Project folder name under /claude-step directory. Required if github_event is not provided.'
+    description: 'Project folder name under /claude-chain directory. Required if github_event is not provided.'
     required: false
   default_base_branch:
-    # Default defined in src/claudestep/domain/constants.py (DEFAULT_BASE_BRANCH)
+    # Default defined in src/claudechain/domain/constants.py (DEFAULT_BASE_BRANCH)
     description: 'Default base branch if not specified in project config or event context. Defaults to main.'
     required: false
   merged_pr_number:
@@ -39,11 +39,11 @@ inputs:
     required: false
     default: 'claude-sonnet-4-5'
   claude_allowed_tools:
-    # Default defined in src/claudestep/domain/constants.py (DEFAULT_ALLOWED_TOOLS)
+    # Default defined in src/claudechain/domain/constants.py (DEFAULT_ALLOWED_TOOLS)
     description: 'Comma-separated list of tools Claude can use. Defaults to minimal permissions: Read,Write,Edit,Bash(git add:*),Bash(git commit:*)'
     required: false
   base_branch:
-    # Default defined in src/claudestep/domain/constants.py (DEFAULT_BASE_BRANCH)
+    # Default defined in src/claudechain/domain/constants.py (DEFAULT_BASE_BRANCH)
     description: 'Base branch where spec files must exist (fetched via GitHub API) and where pull requests will target. Defaults to main.'
     required: false
   working_directory:
@@ -59,9 +59,9 @@ inputs:
     required: false
     default: ''
   pr_label:
-    description: 'Label to apply to ClaudeStep PRs'
+    description: 'Label to apply to ClaudeChain PRs'
     required: false
-    default: 'claudestep'
+    default: 'claudechain'
 
 outputs:
   # Execution status outputs (for simplified workflow)
@@ -69,7 +69,7 @@ outputs:
     description: 'Whether execution was skipped (true/false). Check skip_reason for details.'
     value: ${{ steps.parse.outputs.skip }}
   skip_reason:
-    description: 'Reason for skipping if skipped (e.g., "No claudestep label", "PR not merged")'
+    description: 'Reason for skipping if skipped (e.g., "No claudechain label", "PR not merged")'
     value: ${{ steps.parse.outputs.skip_reason }}
 
   # Resolved configuration outputs
@@ -130,13 +130,13 @@ runs:
         GITHUB_REPOSITORY: ${{ github.repository }}
       run: |
         export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
-        python3 -m claudestep parse-event
+        python3 -m claudechain parse-event
 
     - name: Log skip reason
       if: inputs.github_event != '' && steps.parse.outputs.skip == 'true'
       shell: bash
       run: |
-        echo "::notice::Skipping ClaudeStep: ${{ steps.parse.outputs.skip_reason }}"
+        echo "::notice::Skipping ClaudeChain: ${{ steps.parse.outputs.skip_reason }}"
         echo "## ⏭️ Skipped" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Reason:** ${{ steps.parse.outputs.skip_reason }}" >> $GITHUB_STEP_SUMMARY
@@ -166,7 +166,7 @@ runs:
         CLAUDE_ALLOWED_TOOLS: ${{ inputs.claude_allowed_tools }}
       run: |
         export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
-        python3 -m claudestep prepare
+        python3 -m claudechain prepare
 
     # WORKAROUND: Clean stale Claude Code lock files before installation
     # Issue: https://github.com/anthropics/claude-code-action/issues/709
@@ -227,7 +227,7 @@ runs:
         ACTION_PATH: ${{ github.action_path }}
       run: |
         export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
-        python3 -m claudestep finalize
+        python3 -m claudechain finalize
 
     - name: Prepare summary prompt
       id: prepare_summary
@@ -245,7 +245,7 @@ runs:
         ACTION_PATH: ${{ github.action_path }}
       run: |
         export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
-        python3 -m claudestep prepare-summary
+        python3 -m claudechain prepare-summary
 
     - name: Generate PR summary
       id: pr_summary
@@ -289,7 +289,7 @@ runs:
         TASK_DESCRIPTION: ${{ steps.prepare.outputs.task_description }}
       run: |
         export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
-        python3 -m claudestep post-pr-comment
+        python3 -m claudechain post-pr-comment
       continue-on-error: true
 
     - name: Format Slack notification
@@ -307,7 +307,7 @@ runs:
         ACTION_PATH: ${{ github.action_path }}
       run: |
         export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
-        python3 -m claudestep format-slack-notification
+        python3 -m claudechain format-slack-notification
       continue-on-error: true
 
     - name: Post to Slack
@@ -318,7 +318,7 @@ runs:
         webhook-type: incoming-webhook
         payload: |
           {
-            "text": "New ClaudeStep PR Created",
+            "text": "New ClaudeChain PR Created",
             "blocks": [
               {
                 "type": "section",
@@ -332,7 +332,7 @@ runs:
                 "elements": [
                   {
                     "type": "mrkdwn",
-                    "text": "Generated by <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|ClaudeStep>"
+                    "text": "Generated by <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|ClaudeChain>"
                   }
                 ]
               }
@@ -357,7 +357,7 @@ runs:
         ACTION_PATH: ${{ github.action_path }}
       run: |
         export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
-        python3 -m claudestep create-artifact
+        python3 -m claudechain create-artifact
       continue-on-error: true
 
     - name: Upload task metadata artifact

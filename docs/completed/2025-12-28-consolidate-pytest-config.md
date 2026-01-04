@@ -37,7 +37,7 @@ addopts = [
     "--strict-markers",
     "--tb=short",
     "--disable-warnings",
-    "--cov=src/claudestep",
+    "--cov=src/claudechain",
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-fail-under=70",

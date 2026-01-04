@@ -1,9 +1,9 @@
 ## Background
 
-The project's own `claudestep.yml` workflow file contains ~100 lines of bash logic to handle:
+The project's own `claudechain.yml` workflow file contains ~100 lines of bash logic to handle:
 - Determining project name from branch patterns or inputs
 - Inferring base branch from GitHub event context
-- Checking for 'claudestep' label on PRs
+- Checking for 'claudechain' label on PRs
 - Deciding whether to skip execution
 - Handling different event types (workflow_dispatch, pull_request:closed)
 
@@ -13,13 +13,13 @@ This complexity was addressed in `docs/completed/2026-01-01-simplify-user-workfl
 - Internal checkout handling within the action
 - Skip logic with proper outputs
 
-The simplified example workflow (`examples/claudestep-simplified.yml`) was created to demonstrate the new approach. However, the project's own `claudestep.yml` has not yet been updated to use this simplified approach.
+The simplified example workflow (`examples/claudechain-simplified.yml`) was created to demonstrate the new approach. However, the project's own `claudechain.yml` has not yet been updated to use this simplified approach.
 
-**Goal:** Update `claudestep.yml` to use the simplified workflow pattern, then delete the `examples/` directory since `claudestep.yml` itself will serve as the canonical example.
+**Goal:** Update `claudechain.yml` to use the simplified workflow pattern, then delete the `examples/` directory since `claudechain.yml` itself will serve as the canonical example.
 
 ## Phases
 
-- [x] Phase 1: Update claudestep.yml to simplified workflow
+- [x] Phase 1: Update claudechain.yml to simplified workflow
 
 Replace the current workflow with the simplified approach:
 
@@ -27,12 +27,12 @@ Replace the current workflow with the simplified approach:
 - `Determine project and base branch` step (50+ lines of bash)
 - `Validate base branch` step
 - `Checkout repository` step (manual)
-- `Run ClaudeStep action` step
+- `Run ClaudeChain action` step
 
 **New structure (~40 lines):**
 ```yaml
 jobs:
-  run-claudestep:
+  run-claudechain:
     runs-on: ubuntu-latest
     steps:
       - uses: ./
@@ -55,17 +55,17 @@ jobs:
 6. Preserve existing secrets usage (ANTHROPIC_API_KEY, GITHUB_TOKEN, SLACK_WEBHOOK_URL)
 7. Keep header comments but update to reflect simplified approach
 
-**File to modify:** `.github/workflows/claudestep.yml`
+**File to modify:** `.github/workflows/claudechain.yml`
 
 **Completed:** 2026-01-01
 
 **Technical notes:**
-- Reduced `claudestep.yml` from 140 lines to 55 lines
+- Reduced `claudechain.yml` from 140 lines to 55 lines
 - Removed all bash complexity from workflow - action handles event parsing internally via `parse-event` command
 - Updated `tests/integration/test_auto_start_workflow.py` to test simplified workflow structure:
-  - Removed tests for deleted `claudestep-auto-start.yml` workflow
+  - Removed tests for deleted `claudechain-auto-start.yml` workflow
   - Replaced tests checking for old bash steps with tests validating simplified pattern
-  - Added new `TestClaudeStepWorkflowYAML` and `TestSimplifiedWorkflowEventHandling` test classes
+  - Added new `TestClaudeChainWorkflowYAML` and `TestSimplifiedWorkflowEventHandling` test classes
 - All 791 unit/integration tests pass
 
 - [x] Phase 2: Simplify triggers and workflow_dispatch inputs
@@ -92,7 +92,7 @@ on:
   workflow_dispatch:
     inputs:
       project_name:
-        description: 'Project name (folder under claude-step/)'
+        description: 'Project name (folder under claude-chain/)'
         required: true
         type: string
         default: 'e2e-test-project'
@@ -104,7 +104,7 @@ on:
 
 **Benefits of using `push` instead of `pull_request:closed`:**
 - Simpler - no need to check if PR was merged vs closed without merge
-- No need to check for `claudestep` label (branch name pattern is sufficient)
+- No need to check for `claudechain` label (branch name pattern is sufficient)
 - Covers direct pushes and PR merges equally
 - The action's `parse-event` already handles push events
 
@@ -124,7 +124,7 @@ on:
 Update the workflow header comments to reflect the simplified design:
 
 ```yaml
-# ClaudeStep Workflow
+# ClaudeChain Workflow
 #
 # This workflow handles all event types automatically by passing the GitHub
 # event context to the action. The action determines:
@@ -143,45 +143,45 @@ Update the workflow header comments to reflect the simplified design:
 **Completed:** 2026-01-01
 
 **Technical notes:**
-- Updated header comments from 23 lines to 14 lines, removing outdated references to `pull_request:closed` trigger and `claudestep` label requirement
-- Updated `tests/integration/test_auto_start_workflow.py`: renamed `test_claudestep_has_generic_workflow_documentation` to `test_claudestep_has_event_handling_documentation` to match new simplified header language
+- Updated header comments from 23 lines to 14 lines, removing outdated references to `pull_request:closed` trigger and `claudechain` label requirement
+- Updated `tests/integration/test_auto_start_workflow.py`: renamed `test_claudechain_has_generic_workflow_documentation` to `test_claudechain_has_event_handling_documentation` to match new simplified header language
 - All 791 unit/integration tests pass
 
 - [x] Phase 4: Delete examples directory
 
-Remove the `examples/` directory since `claudestep.yml` now serves as the canonical example:
+Remove the `examples/` directory since `claudechain.yml` now serves as the canonical example:
 
 ```bash
 rm -rf examples/
 ```
 
-The `examples/claudestep-simplified.yml` file was a temporary demonstration. Now that our own workflow uses the simplified approach, users can reference `.github/workflows/claudestep.yml` directly.
+The `examples/claudechain-simplified.yml` file was a temporary demonstration. Now that our own workflow uses the simplified approach, users can reference `.github/workflows/claudechain.yml` directly.
 
 **Files to delete:**
-- `examples/claudestep-simplified.yml`
+- `examples/claudechain-simplified.yml`
 - `examples/` directory
 
 **Completed:** 2026-01-01
 
 **Technical notes:**
-- Deleted `examples/` directory containing `claudestep-simplified.yml`
+- Deleted `examples/` directory containing `claudechain-simplified.yml`
 - All 791 unit/integration tests pass
 
 - [x] Phase 5: Update README references
 
 Check if README.md references the examples directory and update accordingly:
-- Remove references to `examples/claudestep-simplified.yml`
-- Point users to `.github/workflows/claudestep.yml` as the reference implementation
+- Remove references to `examples/claudechain-simplified.yml`
+- Point users to `.github/workflows/claudechain.yml` as the reference implementation
 
 **File to modify:** `README.md` (if it references examples)
 
 **Completed:** 2026-01-01
 
 **Technical notes:**
-- Updated "Examples" section to point to `.github/workflows/claudestep.yml` as the canonical reference implementation
+- Updated "Examples" section to point to `.github/workflows/claudechain.yml` as the canonical reference implementation
 - Updated Option A workflow example in Step 3 to use `push` trigger instead of `pull_request: types: [closed]`
 - Updated "Migrating to Simplified Workflow" section to reflect new `push` trigger pattern
-- Updated Troubleshooting section to remove references to deprecated `claudestep-auto-start.yml` workflow
+- Updated Troubleshooting section to remove references to deprecated `claudechain-auto-start.yml` workflow
 - All 791 unit/integration tests pass
 
 - [x] Phase 6: Validation
@@ -202,10 +202,10 @@ Check if README.md references the examples directory and update accordingly:
 **Success criteria:**
 - All unit tests pass
 - All integration tests pass
-- `claudestep.yml` reduced from ~140 lines to ~40 lines
+- `claudechain.yml` reduced from ~140 lines to ~40 lines
 - No bash complexity in workflow file
 - `examples/` directory removed
-- README updated to reference `claudestep.yml` instead of examples
+- README updated to reference `claudechain.yml` instead of examples
 - Workflow uses `push` trigger instead of `pull_request:closed`
 - Workflow still supports workflow_dispatch for manual triggers
 
@@ -214,9 +214,9 @@ Check if README.md references the examples directory and update accordingly:
 **Technical notes:**
 - All 643 unit tests pass
 - All 148 integration tests pass
-- `claudestep.yml` reduced to 49 lines (from ~140 lines)
+- `claudechain.yml` reduced to 49 lines (from ~140 lines)
 - No bash complexity in workflow file - only YAML configuration
 - `examples/` directory confirmed removed
-- README references `.github/workflows/claudestep.yml` as the canonical reference implementation
+- README references `.github/workflows/claudechain.yml` as the canonical reference implementation
 - Workflow uses `push: branches: [main, main-e2e]` trigger
 - Workflow supports `workflow_dispatch` with `project_name` input for manual triggers

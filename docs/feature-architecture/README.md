@@ -1,6 +1,6 @@
 # Feature Architecture
 
-Technical documentation for specific ClaudeStep features and components. These documents explain how individual features are designed and implemented.
+Technical documentation for specific ClaudeChain features and components. These documents explain how individual features are designed and implemented.
 
 ## What Belongs Here
 

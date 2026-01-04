@@ -8,11 +8,11 @@ import time
 import logging
 from typing import Optional, Dict, Any, List, Callable
 
-from claudestep.domain.constants import DEFAULT_PR_LABEL
+from claudechain.domain.constants import DEFAULT_PR_LABEL
 from ..constants import E2E_TEST_BRANCH
-from claudestep.domain.exceptions import GitHubAPIError
-from claudestep.domain.github_models import WorkflowRun, GitHubPullRequest, PRComment
-from claudestep.infrastructure.github.operations import (
+from claudechain.domain.exceptions import GitHubAPIError
+from claudechain.domain.github_models import WorkflowRun, GitHubPullRequest, PRComment
+from claudechain.infrastructure.github.operations import (
     list_pull_requests_for_project as _list_prs_for_project,
     list_pull_requests as _list_pull_requests,
     trigger_workflow as _trigger_workflow,
@@ -38,11 +38,11 @@ logging.basicConfig(
 class GitHubHelper:
     """Helper class for GitHub operations in E2E tests."""
 
-    def __init__(self, repo: str = "gestrich/claude-step"):
+    def __init__(self, repo: str = "gestrich/claude-chain"):
         """Initialize GitHub helper.
 
         Args:
-            repo: Repository in format "owner/name". Defaults to claude-step repo.
+            repo: Repository in format "owner/name". Defaults to claude-chain repo.
         """
         self.repo = repo
 
@@ -148,7 +148,7 @@ class GitHubHelper:
         """Trigger a GitHub workflow manually.
 
         Args:
-            workflow_name: Name of the workflow file (e.g., "claudestep.yml")
+            workflow_name: Name of the workflow file (e.g., "claudechain.yml")
             inputs: Dictionary of workflow inputs
             ref: Git ref to run workflow on (branch/tag/SHA)
         """
@@ -413,7 +413,7 @@ class GitHubHelper:
         except GitHubAPIError as e:
             logger.warning(f"Failed to delete branch '{branch}': {e}")
 
-    def cleanup_test_branches(self, pattern_prefix: str = "claude-step-test-") -> None:
+    def cleanup_test_branches(self, pattern_prefix: str = "claude-chain-test-") -> None:
         """Clean up test branches from previous failed runs.
 
         This is idempotent and can be run before tests to ensure clean state.
@@ -453,7 +453,7 @@ class GitHubHelper:
         logger.info(f"Removing label '{label}' from PR #{pr_number}")
 
         try:
-            from claudestep.infrastructure.github.operations import run_gh_command
+            from claudechain.infrastructure.github.operations import run_gh_command
             run_gh_command([
                 "api",
                 f"/repos/{self.repo}/issues/{pr_number}/labels/{label}",
@@ -464,7 +464,7 @@ class GitHubHelper:
             # Label might not exist on the PR, which is fine
             logger.debug(f"Could not remove label '{label}' from PR #{pr_number}: {e}")
 
-    def cleanup_test_prs(self, title_prefix: str = "ClaudeStep") -> None:
+    def cleanup_test_prs(self, title_prefix: str = "ClaudeChain") -> None:
         """Clean up open test PRs from previous failed runs.
 
         This is idempotent and can be run before tests to ensure clean state.

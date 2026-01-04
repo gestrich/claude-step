@@ -1,7 +1,7 @@
 """Tests for table formatting utilities"""
 
 import pytest
-from claudestep.domain.formatters.table_formatter import TableFormatter, visual_width, pad_to_visual_width
+from claudechain.domain.formatters.table_formatter import TableFormatter, visual_width, pad_to_visual_width
 
 
 class TestVisualWidth:

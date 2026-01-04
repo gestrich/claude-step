@@ -83,8 +83,8 @@ class StatisticsService:
 
 1. **Metadata dependency**: Statistics rely on metadata being up-to-date via merge triggers
 2. **No real-time sync**: Statistics reflect last workflow run, not immediate GitHub state
-3. **Manual PRs not tracked**: PRs created/merged outside ClaudeStep workflow won't appear in statistics until metadata is updated
-4. **Historical data limited**: Only PRs tracked after ClaudeStep adoption appear in statistics
+3. **Manual PRs not tracked**: PRs created/merged outside ClaudeChain workflow won't appear in statistics until metadata is updated
+4. **Historical data limited**: Only PRs tracked after ClaudeChain adoption appear in statistics
 
 ### Mitigation Strategies
 
@@ -153,13 +153,13 @@ A future `synchronize` command (using the GitHub infrastructure built in Phases 
 
 ```bash
 # Backfill historical PRs into metadata
-python -m claudestep synchronize --backfill --days-back 90
+python -m claudechain synchronize --backfill --days-back 90
 
 # Audit metadata against GitHub
-python -m claudestep synchronize --audit
+python -m claudechain synchronize --audit
 
 # Correct drift
-python -m claudestep synchronize --repair
+python -m claudechain synchronize --repair
 ```
 
 This allows metadata-first architecture while maintaining ability to validate and correct against GitHub when needed.
@@ -183,13 +183,13 @@ This keeps statistics fast and metadata-based while allowing opt-in real-time qu
 - **Refactoring process**: `docs/proposed/refactor-statistics-service-architecture.md` - Complete 9-phase refactoring
 - **Architecture overview**: `docs/architecture/architecture.md` - "Future: Metadata Synchronization" section
 - **Code style guide**: `docs/architecture/python-code-style.md` - "Domain Models and Data Parsing" section
-- **Domain models**: `src/claudestep/domain/models.py` - `PullRequest`, `PRReference`, `HybridProjectMetadata`
-- **GitHub models**: `src/claudestep/domain/github_models.py` - `GitHubPullRequest` (for future use)
-- **GitHub operations**: `src/claudestep/infrastructure/github/operations.py` - PR query functions (dormant, ready for synchronize)
-- **Statistics service**: `src/claudestep/application/services/statistics_service.py` - Refactored implementation
+- **Domain models**: `src/claudechain/domain/models.py` - `PullRequest`, `PRReference`, `HybridProjectMetadata`
+- **GitHub models**: `src/claudechain/domain/github_models.py` - `GitHubPullRequest` (for future use)
+- **GitHub operations**: `src/claudechain/infrastructure/github/operations.py` - PR query functions (dormant, ready for synchronize)
+- **Statistics service**: `src/claudechain/application/services/statistics_service.py` - Refactored implementation
 
 ## References
 
 - Martin Fowler's Service Layer pattern: https://martinfowler.com/eaaCatalog/serviceLayer.html
-- ClaudeStep architecture documentation: `docs/architecture/architecture.md`
+- ClaudeChain architecture documentation: `docs/architecture/architecture.md`
 - Repository Pattern for infrastructure abstraction

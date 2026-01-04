@@ -2,17 +2,17 @@
 
 ## Overview
 
-This document proposes a restructuring of the ClaudeStep codebase to follow modern Python packaging standards and implement a clear layered architecture. The goal is to improve code organization, maintainability, testability, and developer experience.
+This document proposes a restructuring of the ClaudeChain codebase to follow modern Python packaging standards and implement a clear layered architecture. The goal is to improve code organization, maintainability, testability, and developer experience.
 
 ## Current Problems
 
 ### 1. Non-Standard Package Location
 
-**Problem**: Code lives in `scripts/claudestep/` instead of following Python packaging conventions.
+**Problem**: Code lives in `scripts/claudechain/` instead of following Python packaging conventions.
 
 ```
 scripts/
-└── claudestep/          # ❌ Non-standard location
+└── claudechain/          # ❌ Non-standard location
     ├── commands/
     ├── git_operations.py
     ├── models.py
@@ -30,7 +30,7 @@ scripts/
 **Problem**: All modules live at the same level with no architectural separation.
 
 ```
-claudestep/
+claudechain/
 ├── git_operations.py           # Infrastructure
 ├── github_operations.py        # Infrastructure
 ├── github_actions.py           # Infrastructure
@@ -99,11 +99,11 @@ We propose a **4-layer architecture** following Clean Architecture / Hexagonal A
 ### New Directory Structure
 
 ```
-claude-step/
+claude-chain/
 ├── pyproject.toml              # Modern Python package config
 ├── README.md
 ├── src/                        # Source root (standard Python convention)
-│   └── claudestep/             # Main package
+│   └── claudechain/             # Main package
 │       ├── __init__.py
 │       ├── __main__.py         # Entry point
 │       │
@@ -171,7 +171,7 @@ claude-step/
 │   └── conftest.py             # Shared fixtures
 │
 ├── scripts/                    # Backward compatibility shim (temporary)
-│   └── claudestep -> ../src/claudestep  # Symlink during migration
+│   └── claudechain -> ../src/claudechain  # Symlink during migration
 │
 ├── docs/
 ├── examples/
@@ -182,7 +182,7 @@ claude-step/
 
 ### Layer 1: Domain
 
-**Location**: `src/claudestep/domain/`
+**Location**: `src/claudechain/domain/`
 
 **Purpose**: Core business entities and rules with NO external dependencies.
 
@@ -202,7 +202,7 @@ claude-step/
 
 ### Layer 2: Infrastructure
 
-**Location**: `src/claudestep/infrastructure/`
+**Location**: `src/claudechain/infrastructure/`
 
 **Purpose**: Adapters to external systems (git, GitHub, filesystem, etc.)
 
@@ -223,7 +223,7 @@ claude-step/
 
 ### Layer 3: Application
 
-**Location**: `src/claudestep/application/`
+**Location**: `src/claudechain/application/`
 
 **Purpose**: Business logic orchestration using domain models and infrastructure.
 
@@ -251,7 +251,7 @@ claude-step/
 
 ### Layer 4: Presentation (CLI)
 
-**Location**: `src/claudestep/cli/`
+**Location**: `src/claudechain/cli/`
 
 **Purpose**: Command-line interface and command orchestration.
 
@@ -277,7 +277,7 @@ To enable testability, we use **constructor injection** for infrastructure depen
 
 ```python
 # reviewer_management.py - BEFORE
-from claudestep.github_operations import get_open_prs
+from claudechain.github_operations import get_open_prs
 
 def check_reviewer_capacity(reviewer):
     # Hard-coded dependency on github_operations
@@ -336,14 +336,14 @@ def test_check_capacity():
 
 **Tasks**:
 - Create `pyproject.toml` with package metadata
-- Create `src/claudestep/` directory structure
+- Create `src/claudechain/` directory structure
 - Add package dependencies (if any)
 - Set up `pytest` configuration
 - Update `.gitignore` for `src/` structure
 
 **Files to create**:
 - `pyproject.toml`
-- `src/claudestep/__init__.py`
+- `src/claudechain/__init__.py`
 - `pytest.ini` or `pyproject.toml` test config
 
 **Validation**: `pip install -e .` works locally.
@@ -352,9 +352,9 @@ def test_check_capacity():
 
 **Technical Notes**:
 - Created `pyproject.toml` with modern Python packaging configuration (PEP 517/518)
-- Created `src/claudestep/` directory structure with `__init__.py`
+- Created `src/claudechain/` directory structure with `__init__.py`
 - Updated `.gitignore` to include build artifacts (`build/`, `dist/`, `*.egg-info/`, `.pytest_cache/`, etc.)
-- Validated package structure with `PYTHONPATH=src python3 -c "import claudestep"`
+- Validated package structure with `PYTHONPATH=src python3 -c "import claudechain"`
 - Validated `pyproject.toml` syntax using Python's `tomllib`
 - Note: Existing `pytest.ini` configuration is maintained alongside `pyproject.toml` pytest config
 - Note: `pip install -e .` requires virtual environment due to PEP 668 externally-managed environment restrictions on macOS, but package structure is confirmed valid via direct import test
@@ -364,7 +364,7 @@ def test_check_capacity():
 **Goal**: Extract pure domain models with no dependencies.
 
 **Tasks**:
-- Create `src/claudestep/domain/`
+- Create `src/claudechain/domain/`
 - Move `models.py` → `domain/models.py`
 - Move `exceptions.py` → `domain/exceptions.py`
 - Move `config.py` → `domain/config.py`
@@ -376,17 +376,17 @@ def test_check_capacity():
 **Status**: ✅ Completed
 
 **Technical Notes**:
-- Created `src/claudestep/domain/` directory structure with `__init__.py`
+- Created `src/claudechain/domain/` directory structure with `__init__.py`
 - Moved `models.py`, `exceptions.py`, and `config.py` to `domain/` layer
-- Updated all imports throughout codebase to use `claudestep.domain.*` paths:
-  - Updated 10 files in `scripts/claudestep/` (commands and modules)
+- Updated all imports throughout codebase to use `claudechain.domain.*` paths:
+  - Updated 10 files in `scripts/claudechain/` (commands and modules)
   - Updated 3 test files in `tests/`
-- Created compatibility symlinks in `src/claudestep/` for non-migrated modules to maintain backward compatibility:
-  - Symlinked all remaining `.py` files from `scripts/claudestep/`
+- Created compatibility symlinks in `src/claudechain/` for non-migrated modules to maintain backward compatibility:
+  - Symlinked all remaining `.py` files from `scripts/claudechain/`
   - Symlinked `commands/` and `prompts/` directories
 - **Note**: `domain/config.py` currently contains I/O operations (file reading) which violates domain layer principles. This is a known issue that will be addressed in a future refactoring. The file loading logic should be moved to infrastructure layer.
 - **Note**: `domain/models.py` imports `table_formatter` which is still in the old location. This will be refactored when `table_formatter` moves to `application/formatters/` in Phase 4.
-- Validated package structure with `PYTHONPATH=src:scripts python3 -c "import claudestep.domain.*"`
+- Validated package structure with `PYTHONPATH=src:scripts python3 -c "import claudechain.domain.*"`
 - All tests pass (107 passed, 5 failed due to unrelated prompt template path issues in test fixtures)
 
 ### Phase 3: Move Infrastructure Layer
@@ -394,7 +394,7 @@ def test_check_capacity():
 **Goal**: Organize external dependencies.
 
 **Tasks**:
-- Create `src/claudestep/infrastructure/`
+- Create `src/claudechain/infrastructure/`
 - Move `git_operations.py` → `infrastructure/git/operations.py`
 - Move `github_operations.py` → `infrastructure/github/operations.py`
 - Move `github_actions.py` → `infrastructure/github/actions.py`
@@ -407,7 +407,7 @@ def test_check_capacity():
 **Status**: ✅ Completed
 
 **Technical Notes**:
-- Created `src/claudestep/infrastructure/` directory structure with subdirectories:
+- Created `src/claudechain/infrastructure/` directory structure with subdirectories:
   - `infrastructure/git/` for Git operations
   - `infrastructure/github/` for GitHub CLI and Actions integrations
   - `infrastructure/filesystem/` for file I/O operations
@@ -416,16 +416,16 @@ def test_check_capacity():
   - `github_operations.py` → `infrastructure/github/operations.py`
   - `github_actions.py` → `infrastructure/github/actions.py`
 - Created new `infrastructure/filesystem/operations.py` with basic file I/O utilities (read_file, write_file, file_exists, find_file)
-- Updated all imports throughout codebase to use `claudestep.infrastructure.*` paths:
+- Updated all imports throughout codebase to use `claudechain.infrastructure.*` paths:
   - Updated imports in infrastructure layer files themselves (cross-dependencies)
-  - Updated 14 files in `scripts/claudestep/` (commands and modules)
+  - Updated 14 files in `scripts/claudechain/` (commands and modules)
   - Updated 1 test file in `tests/`
-  - Updated old `scripts/claudestep/` versions to use new paths for backward compatibility
-- Removed symlinks for moved infrastructure files from `src/claudestep/`:
+  - Updated old `scripts/claudechain/` versions to use new paths for backward compatibility
+- Removed symlinks for moved infrastructure files from `src/claudechain/`:
   - Removed `git_operations.py` symlink
   - Removed `github_operations.py` symlink
   - Removed `github_actions.py` symlink
-- Validated package structure with `PYTHONPATH=src:scripts python3 -c "import claudestep.infrastructure.*"`
+- Validated package structure with `PYTHONPATH=src:scripts python3 -c "import claudechain.infrastructure.*"`
 - All tests pass (107 passed, 5 failed due to pre-existing unrelated prompt template path issues)
 - Infrastructure layer now properly depends only on domain layer, following the layered architecture dependency rule
 
@@ -434,7 +434,7 @@ def test_check_capacity():
 **Goal**: Organize business logic services.
 
 **Tasks**:
-- Create `src/claudestep/application/` with subdirectories
+- Create `src/claudechain/application/` with subdirectories
 - Move modules to appropriate subdirectories:
   - `reviewer_management.py` → `application/services/`
   - `task_management.py` → `application/services/`
@@ -452,7 +452,7 @@ def test_check_capacity():
 **Status**: ✅ Completed
 
 **Technical Notes**:
-- Created `src/claudestep/application/` directory structure with subdirectories:
+- Created `src/claudechain/application/` directory structure with subdirectories:
   - `application/services/` for business logic services
   - `application/collectors/` for data collection services
   - `application/formatters/` for output formatting utilities
@@ -464,19 +464,19 @@ def test_check_capacity():
   - `artifact_operations.py` → `application/services/artifact_operations.py`
   - `statistics_collector.py` → `application/collectors/statistics_collector.py`
   - `table_formatter.py` → `application/formatters/table_formatter.py`
-- Updated all imports throughout codebase to use `claudestep.application.*` paths:
+- Updated all imports throughout codebase to use `claudechain.application.*` paths:
   - Updated imports in application layer files themselves (cross-dependencies within application layer)
-  - Updated 4 files in `scripts/claudestep/commands/` (discover_ready, prepare, finalize, statistics)
-  - Updated 7 files in `scripts/claudestep/` for backward compatibility (models, plus the old versions of moved files)
+  - Updated 4 files in `scripts/claudechain/commands/` (discover_ready, prepare, finalize, statistics)
+  - Updated 7 files in `scripts/claudechain/` for backward compatibility (models, plus the old versions of moved files)
   - Updated 4 test files in `tests/` (test_pr_operations, test_table_formatter, test_task_management, test_statistics)
-  - Fixed domain layer import: `src/claudestep/domain/models.py` now imports TableFormatter from application layer
-- Removed symlinks for moved application files from `src/claudestep/`:
+  - Fixed domain layer import: `src/claudechain/domain/models.py` now imports TableFormatter from application layer
+- Removed symlinks for moved application files from `src/claudechain/`:
   - Removed `reviewer_management.py`, `task_management.py`, `project_detection.py` symlinks
   - Removed `pr_operations.py`, `artifact_operations.py` symlinks
   - Removed `statistics_collector.py`, `table_formatter.py` symlinks
 - Updated test mock paths in `test_pr_operations.py` to use new module paths
 - **Note**: Domain layer now depends on application layer (models.py imports TableFormatter). This is a known architectural violation that should be addressed in a future refactoring - the formatting logic should be moved out of domain models.
-- **Note**: Old `scripts/claudestep/` versions remain as backward compatibility layer and will be removed in Phase 7
+- **Note**: Old `scripts/claudechain/` versions remain as backward compatibility layer and will be removed in Phase 7
 - Validated package structure with import tests
 - Test results: 107 tests passed, 5 pre-existing failures unrelated to Phase 4 (in test_prepare_summary.py due to prompt template path issues)
 - Application layer now properly organized into services, collectors, and formatters following the layered architecture
@@ -486,7 +486,7 @@ def test_check_capacity():
 **Goal**: Organize CLI commands.
 
 **Tasks**:
-- Create `src/claudestep/cli/`
+- Create `src/claudechain/cli/`
 - Move `commands/` → `cli/commands/`
 - Extract CLI parsing from `__main__.py` to `cli/parser.py`
 - Update `__main__.py` to wire dependencies and call CLI
@@ -498,23 +498,23 @@ def test_check_capacity():
 **Status**: ✅ Completed
 
 **Technical Notes**:
-- Created `src/claudestep/cli/` directory structure with subdirectories:
+- Created `src/claudechain/cli/` directory structure with subdirectories:
   - `cli/` for presentation layer root
   - `cli/commands/` for individual command handlers
-- Moved all command files from `scripts/claudestep/commands/` to `src/claudestep/cli/commands/`:
+- Moved all command files from `scripts/claudechain/commands/` to `src/claudechain/cli/commands/`:
   - `add_cost_comment.py`, `discover.py`, `discover_ready.py`
   - `extract_cost.py`, `finalize.py`, `notify_pr.py`
   - `prepare.py`, `prepare_summary.py`, `statistics.py`
-- Created new `src/claudestep/cli/parser.py` with CLI argument parsing logic extracted from `__main__.py`
-- Created new `src/claudestep/__main__.py` in the src directory that imports from `claudestep.cli.*`
-- Updated inter-command imports: `discover_ready.py` now imports from `claudestep.cli.commands.discover`
-- Updated `scripts/claudestep/__main__.py` to use new CLI module paths for backward compatibility
-- Updated test file `tests/test_prepare_summary.py` to import from `claudestep.cli.commands.prepare_summary`
-- Removed symlink to old commands directory from `src/claudestep/`
-- **Note**: The `prompts/` symlink from `src/claudestep/` to `scripts/claudestep/prompts` was later removed when prompt templates were moved to `src/claudestep/resources/prompts/` (see `docs/proposed/move-prompt-template-to-resources.md`)
+- Created new `src/claudechain/cli/parser.py` with CLI argument parsing logic extracted from `__main__.py`
+- Created new `src/claudechain/__main__.py` in the src directory that imports from `claudechain.cli.*`
+- Updated inter-command imports: `discover_ready.py` now imports from `claudechain.cli.commands.discover`
+- Updated `scripts/claudechain/__main__.py` to use new CLI module paths for backward compatibility
+- Updated test file `tests/test_prepare_summary.py` to import from `claudechain.cli.commands.prepare_summary`
+- Removed symlink to old commands directory from `src/claudechain/`
+- **Note**: The `prompts/` symlink from `src/claudechain/` to `scripts/claudechain/prompts` was later removed when prompt templates were moved to `src/claudechain/resources/prompts/` (see `docs/proposed/move-prompt-template-to-resources.md`)
 - Validated package structure with import tests and CLI help command
 - Test results: 107 tests passed, 5 pre-existing failures (in test_prepare_summary.py due to prompt template path issues, unrelated to Phase 5)
-- CLI works identically to pre-migration state, all commands accessible via `python3 -m claudestep <command>`
+- CLI works identically to pre-migration state, all commands accessible via `python3 -m claudechain <command>`
 - Presentation layer now properly organized following the layered architecture
 
 ### Phase 6: Update Tests
@@ -535,7 +535,7 @@ def test_check_capacity():
 **Status**: ✅ Completed
 
 **Technical Notes**:
-- Created comprehensive `tests/unit/` directory structure mirroring the `src/claudestep/` layered architecture:
+- Created comprehensive `tests/unit/` directory structure mirroring the `src/claudechain/` layered architecture:
   - `tests/unit/domain/` for domain layer tests
   - `tests/unit/infrastructure/` for infrastructure layer tests
   - `tests/unit/application/` with subdirectories for `services/`, `collectors/`, and `formatters/`
@@ -566,7 +566,7 @@ def test_check_capacity():
 - Update `docs/architecture/architecture.md`
 - Update README.md with new structure
 - Update examples if needed
-- Remove `scripts/claudestep` compatibility shim (if added)
+- Remove `scripts/claudechain` compatibility shim (if added)
 - **Validate CI is working**:
   - Push changes to a test branch
   - Open a PR to trigger CI workflows
@@ -590,10 +590,10 @@ def test_check_capacity():
   - `statistics/action.yml` - Updated PYTHONPATH to include both `src/` and `scripts/`
   - `discovery/action.yml` - Updated PYTHONPATH to include both `src/` and `scripts/`
 - Updated `docs/architecture/architecture.md` to document new layered architecture:
-  - Added documentation of `src/claudestep/` modern package structure
-  - Noted `scripts/claudestep/` as legacy compatibility layer
+  - Added documentation of `src/claudechain/` modern package structure
+  - Noted `scripts/claudechain/` as legacy compatibility layer
   - Updated directory structure examples to show both old and new locations
-  - Updated "Adding New Actions" section to reference new `src/claudestep/cli/` location
+  - Updated "Adding New Actions" section to reference new `src/claudechain/cli/` location
   - Updated "Module Organization" section with complete layered architecture breakdown
 - README.md did not require changes as it focuses on user-facing usage, not internal architecture
 - All PYTHONPATH configurations now use: `export PYTHONPATH="$ACTION_PATH/src:$ACTION_PATH/scripts:$PYTHONPATH"`
@@ -614,16 +614,16 @@ def test_check_capacity():
 - Run full test suite locally (`pytest tests/`)
 - Run integration tests (`pytest tests/integration/`)
 - Test all CLI commands manually:
-  - `python -m claudestep discover`
-  - `python -m claudestep discover-ready`
-  - `python -m claudestep prepare`
-  - `python -m claudestep finalize`
-  - `python -m claudestep statistics`
+  - `python -m claudechain discover`
+  - `python -m claudechain discover-ready`
+  - `python -m claudechain prepare`
+  - `python -m claudechain finalize`
+  - `python -m claudechain statistics`
 - Verify GitHub Actions workflows execute successfully in CI
 - **Run end-to-end tests against demo repository**:
-  - Use the existing `claude-step-demo` repository
+  - Use the existing `claude-chain-demo` repository
   - Follow the instructions in `docs/architecture/e2e-testing.md`
-  - Run `claude-step-demo/tests/integration/run_test.sh`
+  - Run `claude-chain-demo/tests/integration/run_test.sh`
   - Verify all workflow steps complete successfully
   - Verify PRs are created, summaries posted, and cleanup works
 - Verify all commands produce expected outputs
@@ -639,39 +639,39 @@ def test_check_capacity():
   - The 5 failures are in `test_prepare_summary.py` due to prompt template path issues
   - These failures existed before Phase 8 and are unrelated to the architecture migration
 - Validated all CLI commands work correctly:
-  - `python3 -m claudestep --help` - Shows all available commands
-  - `python3 -m claudestep discover --help` - Command-specific help works
-  - `python3 -m claudestep statistics --help` - Command-specific help works
+  - `python3 -m claudechain --help` - Shows all available commands
+  - `python3 -m claudechain discover --help` - Command-specific help works
+  - `python3 -m claudechain statistics --help` - Command-specific help works
   - All other commands (`discover-ready`, `prepare`, `finalize`, `prepare-summary`, `extract-cost`, `add-cost-comment`, `notify-pr`) are available
 - Verified build succeeds: all layer imports work correctly
-  - Domain layer: `claudestep.domain.models` imports successfully
-  - Infrastructure layer: `claudestep.infrastructure.git.operations` imports successfully
-  - Application layer: `claudestep.application.services.task_management` imports successfully
-  - CLI layer: `claudestep.cli.commands.discover` imports successfully
+  - Domain layer: `claudechain.domain.models` imports successfully
+  - Infrastructure layer: `claudechain.infrastructure.git.operations` imports successfully
+  - Application layer: `claudechain.application.services.task_management` imports successfully
+  - CLI layer: `claudechain.cli.commands.discover` imports successfully
 - Package structure is fully functional with new layered architecture
 - All commands maintain backward compatibility and function identically to pre-migration state
 - PYTHONPATH configuration `src:scripts` allows both new and legacy paths to work during transition
 
-**Note**: The end-to-end tests use the real demo repository (`gestrich/claude-step-demo`) to validate the complete workflow including GitHub Actions integration, PR creation, and AI-generated summaries. See `docs/architecture/e2e-testing.md` for detailed instructions. Full CI validation in GitHub Actions environment will occur when these changes are pushed to a test branch.
+**Note**: The end-to-end tests use the real demo repository (`gestrich/claude-chain-demo`) to validate the complete workflow including GitHub Actions integration, PR creation, and AI-generated summaries. See `docs/architecture/e2e-testing.md` for detailed instructions. Full CI validation in GitHub Actions environment will occur when these changes are pushed to a test branch.
 
 ## Example: Refactored Command
 
 ### Before (Current Structure)
 
 ```python
-# scripts/claudestep/commands/prepare.py
-from claudestep.config import load_config
-from claudestep.git_operations import create_branch
-from claudestep.github_operations import get_open_prs
-from claudestep.reviewer_management import find_available_reviewer
-from claudestep.task_management import find_next_task
+# scripts/claudechain/commands/prepare.py
+from claudechain.config import load_config
+from claudechain.git_operations import create_branch
+from claudechain.github_operations import get_open_prs
+from claudechain.reviewer_management import find_available_reviewer
+from claudechain.task_management import find_next_task
 
 def cmd_prepare(args, gh):
     # Mix of CLI, business logic, and I/O
-    config = load_config("claude-step/my-project/configuration.yml")
+    config = load_config("claude-chain/my-project/configuration.yml")
     reviewer = find_available_reviewer(config.reviewers)
-    task = find_next_task("claude-step/my-project/spec.md")
-    create_branch(f"claude-step-{task.index}")
+    task = find_next_task("claude-chain/my-project/spec.md")
+    create_branch(f"claude-chain-{task.index}")
     gh.write_output("task", task.description)
 ```
 
@@ -683,13 +683,13 @@ def cmd_prepare(args, gh):
 ### After (Proposed Structure)
 
 ```python
-# src/claudestep/cli/commands/prepare.py
-from claudestep.application.services.reviewer_management import ReviewerService
-from claudestep.application.services.task_management import TaskService
-from claudestep.application.services.project_detection import ProjectService
-from claudestep.infrastructure.git.operations import GitClient
-from claudestep.infrastructure.github.operations import GitHubClient
-from claudestep.infrastructure.github.actions import GitHubActionsClient
+# src/claudechain/cli/commands/prepare.py
+from claudechain.application.services.reviewer_management import ReviewerService
+from claudechain.application.services.task_management import TaskService
+from claudechain.application.services.project_detection import ProjectService
+from claudechain.infrastructure.git.operations import GitClient
+from claudechain.infrastructure.github.operations import GitHubClient
+from claudechain.infrastructure.github.actions import GitHubActionsClient
 
 def cmd_prepare(args, gh_actions: GitHubActionsClient):
     """Thin CLI command that orchestrates services."""
@@ -708,7 +708,7 @@ def cmd_prepare(args, gh_actions: GitHubActionsClient):
     task = task_service.find_next_task(project.spec_path)
 
     # Perform infrastructure operations
-    branch_name = f"claude-step-{project.name}-{task.index}"
+    branch_name = f"claude-chain-{project.name}-{task.index}"
     git.create_branch(branch_name)
 
     # Output results
@@ -783,13 +783,13 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "claudestep"
+name = "claudechain"
 version = "0.1.0"
 description = "Incremental AI-powered refactoring automation"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    { name = "ClaudeStep Contributors" }
+    { name = "ClaudeChain Contributors" }
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -813,7 +813,7 @@ dev = [
 ]
 
 [project.scripts]
-claudestep = "claudestep.__main__:main"
+claudechain = "claudechain.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -825,7 +825,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 
 [tool.coverage.run]
-source = ["src/claudestep"]
+source = ["src/claudechain"]
 omit = ["*/tests/*"]
 
 [tool.coverage.report]
@@ -866,17 +866,17 @@ target-version = "py311"
 During migration, keep old imports working:
 
 ```python
-# scripts/claudestep/models.py (compatibility shim)
+# scripts/claudechain/models.py (compatibility shim)
 """
-DEPRECATED: This module has moved to claudestep.domain.models
+DEPRECATED: This module has moved to claudechain.domain.models
 This import path is maintained for backward compatibility.
 """
-from claudestep.domain.models import *  # noqa: F401, F403
+from claudechain.domain.models import *  # noqa: F401, F403
 
 import warnings
 warnings.warn(
-    "Importing from 'claudestep.models' is deprecated. "
-    "Use 'claudestep.domain.models' instead.",
+    "Importing from 'claudechain.models' is deprecated. "
+    "Use 'claudechain.domain.models' instead.",
     DeprecationWarning,
     stacklevel=2
 )
@@ -888,8 +888,8 @@ This allows external code (if any) and GitHub Actions to continue working during
 
 Migration is complete when:
 
-- All code is in `src/claudestep/` with clear layer structure
-- No code remains in `scripts/claudestep/`
+- All code is in `src/claudechain/` with clear layer structure
+- No code remains in `scripts/claudechain/`
 - All imports use new paths
 - All tests pass (unit, integration, and end-to-end)
 - `pip install -e .` works
@@ -918,7 +918,7 @@ Migration is complete when:
 
 ## Questions for Discussion
 
-1. **Naming**: Should we rename the package (e.g., `claudestep` vs `claude_step`)?
+1. **Naming**: Should we rename the package (e.g., `claudechain` vs `claude_chain`)?
 2. **Services vs Functions**: Should application layer use classes (services) or functions?
 3. **Migration Timeline**: Do this all at once, or spread over multiple releases?
 4. **Breaking Changes**: Is it acceptable to break backward compatibility during migration?

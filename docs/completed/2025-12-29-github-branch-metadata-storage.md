@@ -2,9 +2,9 @@
 
 ## Background
 
-### ClaudeStep Overview
+### ClaudeChain Overview
 
-ClaudeStep is a GitHub Action that automates code refactoring by creating incremental pull requests for tasks defined in `spec.md` files. It runs Claude Code on individual steps, creating PRs one at a time, and automatically stages the next PR when one is merged.
+ClaudeChain is a GitHub Action that automates code refactoring by creating incremental pull requests for tasks defined in `spec.md` files. It runs Claude Code on individual steps, creating PRs one at a time, and automatically stages the next PR when one is merged.
 
 Key features:
 - Incremental automation with manageable review burden
@@ -14,7 +14,7 @@ Key features:
 
 ### Current State: Artifact-Based Storage (Legacy)
 
-Currently, ClaudeStep stores PR metadata in GitHub artifacts (see `src/claudestep/application/services/artifact_operations.py`). Each PR generates an artifact named `task-metadata-{project}-{index}.json` containing flat cost data.
+Currently, ClaudeChain stores PR metadata in GitHub artifacts (see `src/claudechain/application/services/artifact_operations.py`). Each PR generates an artifact named `task-metadata-{project}-{index}.json` containing flat cost data.
 
 **Issues with Current Model:**
 - Mixed concerns: PR info and cost data at same level
@@ -33,7 +33,7 @@ This data is used for:
 1. **Limited retention** - GitHub artifacts expire after 90 days (default)
 2. **Poor queryability** - Must iterate through all PRs, then all workflow runs, then download each artifact individually to build statistics
 3. **Performance** - The current `find_project_artifacts()` function:
-   - Queries all PRs with the `claudestep` label
+   - Queries all PRs with the `claudechain` label
    - Fetches up to 50 recent workflow runs
    - Downloads each artifact individually via GitHub API
    - Can take 30+ seconds for projects with 50+ PRs
@@ -44,11 +44,11 @@ This data is used for:
 Migrate to a branch-based storage system that:
 - Keeps all dependencies within the GitHub ecosystem (no external services)
 - Provides efficient querying capabilities for statistics and reporting
-- Stores metadata as JSON files in a dedicated `claudestep-metadata` branch per repository
-- Presents a REST-like API interface to Python clients (following ClaudeStep's layered architecture)
+- Stores metadata as JSON files in a dedicated `claudechain-metadata` branch per repository
+- Presents a REST-like API interface to Python clients (following ClaudeChain's layered architecture)
 - Enables the `statistics` action to generate reports in <5 seconds instead of 30+ seconds
 
-**Note:** Since ClaudeStep has not been released yet, no migration from artifacts is needed. The artifact upload/download code can remain in the codebase (unused) for potential future use, but all new implementations will use branch-based storage exclusively.
+**Note:** Since ClaudeChain has not been released yet, no migration from artifacts is needed. The artifact upload/download code can remain in the codebase (unused) for potential future use, but all new implementations will use branch-based storage exclusively.
 
 ## Data Model: Hybrid Approach
 
@@ -72,7 +72,7 @@ Migrate to a branch-based storage system that:
 ## Key Design Decisions
 
 ### Storage Strategy
-- Use a dedicated branch (e.g., `claudestep-metadata`) per repository
+- Use a dedicated branch (e.g., `claudechain-metadata`) per repository
 - Store project data as JSON files, one file per project
 - Each project JSON contains all associated PR metadata (matching current `TaskMetadata` schema)
 - Avoid binary formats (e.g., SQLite) to keep data human-readable in version control
@@ -81,7 +81,7 @@ Migrate to a branch-based storage system that:
 ### API Design Goals
 - REST-like interface from the Python client perspective
 - Hide GitHub/JSON implementation details behind the API layer
-- Follow ClaudeStep's layered architecture (domain → infrastructure → application → cli)
+- Follow ClaudeChain's layered architecture (domain → infrastructure → application → cli)
 - Support operations needed by current codebase:
   - `find_project_artifacts()` - List all PRs for a project (replacing artifact-based version)
   - `find_in_progress_tasks()` - Get open PR task indices (for capacity checking)
@@ -93,12 +93,12 @@ Migrate to a branch-based storage system that:
 
 The new storage system will replace artifact usage in:
 
-1. **`finalize` command** (`src/claudestep/cli/commands/finalize.py`)
+1. **`finalize` command** (`src/claudechain/cli/commands/finalize.py`)
    - Currently uploads artifacts after PR creation
    - Will write TaskMetadata to branch-based storage instead
    - Artifact upload code can be removed/commented out
 
-2. **`statistics` command** (`src/claudestep/cli/commands/statistics.py`)
+2. **`statistics` command** (`src/claudechain/cli/commands/statistics.py`)
    - Currently uses `find_project_artifacts()` to collect data
    - Will read from branch-based storage for 6x faster queries
 
@@ -106,7 +106,7 @@ The new storage system will replace artifact usage in:
    - Currently calls `find_in_progress_tasks()` and `get_reviewer_assignments()`
    - Will use equivalent functions from new metadata service
 
-4. **Statistics collector** (`src/claudestep/application/collectors/statistics_collector.py`)
+4. **Statistics collector** (`src/claudechain/application/collectors/statistics_collector.py`)
    - Currently builds `ProjectStats` and `TeamMemberStats` from artifacts
    - Will build from branch-based metadata instead
 
@@ -119,7 +119,7 @@ The new storage system will replace artifact usage in:
 - **Phase 2**: Data Structure & Schema Design - ✅ COMPLETED (2025-12-29)
 - **Phase 3**: Core API Layer Design - ✅ COMPLETED (2025-12-29)
 - **Phase 4**: GitHub Storage Backend Implementation - ✅ COMPLETED (2025-12-29)
-- **Phase 6**: Integration with Existing ClaudeStep Code - ✅ COMPLETED (2025-12-29)
+- **Phase 6**: Integration with Existing ClaudeChain Code - ✅ COMPLETED (2025-12-29)
 - **Phase 7**: Testing & Validation - ✅ COMPLETED (2025-12-29)
 
 ### Skipped Phases ⏭️
@@ -172,7 +172,7 @@ The new storage system will replace artifact usage in:
   - Returns full file paths, SHAs, and metadata
 
 **For our use case:**
-- Typical `claudestep-metadata` branch will have 5-20 project JSON files
+- Typical `claudechain-metadata` branch will have 5-20 project JSON files
 - Git Tree API is **perfect fit** - can list entire branch in one API call
 
 **File metadata available:**
@@ -308,7 +308,7 @@ The new storage system will replace artifact usage in:
 2. Use `PUT /repos/:owner/:repo/contents/projects/{project}.json` to write (with SHA)
 3. Use `GET /repos/:owner/:repo/git/trees/:branch_sha?recursive=1` to list all projects
 4. Implement retry logic for 409 Conflict errors (SHA mismatch)
-5. Store metadata on `claudestep-metadata` branch (create if not exists)
+5. Store metadata on `claudechain-metadata` branch (create if not exists)
 
 **Alternative Considered:** Git commands with branch checkout - **Rejected**
 - Reason: Unnecessary complexity, slower, requires managing git state
@@ -339,7 +339,7 @@ The new storage system will replace artifact usage in:
 
 **Decision:** Selected **Hybrid Model** approach with clear separation of task definitions and PR execution
 
-**No Backward Compatibility Required:** Since ClaudeStep has not been released yet, the implementation can move straight to this approach without migration from any previous format.
+**No Backward Compatibility Required:** Since ClaudeChain has not been released yet, the implementation can move straight to this approach without migration from any previous format.
 
 **Tasks Completed:**
 
@@ -389,7 +389,7 @@ The new storage system will replace artifact usage in:
          {
            "task_index": 1,
            "pr_number": 41,
-           "branch_name": "claudestep/auth-refactor/step-1",
+           "branch_name": "claudechain/auth-refactor/step-1",
            "reviewer": "alice",
            "pr_state": "merged",
            "created_at": "2025-12-28T10:15:00Z",
@@ -409,7 +409,7 @@ The new storage system will replace artifact usage in:
          {
            "task_index": 2,
            "pr_number": 42,
-           "branch_name": "claudestep/auth-refactor/step-2",
+           "branch_name": "claudechain/auth-refactor/step-2",
            "reviewer": "bob",
            "pr_state": "open",
            "created_at": "2025-12-29T09:30:00Z",
@@ -451,9 +451,9 @@ The new storage system will replace artifact usage in:
    - **Future**: Add optional index if 100+ projects become common
 
 3. **✅ Directory Organization Finalized**
-   - Final structure for `claudestep-metadata` branch:
+   - Final structure for `claudechain-metadata` branch:
      ```
-     claudestep-metadata/
+     claudechain-metadata/
      ├── projects/
      │   ├── my-refactor.json
      │   ├── another-project.json
@@ -495,7 +495,7 @@ The new storage system will replace artifact usage in:
    - Explains purpose and structure
    - Includes manual inspection commands
    - Privacy and security notes
-   - Ready to be placed in `claudestep-metadata` branch
+   - Ready to be placed in `claudechain-metadata` branch
 
 **Technical Notes:**
 
@@ -523,8 +523,8 @@ Ready to proceed to **Phase 3: Core API Layer Design**:
 - Design API compatible with current `artifact_operations.py` functions
 
 **Files To Be Created:**
-- `src/claudestep/domain/metadata_models.py` - New domain models (Task, PullRequest, AIOperation, Project)
-- Or update `src/claudestep/domain/models.py` - Add new models alongside existing ones
+- `src/claudechain/domain/metadata_models.py` - New domain models (Task, PullRequest, AIOperation, Project)
+- Or update `src/claudechain/domain/models.py` - Add new models alongside existing ones
 
 **Reference Documentation:**
 - `docs/proposed/github-model-alternatives.md` - Complete specification with examples and Python implementation
@@ -541,7 +541,7 @@ Ready to proceed to **Phase 3: Core API Layer Design**:
 
 **Tasks Completed:**
 
-1. **✅ Domain Models Enhanced** (`src/claudestep/domain/models.py`)
+1. **✅ Domain Models Enhanced** (`src/claudechain/domain/models.py`)
    - Found existing implementation of `Task`, `PullRequest`, `AIOperation`, and `HybridProjectMetadata` dataclasses
    - Added missing helper methods to `HybridProjectMetadata`:
      - `get_cost_by_model()` - Cost breakdown by AI model
@@ -555,8 +555,8 @@ Ready to proceed to **Phase 3: Core API Layer Design**:
    - All methods follow the specification in `docs/proposed/github-model-alternatives.md`
    - Enums already present: `TaskStatus`, `PRState`, `AIOperationType`
 
-2. **✅ Infrastructure Layer Created** (`src/claudestep/infrastructure/metadata/`)
-   - Created new module: `src/claudestep/infrastructure/metadata/operations.py`
+2. **✅ Infrastructure Layer Created** (`src/claudechain/infrastructure/metadata/`)
+   - Created new module: `src/claudechain/infrastructure/metadata/operations.py`
    - Defined abstract `MetadataStore` interface with methods:
      - `save_project(project: HybridProjectMetadata) -> None`
      - `get_project(project_name: str) -> Optional[HybridProjectMetadata]`
@@ -568,7 +568,7 @@ Ready to proceed to **Phase 3: Core API Layer Design**:
    - Comprehensive docstrings explaining purpose and error handling
    - Ready for implementation in Phase 4 (GitHubMetadataStore)
 
-3. **✅ Application Service Created** (`src/claudestep/application/services/metadata_service.py`)
+3. **✅ Application Service Created** (`src/claudechain/application/services/metadata_service.py`)
    - New file: `metadata_service.py` (394 lines)
    - Implements `MetadataService` class that wraps `MetadataStore`
    - Core CRUD operations:
@@ -590,7 +590,7 @@ Ready to proceed to **Phase 3: Core API Layer Design**:
      - `project_exists()`, `list_project_names()`
 
 **Technical Implementation:**
-- All code follows ClaudeStep's layered architecture pattern
+- All code follows ClaudeChain's layered architecture pattern
 - Domain models are pure data classes with no external dependencies
 - Infrastructure layer defines abstract interfaces
 - Application service provides business logic and use case implementations
@@ -606,12 +606,12 @@ Ready to proceed to **Phase 3: Core API Layer Design**:
   - `infrastructure/metadata/operations.py`: 0% coverage (expected - abstract interface)
 
 **Files Created:**
-- `src/claudestep/infrastructure/metadata/__init__.py`
-- `src/claudestep/infrastructure/metadata/operations.py`
-- `src/claudestep/application/services/metadata_service.py`
+- `src/claudechain/infrastructure/metadata/__init__.py`
+- `src/claudechain/infrastructure/metadata/operations.py`
+- `src/claudechain/application/services/metadata_service.py`
 
 **Files Modified:**
-- `src/claudestep/domain/models.py` - Added helper methods to `HybridProjectMetadata` and `PullRequest`
+- `src/claudechain/domain/models.py` - Added helper methods to `HybridProjectMetadata` and `PullRequest`
 
 **Expected Outcome Achieved:**
 - ✅ Hybrid model domain classes fully implemented with all helper methods
@@ -633,12 +633,12 @@ Ready to proceed to **Phase 3: Core API Layer Design**:
 
 **Tasks Completed:**
 
-1. **✅ Implement `GitHubMetadataStore`** (`src/claudestep/infrastructure/metadata/github_metadata_store.py`)
+1. **✅ Implement `GitHubMetadataStore`** (`src/claudechain/infrastructure/metadata/github_metadata_store.py`)
    - Fully implemented `MetadataStore` abstract interface (512 lines)
    - Uses GitHub Contents API via `gh_api_call()` and `run_gh_command()` (no git checkout required)
    - Leverages existing infrastructure:
-     - `src/claudestep/infrastructure/github/operations.py` - `gh_api_call()`, `run_gh_command()`
-     - `src/claudestep/infrastructure/git/operations.py` - Command wrappers
+     - `src/claudechain/infrastructure/github/operations.py` - `gh_api_call()`, `run_gh_command()`
+     - `src/claudechain/infrastructure/git/operations.py` - Command wrappers
    - All 7 interface methods implemented:
      - `save_project()` - Save/update project metadata with optimistic locking
      - `get_project()` - Get project by name
@@ -649,7 +649,7 @@ Ready to proceed to **Phase 3: Core API Layer Design**:
      - `delete_project()` - Delete project metadata
 
 2. **✅ Branch Management**
-   - `_ensure_branch_exists()` method creates `claudestep-metadata` branch on first write
+   - `_ensure_branch_exists()` method creates `claudechain-metadata` branch on first write
    - Creates branch from default branch (main/master)
    - Adds README.md with documentation explaining branch purpose
    - Gracefully handles existing branch (no error if already exists)
@@ -665,7 +665,7 @@ Ready to proceed to **Phase 3: Core API Layer Design**:
    - Automatic JSON serialization using `HybridProjectMetadata.to_dict()/from_dict()`
 
 4. **✅ Error Handling**
-   - Uses `GitHubAPIError` from `src/claudestep/domain/exceptions.py`
+   - Uses `GitHubAPIError` from `src/claudechain/domain/exceptions.py`
    - Comprehensive retry logic with exponential backoff (max 3 retries)
    - SHA conflict detection and automatic retry with fresh SHA
    - 404 handling for non-existent files/branches (not treated as errors)
@@ -690,7 +690,7 @@ Ready to proceed to **Phase 3: Core API Layer Design**:
 
 **File Structure Created:**
 ```
-claudestep-metadata/
+claudechain-metadata/
 ├── projects/
 │   ├── project1.json
 │   ├── project2.json
@@ -713,8 +713,8 @@ claudestep-metadata/
 - **Filter by date**: Read all files, filter in-memory (<2s for 20 projects)
 
 **Files Created/Modified:**
-- ✅ Created: `src/claudestep/infrastructure/metadata/github_metadata_store.py` (512 lines)
-- ✅ Modified: `src/claudestep/infrastructure/metadata/__init__.py` (added export)
+- ✅ Created: `src/claudechain/infrastructure/metadata/github_metadata_store.py` (512 lines)
+- ✅ Modified: `src/claudechain/infrastructure/metadata/__init__.py` (added export)
 
 **Build Status:**
 - ✅ All 493 existing tests pass
@@ -724,11 +724,11 @@ claudestep-metadata/
 
 **Expected Outcome Achieved:**
 - ✅ Working GitHub-backed storage implementation
-- ✅ Follows ClaudeStep's infrastructure patterns
+- ✅ Follows ClaudeChain's infrastructure patterns
 - ⏸️ Comprehensive unit tests (70%+ coverage) - Deferred to Phase 7
 
 **Next Steps:**
-Ready to proceed to **Phase 6: Integration with Existing ClaudeStep Code** - Update CLI commands to use new storage backend
+Ready to proceed to **Phase 6: Integration with Existing ClaudeChain Code** - Update CLI commands to use new storage backend
 
 ### Phase 5: Index Management (SKIPPED)
 
@@ -742,7 +742,7 @@ Ready to proceed to **Phase 6: Integration with Existing ClaudeStep Code** - Upd
 
 **Alternative Approach:** Use Git Tree API + in-memory filtering for all queries.
 
-### Phase 6: Integration with Existing ClaudeStep Code ✅
+### Phase 6: Integration with Existing ClaudeChain Code ✅
 
 **Status:** ✅ COMPLETED on 2025-12-29
 
@@ -752,7 +752,7 @@ Ready to proceed to **Phase 6: Integration with Existing ClaudeStep Code** - Upd
 
 **Tasks Completed:**
 
-1. **Update `finalize` Command** (`src/claudestep/cli/commands/finalize.py`)
+1. **Update `finalize` Command** (`src/claudechain/cli/commands/finalize.py`)
    - Replace artifact upload with branch-based metadata write
    - After PR creation, load Project from metadata store (or create if first task)
    - Add new PullRequest to project.pull_requests list
@@ -761,7 +761,7 @@ Ready to proceed to **Phase 6: Integration with Existing ClaudeStep Code** - Upd
    - Remove or comment out artifact upload code (keep for reference)
    - Update integration tests in `tests/integration/cli/commands/test_finalize.py`
 
-2. **Update `statistics` Command** (`src/claudestep/cli/commands/statistics.py`)
+2. **Update `statistics` Command** (`src/claudechain/cli/commands/statistics.py`)
    - Replace `find_project_artifacts()` calls with `metadata_service.list_all_projects()`
    - Work with Project objects (access project.tasks and project.pull_requests)
    - Use Project helper methods: `get_total_cost()`, `get_progress_stats()`, `get_completion_percentage()`
@@ -769,7 +769,7 @@ Ready to proceed to **Phase 6: Integration with Existing ClaudeStep Code** - Upd
    - Test performance improvement (should be <5 seconds vs. 30+ seconds)
    - Update integration tests in `tests/integration/cli/commands/test_statistics.py`
 
-3. **Update `prepare` Command** (`src/claudestep/cli/commands/prepare.py`)
+3. **Update `prepare` Command** (`src/claudechain/cli/commands/prepare.py`)
    - Update reviewer capacity checking to use hybrid model
    - Call `metadata_service.get_open_prs_by_reviewer()` to get reviewer workload
    - Select next pending task from project.tasks (filter by status == "pending")
@@ -777,7 +777,7 @@ Ready to proceed to **Phase 6: Integration with Existing ClaudeStep Code** - Upd
    - Verify capacity limits work correctly
    - Update integration tests in `tests/integration/cli/commands/test_prepare.py`
 
-4. **Update Statistics Collector** (`src/claudestep/application/collectors/statistics_collector.py`)
+4. **Update Statistics Collector** (`src/claudechain/application/collectors/statistics_collector.py`)
    - Modify to work with Project objects from branch-based storage
    - Iterate over project.pull_requests to count by reviewer
    - Use project.get_total_cost() for cost aggregation
@@ -791,7 +791,7 @@ Ready to proceed to **Phase 6: Integration with Existing ClaudeStep Code** - Upd
    - Remove imports of artifact operations from active code paths
 
 **Expected Outcome:**
-- All ClaudeStep commands use new branch-based storage exclusively
+- All ClaudeChain commands use new branch-based storage exclusively
 - Artifact code remains in codebase but unused
 - Integration tests pass with new backend
 - Performance improvements measurable in statistics action
@@ -804,19 +804,19 @@ All integration tasks have been successfully completed. The implementation uses 
 
 **Files Modified:**
 
-1. **`src/claudestep/cli/commands/finalize.py`**
+1. **`src/claudechain/cli/commands/finalize.py`**
    - Added imports for new metadata storage classes
    - After PR creation, creates `PullRequest` object with `AIOperation` entries
    - Calls `metadata_service.add_pr_to_project()` to save to GitHub metadata storage
    - Removed legacy artifact metadata creation code
 
-2. **`src/claudestep/application/collectors/statistics_collector.py`**
+2. **`src/claudechain/application/collectors/statistics_collector.py`**
    - Updated `collect_project_costs()` to use metadata storage exclusively
    - Updated `collect_project_stats()` to use `metadata_service.find_in_progress_tasks()`
    - Removed all artifact-based fallback logic
    - Removed unused imports (`find_project_artifacts`, `get_in_progress_task_indices`)
 
-3. **`src/claudestep/application/services/reviewer_management.py`**
+3. **`src/claudechain/application/services/reviewer_management.py`**
    - Updated `find_available_reviewer()` to use metadata storage for capacity checking
    - Reads open PRs from `project_metadata.pull_requests`
    - Removed artifact-based fallback logic
@@ -841,7 +841,7 @@ All integration tasks have been successfully completed. The implementation uses 
 
 The integration requires GitHub branch-based metadata storage to be available:
 
-1. **Fresh start**: No migration needed (ClaudeStep not yet released)
+1. **Fresh start**: No migration needed (ClaudeChain not yet released)
 2. **Clean implementation**: No legacy code paths to maintain
 3. **Immediate adoption**: All new PRs use metadata storage from day one
 
@@ -857,7 +857,7 @@ Ready to proceed to **Phase 7: Testing & Validation** - Add comprehensive unit t
 
 **Dependencies:** Can start unit tests alongside Phases 3-4, integration tests after Phase 6
 
-**Approach:** Follow ClaudeStep's testing conventions from `docs/architecture/testing-guide.md`.
+**Approach:** Follow ClaudeChain's testing conventions from `docs/architecture/testing-guide.md`.
 
 **Testing Strategy:**
 
@@ -887,8 +887,8 @@ Ready to proceed to **Phase 7: Testing & Validation** - Add comprehensive unit t
      - Test metadata storage and retrieval operations
 
 3. **End-to-End Tests** (`tests/e2e/`)
-   - Run full ClaudeStep workflow with new storage
-   - Create test projects in `claude-step/test-*`
+   - Run full ClaudeChain workflow with new storage
+   - Create test projects in `claude-chain/test-*`
    - Verify metadata persists across PR lifecycle
    - Test with real GitHub repository (recursive pattern)
    - Clean up test resources automatically
@@ -956,9 +956,9 @@ Ready to proceed to **Phase 7: Testing & Validation** - Add comprehensive unit t
 
 ## Architecture Alignment
 
-### ClaudeStep's Layered Architecture
+### ClaudeChain's Layered Architecture
 
-This implementation follows ClaudeStep's established architecture pattern:
+This implementation follows ClaudeChain's established architecture pattern:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -993,7 +993,7 @@ This implementation follows ClaudeStep's established architecture pattern:
 
 ### Python-First Approach
 
-Following ClaudeStep's convention:
+Following ClaudeChain's convention:
 - **Business logic in Python** - All metadata operations in Python modules
 - **Minimal YAML** - GitHub Action files just invoke Python commands
 - **Command dispatcher** - No migration command needed (fresh implementation)
@@ -1002,16 +1002,16 @@ Following ClaudeStep's convention:
 ### Key Files To Be Created/Modified
 
 **New Files:**
-- `src/claudestep/domain/models.py` - Add Task, PullRequest, AIOperation, Project models (or create new file)
-- `src/claudestep/infrastructure/metadata/operations.py` - MetadataStore abstract interface
-- `src/claudestep/infrastructure/metadata/github_metadata_store.py` - GitHub-backed implementation
-- `src/claudestep/application/services/metadata_service.py` - Application service layer
+- `src/claudechain/domain/models.py` - Add Task, PullRequest, AIOperation, Project models (or create new file)
+- `src/claudechain/infrastructure/metadata/operations.py` - MetadataStore abstract interface
+- `src/claudechain/infrastructure/metadata/github_metadata_store.py` - GitHub-backed implementation
+- `src/claudechain/application/services/metadata_service.py` - Application service layer
 
 **Modified Files:**
-- `src/claudestep/cli/commands/finalize.py` - Use new storage
-- `src/claudestep/cli/commands/statistics.py` - Use new storage
-- `src/claudestep/cli/commands/prepare.py` - Use new storage for capacity
-- `src/claudestep/application/services/artifact_operations.py` - Backward compat fallback
+- `src/claudechain/cli/commands/finalize.py` - Use new storage
+- `src/claudechain/cli/commands/statistics.py` - Use new storage
+- `src/claudechain/cli/commands/prepare.py` - Use new storage for capacity
+- `src/claudechain/application/services/artifact_operations.py` - Backward compat fallback
 
 ## Open Questions & Considerations
 
@@ -1023,7 +1023,7 @@ Following ClaudeStep's convention:
 
 ### Scalability
 - What happens when a project JSON file becomes very large (hundreds of PRs)?
-  - **Typical ClaudeStep project**: 20-50 tasks
+  - **Typical ClaudeChain project**: 20-50 tasks
   - **Large project**: 100-200 tasks
   - **Mitigation**: Archive completed PRs to separate files if needed
 - Should we implement pagination or file splitting?
@@ -1042,11 +1042,11 @@ Following ClaudeStep's convention:
   - **Yes** - Transparency is good; users can inspect/debug
   - Add `.nojekyll` to prevent GitHub Pages from processing it
 - Do we need tools for users to inspect/modify metadata manually?
-  - Nice-to-have: `claudestep metadata show <project>` command
+  - Nice-to-have: `claudechain metadata show <project>` command
   - Can always use `gh api` or clone the metadata branch
 - Documentation updates needed:
   - Mention metadata branch in README
-  - Explain that users can inspect `claudestep-metadata` branch for debugging
+  - Explain that users can inspect `claudechain-metadata` branch for debugging
   - Note that artifact upload code exists but is unused
 
 ### Security & Privacy
@@ -1112,7 +1112,7 @@ Following ClaudeStep's convention:
 
 ## Summary
 
-This migration from artifact-based to branch-based metadata storage addresses critical limitations in ClaudeStep's current architecture:
+This migration from artifact-based to branch-based metadata storage addresses critical limitations in ClaudeChain's current architecture:
 
 **Problems Solved:**
 1. ✅ Eliminates artifact retention limits (90-day expiration)
@@ -1126,19 +1126,19 @@ This migration from artifact-based to branch-based metadata storage addresses cr
 - **Scalability**: Single API call per project instead of per PR
 - **Reliability**: No data loss from artifact expiration
 - **Transparency**: Users can inspect metadata branch
-- **Maintainability**: Follows ClaudeStep's layered architecture
+- **Maintainability**: Follows ClaudeChain's layered architecture
 
 **Implementation Approach:**
 - 7 phases: Research (1-2) → Implementation (3-5) → Integration (6) → Testing (7)
 - No migration needed (app not yet released)
 - Artifact code kept in codebase but unused
 - Comprehensive testing (unit, integration, e2e)
-- Follows ClaudeStep's Python-first, layered architecture
+- Follows ClaudeChain's Python-first, layered architecture
 
 **Next Steps:**
 1. Begin with Phase 1: GitHub API research to determine optimal implementation approach
 2. Validate data schema design in Phase 2
-3. Implement in phases 3-5, following ClaudeStep's architecture patterns
+3. Implement in phases 3-5, following ClaudeChain's architecture patterns
 4. Integrate with existing commands in Phase 6
 5. Validate and test in Phase 7
 
@@ -1146,5 +1146,5 @@ This migration from artifact-based to branch-based metadata storage addresses cr
 - All 493+ existing tests pass
 - Statistics action completes in <5 seconds (6x improvement)
 - 85%+ test coverage maintained
-- Clean implementation following ClaudeStep architecture
+- Clean implementation following ClaudeChain architecture
 - Artifact code preserved but unused

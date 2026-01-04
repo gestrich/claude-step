@@ -16,16 +16,16 @@ The current E2E test architecture runs tests remotely via a GitHub Actions workf
 
 The `gh` CLI running locally uses your personal authentication (PAT or OAuth), not `GITHUB_TOKEN`. This means:
 - Pushes via GitHub API from local machine **DO trigger** push events
-- The `claudestep.yml` workflow will trigger naturally when we push spec files to `main-e2e`
+- The `claudechain.yml` workflow will trigger naturally when we push spec files to `main-e2e`
 
 ## Phases
 
 - [ ] Phase 1: Add `create_or_update_file` to Infrastructure Layer
 
-Add a new function to `src/claudestep/infrastructure/github/operations.py` that creates or updates files via the GitHub Contents API.
+Add a new function to `src/claudechain/infrastructure/github/operations.py` that creates or updates files via the GitHub Contents API.
 
 **Files to modify:**
-- `src/claudestep/infrastructure/github/operations.py` - Add `create_or_update_file()` function
+- `src/claudechain/infrastructure/github/operations.py` - Add `create_or_update_file()` function
 
 **Implementation details:**
 - Use `gh api` with PUT method to `/repos/{repo}/contents/{path}`
@@ -48,7 +48,7 @@ gh api /repos/{owner}/{repo}/contents/{path} \
 Add a function to create a new branch from an existing ref via the GitHub API.
 
 **Files to modify:**
-- `src/claudestep/infrastructure/github/operations.py` - Add `create_branch_from_ref()` function
+- `src/claudechain/infrastructure/github/operations.py` - Add `create_branch_from_ref()` function
 
 **Implementation details:**
 - Use `gh api` with POST to `/repos/{repo}/git/refs`
@@ -66,7 +66,7 @@ Modify the fixture to create test project files via GitHub API instead of local 
 **New approach:**
 1. Push current HEAD to `main-e2e` (handled by session fixture)
 2. Use `create_or_update_file()` to push `spec.md`, `configuration.yml`, `pr-template.md` to `main-e2e`
-3. This triggers `claudestep.yml` naturally via push event
+3. This triggers `claudechain.yml` naturally via push event
 4. Remove the explicit `trigger_workflow()` call (no longer needed)
 
 **Key changes:**
@@ -95,7 +95,7 @@ def setup_e2e_environment():
     subprocess.run(["git", "push", "origin", "HEAD:main-e2e", "--force"], check=True)
 
     # Clean up old PRs/branches
-    gh = GitHubHelper(repo="gestrich/claude-step")
+    gh = GitHubHelper(repo="gestrich/claude-chain")
     gh.cleanup_test_branches(...)
     gh.cleanup_test_prs(...)
 
@@ -152,7 +152,7 @@ Update documentation to reflect the new E2E test architecture.
 **New instructions:**
 ```bash
 # Run E2E tests locally
-cd /path/to/claude-step
+cd /path/to/claude-chain
 pytest tests/e2e/ -v
 
 # Prerequisites:
@@ -175,12 +175,12 @@ pytest tests/e2e/ -v
    ```
 
 **Manual verification:**
-1. Verify push to `main-e2e` triggers `claudestep.yml` (check GitHub Actions)
+1. Verify push to `main-e2e` triggers `claudechain.yml` (check GitHub Actions)
 2. Verify PRs are created with correct labels and comments
 3. Verify merge-triggered workflow still works
 
 **Success criteria:**
 - All unit tests pass
 - E2E tests complete successfully when run locally
-- `claudestep.yml` triggers naturally on push (not via `workflow_dispatch`)
+- `claudechain.yml` triggers naturally on push (not via `workflow_dispatch`)
 - No local git state corruption (tests only use GitHub API for file operations)

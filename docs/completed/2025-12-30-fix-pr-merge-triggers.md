@@ -2,9 +2,9 @@
 
 ## Background
 
-When ClaudeStep creates a PR, the spec.md file should be updated in the PR to mark the task checkbox as complete (`- [x]`). Then when the PR is merged to main, both the code changes AND the spec.md update are included.
+When ClaudeChain creates a PR, the spec.md file should be updated in the PR to mark the task checkbox as complete (`- [x]`). Then when the PR is merged to main, both the code changes AND the spec.md update are included.
 
-Additionally, after a PR is merged, the metadata in the `claudestep-metadata` branch should be updated to mark the PR as merged and the task as completed, and the next PR should be automatically created.
+Additionally, after a PR is merged, the metadata in the `claudechain-metadata` branch should be updated to mark the PR as merged and the task as completed, and the next PR should be automatically created.
 
 **Current Issues:**
 
@@ -36,7 +36,7 @@ Additionally, after a PR is merged, the metadata in the `claudestep-metadata` br
 Re-enable the `mark_task_complete()` function call in finalize.py so that spec.md is updated as part of the PR.
 
 **Implementation details:**
-- In `src/claudestep/cli/commands/finalize.py`:
+- In `src/claudechain/cli/commands/finalize.py`:
   - Remove the comment explaining why spec marking is disabled (lines 125-127)
   - Before creating the PR, fetch spec.md from base branch via `get_file_from_branch()`
   - Write spec content to local file in PR branch at `{project_path}/spec.md`
@@ -54,10 +54,10 @@ Re-enable the `mark_task_complete()` function call in finalize.py so that spec.m
 - When PR merges, the checked checkbox goes to main
 
 **Files to modify:**
-- `src/claudestep/cli/commands/finalize.py` (add spec.md fetching and marking logic)
+- `src/claudechain/cli/commands/finalize.py` (add spec.md fetching and marking logic)
 
 **Success criteria:**
-- PRs created by ClaudeStep include spec.md with the task checkbox checked
+- PRs created by ClaudeChain include spec.md with the task checkbox checked
 - When PR merges to main, spec.md on main has the checkbox checked
 
 **✅ Completed - Technical notes:**
@@ -73,16 +73,16 @@ Re-enable the `mark_task_complete()` function call in finalize.py so that spec.m
 
 - [x] Phase 2: Add pull_request trigger to e2e workflow
 
-Add the `pull_request: types: [closed]` trigger to `.github/workflows/claudestep.yml` so the workflow runs automatically after PRs are merged.
+Add the `pull_request: types: [closed]` trigger to `.github/workflows/claudechain.yml` so the workflow runs automatically after PRs are merged.
 
 **Implementation details:**
 - Add trigger configuration after `workflow_dispatch`
-- Extract project name from PR branch name (format: `claude-step-{project}-{index}`)
-- Only run for PRs with the `claudestep` label
+- Extract project name from PR branch name (format: `claude-chain-{project}-{index}`)
+- Only run for PRs with the `claudechain` label
 - Pass `github.event.pull_request.number` as `merged_pr_number` input to the action
 
 **Files to modify:**
-- `.github/workflows/claudestep.yml`
+- `.github/workflows/claudechain.yml`
 
 **Example from `examples/advanced/workflow.yml` (lines 28-64):**
 ```yaml
@@ -100,30 +100,30 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BRANCH="${{ github.head_ref }}"
-            PROJECT=$(echo "$BRANCH" | sed -E 's/^claude-step-([^-]+)-[0-9]+$/\1/')
+            PROJECT=$(echo "$BRANCH" | sed -E 's/^claude-chain-([^-]+)-[0-9]+$/\1/')
           fi
           echo "name=$PROJECT" >> $GITHUB_OUTPUT
 ```
 
 **Success criteria:**
-- Workflow triggers automatically when ClaudeStep PRs are merged
+- Workflow triggers automatically when ClaudeChain PRs are merged
 - Project name is correctly extracted from branch name
-- Only ClaudeStep PRs trigger the workflow (not unrelated PRs)
+- Only ClaudeChain PRs trigger the workflow (not unrelated PRs)
 
 **✅ Completed - Technical notes:**
-- Added `pull_request: types: [closed]` trigger after workflow_dispatch in `.github/workflows/claudestep.yml`
+- Added `pull_request: types: [closed]` trigger after workflow_dispatch in `.github/workflows/claudechain.yml`
 - Created "Determine project and checkout ref" step that:
   - Checks `github.event_name` to determine trigger type
   - For workflow_dispatch: uses manual inputs as before
-  - For pull_request: validates PR has 'claudestep' label, extracts project name from branch using sed regex, uses PR base_ref for both base_branch and checkout_ref
-  - Sets skip=true if PR doesn't have claudestep label to prevent running on unrelated PRs
+  - For pull_request: validates PR has 'claudechain' label, extracts project name from branch using sed regex, uses PR base_ref for both base_branch and checkout_ref
+  - Sets skip=true if PR doesn't have claudechain label to prevent running on unrelated PRs
   - Outputs: name (project), base_branch, and checkout_ref
-- Updated checkout step to use `steps.project.outputs.checkout_ref` and conditionally skip if not a claudestep PR
-- Updated ClaudeStep action call to:
+- Updated checkout step to use `steps.project.outputs.checkout_ref` and conditionally skip if not a claudechain PR
+- Updated ClaudeChain action call to:
   - Use `steps.project.outputs.name` for project_name
   - Use `steps.project.outputs.base_branch` for base_branch
   - Pass `github.event.pull_request.number` as merged_pr_number
-  - Conditionally skip if not a claudestep PR
+  - Conditionally skip if not a claudechain PR
 - YAML validated successfully using Python yaml.safe_load()
 - The workflow now supports both manual dispatch (original behavior) and automatic trigger on PR close (new behavior)
 
@@ -132,7 +132,7 @@ jobs:
 When a PR is merged and the workflow runs with `merged_pr_number`, update the metadata to mark the PR as merged and task as completed. This is a Python-level change in the prepare or finalize commands.
 
 **Implementation details:**
-- In `src/claudestep/cli/commands/prepare.py`:
+- In `src/claudechain/cli/commands/prepare.py`:
   - When `MERGED_PR_NUMBER` env var is set, this indicates we're handling a merged PR
   - Use `MetadataService.get_project()` to fetch project metadata
   - Find the PR by number in the metadata
@@ -143,8 +143,8 @@ When a PR is merged and the workflow runs with `merged_pr_number`, update the me
   - Continue to normal prepare logic to create next PR
 
 **Files to modify:**
-- `src/claudestep/cli/commands/prepare.py` (add merged PR detection and metadata update)
-- May need to add `update_pr_state()` method to `src/claudestep/application/services/metadata_service.py` if it doesn't exist
+- `src/claudechain/cli/commands/prepare.py` (add merged PR detection and metadata update)
+- May need to add `update_pr_state()` method to `src/claudechain/application/services/metadata_service.py` if it doesn't exist
 
 **Architecture layers:**
 - **CLI Layer**: `prepare.py` reads env var, orchestrates the update

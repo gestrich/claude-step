@@ -1,5 +1,5 @@
-"""End-to-end integration tests for ClaudeStep.
+"""End-to-end integration tests for ClaudeChain.
 
-This package contains E2E tests that validate the ClaudeStep action by running it
-against test projects within the claude-step repository itself (recursive workflow pattern).
+This package contains E2E tests that validate the ClaudeChain action by running it
+against test projects within the claude-chain repository itself (recursive workflow pattern).
 """

@@ -1,6 +1,6 @@
 ## Background
 
-The `StatisticsReport` class in [models.py](src/claudestep/domain/models.py) currently mixes data representation with formatting logic. It has multiple `format_*` methods that handle both Slack (`mrkdwn`) and GitHub markdown formats using a `for_slack: bool` flag pattern. This creates:
+The `StatisticsReport` class in [models.py](src/claudechain/domain/models.py) currently mixes data representation with formatting logic. It has multiple `format_*` methods that handle both Slack (`mrkdwn`) and GitHub markdown formats using a `for_slack: bool` flag pattern. This creates:
 
 1. **Tight coupling** - The report class knows about rendering details for multiple output formats
 2. **Code duplication** - Similar formatting logic appears in multiple places with conditional branching
@@ -17,7 +17,7 @@ This follows the existing pattern where `TableFormatter` already abstracts table
 
 - [x] Phase 1: Define report element types
 
-Create data classes in `src/claudestep/domain/formatters/report_elements.py` to represent abstract report components:
+Create data classes in `src/claudechain/domain/formatters/report_elements.py` to represent abstract report components:
 - `Header` - title text with level (h1, h2, h3)
 - `Table` - headers, rows, column alignments (leverage existing `TableFormatter`)
 - `TextBlock` - plain or styled text (bold, italic, code)
@@ -30,7 +30,7 @@ These are pure data classes with no formatting logic. They represent the semanti
 
 - [x] Phase 2: Create StatisticsReportData class
 
-Create `src/claudestep/domain/statistics_report_data.py` with a new class that builds report elements:
+Create `src/claudechain/domain/statistics_report_data.py` with a new class that builds report elements:
 - Extract current data-building logic from `StatisticsReport.format_for_slack()` and related methods
 - Return structured `Section`/`Table`/`List` elements instead of formatted strings
 - Methods like `build_leaderboard_section()`, `build_project_progress_section()`, `build_warnings_section()`
@@ -40,7 +40,7 @@ Key insight: Don't over-engineer. The `StatisticsReport` class should get new me
 
 - [x] Phase 3: Create ReportFormatter base and implementations
 
-Create formatters in `src/claudestep/domain/formatters/`:
+Create formatters in `src/claudechain/domain/formatters/`:
 - `report_formatter.py` - Base `ReportFormatter` class with abstract methods for each element type
 - `slack_formatter.py` - `SlackReportFormatter` implementation using Slack mrkdwn syntax
 - `markdown_formatter.py` - `MarkdownReportFormatter` implementation using GitHub-flavored markdown
@@ -49,7 +49,7 @@ Each formatter takes report elements and produces a string. The existing `Markdo
 
 - [x] Phase 4: Refactor StatisticsReport to use new system
 
-Update `StatisticsReport` in [models.py](src/claudestep/domain/models.py):
+Update `StatisticsReport` in [models.py](src/claudechain/domain/models.py):
 - Replace `format_for_slack()` with element-building methods
 - Replace `format_leaderboard()`, `format_warnings_section()`, `format_project_details()` similarly
 - Create thin wrapper methods that use formatters for backward compatibility if needed
@@ -57,15 +57,15 @@ Update `StatisticsReport` in [models.py](src/claudestep/domain/models.py):
 - Keep `format_for_pr_comment()` and `to_json()` as they serve different purposes
 
 Files to modify:
-- `src/claudestep/domain/models.py` - Refactor StatisticsReport
-- `src/claudestep/cli/commands/statistics.py` - Update to use new formatter pattern
+- `src/claudechain/domain/models.py` - Refactor StatisticsReport
+- `src/claudechain/cli/commands/statistics.py` - Update to use new formatter pattern
 
 - [x] Phase 5: Validation
 
 Run full test suite to ensure no regressions:
 ```bash
 export PYTHONPATH=src:scripts
-pytest tests/unit/ tests/integration/ -v --cov=src/claudestep --cov-report=term-missing
+pytest tests/unit/ tests/integration/ -v --cov=src/claudechain --cov-report=term-missing
 ```
 
 Verify:

@@ -15,11 +15,11 @@ Looking at the claude-code-action source code (`src/github/context.ts`), only th
 - `workflow_dispatch`
 - `workflow_run`
 
-ClaudeStep was designed to handle push events internally (the `parse_event.py` command correctly parses push events and detects projects from changed files). However, this is incompatible with the upstream `claude-code-action` limitation.
+ClaudeChain was designed to handle push events internally (the `parse_event.py` command correctly parses push events and detects projects from changed files). However, this is incompatible with the upstream `claude-code-action` limitation.
 
 **Solution:** Remove push event support from documentation and workflows. Use `pull_request: types: [closed]` instead, which:
 1. IS supported by `claude-code-action`
-2. Already has ClaudeStep logic to check for merged state and claudestep label
+2. Already has ClaudeChain logic to check for merged state and claudechain label
 3. Detects projects from changed files via the GitHub Compare API
 
 This is simpler than workarounds like re-triggering as workflow_dispatch.
@@ -31,7 +31,7 @@ This is simpler than workarounds like re-triggering as workflow_dispatch.
 Replace `push` trigger with `pull_request: types: [closed]`.
 
 **Files to modify:**
-- `.github/workflows/claudestep.yml`
+- `.github/workflows/claudechain.yml`
 
 **Changes:**
 ```yaml
@@ -40,7 +40,7 @@ on:
   workflow_dispatch:
     inputs:
       project_name:
-        description: 'Project name (folder under claude-step/)'
+        description: 'Project name (folder under claude-chain/)'
         required: true
         type: string
         default: 'e2e-test-project'
@@ -55,7 +55,7 @@ on:
   workflow_dispatch:
     inputs:
       project_name:
-        description: 'Project name (folder under claude-step/)'
+        description: 'Project name (folder under claude-chain/)'
         required: true
         type: string
         default: 'e2e-test-project'
@@ -83,7 +83,7 @@ Update all documentation to reflect the supported triggers.
 
 **Changes:**
 - Update workflow examples to show `pull_request: types: [closed]` instead of `push`
-- Add note explaining that PRs must have the `claudestep` label and be merged
+- Add note explaining that PRs must have the `claudechain` label and be merged
 - Remove any references to push event triggering
 - Search for "push" references in docs and update as needed
 
@@ -92,13 +92,13 @@ Update all documentation to reflect the supported triggers.
 Keep the push event handling code for potential future use.
 
 **Files unchanged:**
-- `src/claudestep/domain/github_event.py` - Has push event parsing
-- `src/claudestep/cli/commands/parse_event.py` - Has push event handling
+- `src/claudechain/domain/github_event.py` - Has push event parsing
+- `src/claudechain/cli/commands/parse_event.py` - Has push event handling
 
 **Rationale:**
-- Push events work correctly in ClaudeStep itself
+- Push events work correctly in ClaudeChain itself
 - The limitation is in the upstream `claude-code-action`
-- If `claude-code-action` adds push support later, ClaudeStep will already work
+- If `claude-code-action` adds push support later, ClaudeChain will already work
 - No harm in keeping the code
 
 - [x] Phase 4: Validation
@@ -110,7 +110,7 @@ pytest tests/integration/ -v
 ```
 
 **Manual verification:**
-1. Create a PR with the `claudestep` label in the test repository
+1. Create a PR with the `claudechain` label in the test repository
 2. Merge the PR
 3. Verify the workflow triggers and completes successfully
 
@@ -118,4 +118,4 @@ pytest tests/integration/ -v
 - All unit tests pass
 - All integration tests pass
 - Documentation accurately reflects supported triggers
-- PR merge with claudestep label triggers ClaudeStep successfully
+- PR merge with claudechain label triggers ClaudeChain successfully

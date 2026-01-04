@@ -1,19 +1,19 @@
-# ClaudeStep Metadata Branch
+# ClaudeChain Metadata Branch
 
-This branch stores metadata for pull requests created by ClaudeStep.
+This branch stores metadata for pull requests created by ClaudeChain.
 
 ## Purpose
 
-ClaudeStep is a GitHub Action that automates code refactoring by creating incremental pull requests. This branch contains:
+ClaudeChain is a GitHub Action that automates code refactoring by creating incremental pull requests. This branch contains:
 
-- **Task metadata**: Information about each PR created by ClaudeStep
-- **Project tracking**: Progress and statistics for each ClaudeStep project
+- **Task metadata**: Information about each PR created by ClaudeChain
+- **Project tracking**: Progress and statistics for each ClaudeChain project
 - **Cost tracking**: AI model usage costs for each PR
 
 ## Structure
 
 ```
-claudestep-metadata/
+claudechain-metadata/
 ├── projects/
 │   ├── project-1.json
 │   ├── project-2.json
@@ -60,7 +60,7 @@ Each project JSON file contains:
     {
       "task_index": 1,
       "pr_number": 42,
-      "branch_name": "claude-step-my-refactor-1",
+      "branch_name": "claude-chain-my-refactor-1",
       "reviewer": "alice",
       "pr_state": "merged",
       "created_at": "2025-01-10T14:22:00Z",
@@ -87,7 +87,7 @@ Each project JSON file contains:
 
 ## How It's Used
 
-ClaudeStep reads this metadata to:
+ClaudeChain reads this metadata to:
 
 1. **Check reviewer capacity**: Ensure reviewers aren't over their `maxOpenPRs` limit
 2. **Generate statistics**: Weekly team reports showing progress and contributions
@@ -100,29 +100,29 @@ You can view this metadata using:
 
 ```bash
 # List all projects
-git ls-tree -r --name-only claudestep-metadata projects/
+git ls-tree -r --name-only claudechain-metadata projects/
 
 # View a specific project
-git show claudestep-metadata:projects/my-project.json
+git show claudechain-metadata:projects/my-project.json
 
 # Clone just the metadata branch
-git clone --branch claudestep-metadata --single-branch <repo-url>
+git clone --branch claudechain-metadata --single-branch <repo-url>
 ```
 
-Or browse directly on GitHub: Switch to the `claudestep-metadata` branch in the GitHub UI.
+Or browse directly on GitHub: Switch to the `claudechain-metadata` branch in the GitHub UI.
 
 ## Schema Documentation
 
 For complete schema documentation, see:
 - Main repo: `docs/metadata-schema.md`
-- GitHub: https://github.com/anthropics/claude-step/blob/main/docs/metadata-schema.md
+- GitHub: https://github.com/anthropics/claude-chain/blob/main/docs/metadata-schema.md
 
 ## Maintenance
 
-- **Automatic updates**: ClaudeStep updates this branch automatically after each PR
+- **Automatic updates**: ClaudeChain updates this branch automatically after each PR
 - **Manual edits**: Not recommended (changes may be overwritten)
 - **Branch protection**: This branch typically has no protection rules
-- **Deletion**: Deleting this branch will cause ClaudeStep to recreate it with empty state
+- **Deletion**: Deleting this branch will cause ClaudeChain to recreate it with empty state
 
 ## Privacy Note
 
@@ -140,5 +140,5 @@ The metadata contains:
 ## Questions?
 
 For more information:
-- ClaudeStep Documentation: https://github.com/anthropics/claude-step
-- Report Issues: https://github.com/anthropics/claude-step/issues
+- ClaudeChain Documentation: https://github.com/anthropics/claude-chain
+- Report Issues: https://github.com/anthropics/claude-chain/issues

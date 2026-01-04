@@ -34,7 +34,7 @@ class TestProjectManager:
             repo_root = Path(result.stdout.strip())
 
         self.repo_root = repo_root
-        self.projects_dir = repo_root / "claude-step"
+        self.projects_dir = repo_root / "claude-chain"
 
     def create_test_project(
         self,

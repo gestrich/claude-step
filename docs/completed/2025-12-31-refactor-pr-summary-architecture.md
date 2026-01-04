@@ -26,9 +26,9 @@ From `docs/general-architecture/python-style.md`:
 
 - [x] Phase 1: Create domain models for cost and summary data ✅
 
-Create two new domain models in `src/claudestep/domain/`:
+Create two new domain models in `src/claudechain/domain/`:
 
-**1. Create `src/claudestep/domain/cost_breakdown.py`:**
+**1. Create `src/claudechain/domain/cost_breakdown.py`:**
 ```python
 @dataclass
 class CostBreakdown:
@@ -69,7 +69,7 @@ class CostBreakdown:
         pass
 ```
 
-**2. Create `src/claudestep/domain/summary_file.py`:**
+**2. Create `src/claudechain/domain/summary_file.py`:**
 ```python
 @dataclass
 class SummaryFile:
@@ -106,8 +106,8 @@ class SummaryFile:
 ```
 
 **Files to create:**
-- `src/claudestep/domain/cost_breakdown.py`
-- `src/claudestep/domain/summary_file.py`
+- `src/claudechain/domain/cost_breakdown.py`
+- `src/claudechain/domain/summary_file.py`
 
 **Why domain layer:**
 - These models encapsulate parsing logic (file I/O, JSON parsing)
@@ -116,11 +116,11 @@ class SummaryFile:
 - They follow "parse once into well-formed models" principle
 
 **Technical Notes (Phase 1 Completion):**
-- Created `src/claudestep/domain/cost_breakdown.py` with full implementation
+- Created `src/claudechain/domain/cost_breakdown.py` with full implementation
   - Moved logic from `_extract_cost_from_file()` in `prepare_summary.py`
   - Moved logic from `extract_cost_from_execution()` in `extract_cost.py`
   - Moved logic from `format_unified_comment()` in `post_pr_comment.py` (cost section)
-- Created `src/claudestep/domain/summary_file.py` with full implementation
+- Created `src/claudechain/domain/summary_file.py` with full implementation
   - Encapsulates file reading logic from `cmd_post_pr_comment`
   - Implements `format_with_cost()` combining summary and cost breakdown
 - Both files compile successfully with Python 3
@@ -128,10 +128,10 @@ class SummaryFile:
 
 - [x] Phase 2: Create constants file for shared paths ✅
 
-Create `src/claudestep/domain/constants.py` to define magic strings once:
+Create `src/claudechain/domain/constants.py` to define magic strings once:
 
 ```python
-"""Shared constants used across ClaudeStep."""
+"""Shared constants used across ClaudeChain."""
 
 # PR Summary file path (used by action.yml and commands)
 PR_SUMMARY_FILE_PATH = "/tmp/pr-summary.md"
@@ -140,10 +140,10 @@ PR_SUMMARY_FILE_PATH = "/tmp/pr-summary.md"
 ```
 
 **Files to create:**
-- `src/claudestep/domain/constants.py`
+- `src/claudechain/domain/constants.py`
 
 **Files to update:**
-- `src/claudestep/resources/prompts/summary_prompt.md` - Replace hardcoded `/tmp/pr-summary.md` with reference to constant (in code that uses it)
+- `src/claudechain/resources/prompts/summary_prompt.md` - Replace hardcoded `/tmp/pr-summary.md` with reference to constant (in code that uses it)
 - Eventually `action.yml` - Will use constant via command outputs (Phase 5)
 
 **Why:**
@@ -152,14 +152,14 @@ PR_SUMMARY_FILE_PATH = "/tmp/pr-summary.md"
 - Self-documenting code
 
 **Technical Notes (Phase 2 Completion):**
-- Added `PR_SUMMARY_FILE_PATH = "/tmp/pr-summary.md"` constant to existing `src/claudestep/domain/constants.py` file
+- Added `PR_SUMMARY_FILE_PATH = "/tmp/pr-summary.md"` constant to existing `src/claudechain/domain/constants.py` file
 - The constants file already existed with other domain constants (DEFAULT_PR_LABEL, DEFAULT_BASE_BRANCH, etc.)
 - File compiles successfully with Python 3
 - Constant is now available for use in future phases (Phase 3, 4, and 5 will consume this constant)
 
 - [x] Phase 3: Refactor prepare_summary.py to use domain models and explicit parameters ✅
 
-**Update `src/claudestep/cli/commands/prepare_summary.py`:**
+**Update `src/claudechain/cli/commands/prepare_summary.py`:**
 
 Change from:
 ```python
@@ -187,8 +187,8 @@ def cmd_prepare_summary(
     All parameters passed explicitly, no environment variable access.
     """
     # Use domain models
-    from claudestep.domain.cost_breakdown import CostBreakdown
-    from claudestep.domain.constants import PR_SUMMARY_FILE_PATH
+    from claudechain.domain.cost_breakdown import CostBreakdown
+    from claudechain.domain.constants import PR_SUMMARY_FILE_PATH
 
     # Parse cost breakdown using domain model
     cost_breakdown = CostBreakdown.from_execution_files(
@@ -205,7 +205,7 @@ def cmd_prepare_summary(
     # ... rest of logic
 ```
 
-**Update `src/claudestep/__main__.py`:**
+**Update `src/claudechain/__main__.py`:**
 
 Add adapter code to read environment variables and pass to command:
 ```python
@@ -223,8 +223,8 @@ elif args.command == "prepare-summary":
 ```
 
 **Files to update:**
-- `src/claudestep/cli/commands/prepare_summary.py` - Signature and implementation
-- `src/claudestep/__main__.py` - Add adapter code for prepare-summary command
+- `src/claudechain/cli/commands/prepare_summary.py` - Signature and implementation
+- `src/claudechain/__main__.py` - Add adapter code for prepare-summary command
 
 **Delete helper functions:**
 - Remove `_extract_cost_from_file()` function (logic moved to `CostBreakdown._extract_from_file()`)
@@ -248,7 +248,7 @@ elif args.command == "prepare-summary":
 
 - [x] Phase 4: Refactor post_pr_comment.py to use domain models ✅
 
-**Update `src/claudestep/cli/commands/post_pr_comment.py`:**
+**Update `src/claudechain/cli/commands/post_pr_comment.py`:**
 
 Change from:
 ```python
@@ -278,8 +278,8 @@ def cmd_post_pr_comment(
 
     All parameters passed explicitly, no environment variable access.
     """
-    from claudestep.domain.summary_file import SummaryFile
-    from claudestep.domain.cost_breakdown import CostBreakdown
+    from claudechain.domain.summary_file import SummaryFile
+    from claudechain.domain.cost_breakdown import CostBreakdown
 
     # Use domain models for parsing
     summary = SummaryFile.from_file(summary_file_path)
@@ -295,7 +295,7 @@ def cmd_post_pr_comment(
     # ... rest of logic
 ```
 
-**Update `src/claudestep/__main__.py`:**
+**Update `src/claudechain/__main__.py`:**
 
 Add adapter code:
 ```python
@@ -313,8 +313,8 @@ elif args.command == "post-pr-comment":
 ```
 
 **Files to update:**
-- `src/claudestep/cli/commands/post_pr_comment.py` - Signature and implementation
-- `src/claudestep/__main__.py` - Add adapter code for post-pr-comment command
+- `src/claudechain/cli/commands/post_pr_comment.py` - Signature and implementation
+- `src/claudechain/__main__.py` - Add adapter code for post-pr-comment command
 
 **Delete helper functions:**
 - Remove `format_unified_comment()` function (logic moved to `SummaryFile.format_with_cost()`)
@@ -340,7 +340,7 @@ elif args.command == "post-pr-comment":
 
 - [x] Phase 5: Update summary_prompt.md to reference constant ✅
 
-**Update `src/claudestep/resources/prompts/summary_prompt.md`:**
+**Update `src/claudechain/resources/prompts/summary_prompt.md`:**
 
 The prompt template can't directly reference Python constants, but we can make the path a template variable:
 
@@ -356,7 +356,7 @@ To:
 
 **Update `prepare_summary.py` template substitution:**
 ```python
-from claudestep.domain.constants import PR_SUMMARY_FILE_PATH
+from claudechain.domain.constants import PR_SUMMARY_FILE_PATH
 
 # Load and substitute template
 summary_prompt = template.replace("{TASK_DESCRIPTION}", task)
@@ -374,8 +374,8 @@ env:
 ```
 
 **Files to update:**
-- `src/claudestep/resources/prompts/summary_prompt.md` - Use template variable
-- `src/claudestep/cli/commands/prepare_summary.py` - Add template substitution
+- `src/claudechain/resources/prompts/summary_prompt.md` - Use template variable
+- `src/claudechain/cli/commands/prepare_summary.py` - Add template substitution
 - `action.yml` - Use output instead of hardcoded path
 
 **Why:**
@@ -387,7 +387,7 @@ env:
 - Updated `summary_prompt.md` to use `{SUMMARY_FILE_PATH}` template variable in two locations (lines 17 and 29)
 - Added template substitution in `prepare_summary.py` at line 74: `summary_prompt = summary_prompt.replace("{SUMMARY_FILE_PATH}", PR_SUMMARY_FILE_PATH)`
 - Updated `action.yml` line 190 to use `${{ steps.prepare_summary.outputs.summary_file }}` instead of hardcoded `/tmp/pr-summary.md`
-- The `PR_SUMMARY_FILE_PATH` constant is imported from `claudestep.domain.constants` (already present from Phase 3)
+- The `PR_SUMMARY_FILE_PATH` constant is imported from `claudechain.domain.constants` (already present from Phase 3)
 - All 9 integration tests pass successfully
 - No build errors, Python compilation successful
 
@@ -396,16 +396,16 @@ env:
 Now that all cost extraction logic lives in `CostBreakdown` domain model, the `extract_cost.py` file is no longer needed.
 
 **Files to delete:**
-- `src/claudestep/cli/commands/extract_cost.py`
+- `src/claudechain/cli/commands/extract_cost.py`
 
 **Files to check for imports:**
-- Search for `from claudestep.cli.commands.extract_cost import` and verify no remaining imports exist
+- Search for `from claudechain.cli.commands.extract_cost import` and verify no remaining imports exist
 - The only import should have been in `prepare_summary.py`, which we already refactored
 
 **Verification:**
 ```bash
 # Should return no results after this phase
-grep -r "from claudestep.cli.commands.extract_cost" src/
+grep -r "from claudechain.cli.commands.extract_cost" src/
 grep -r "import extract_cost" src/
 ```
 
@@ -416,9 +416,9 @@ grep -r "import extract_cost" src/
 
 **Technical Notes (Phase 6 Completion):**
 - Verified no imports of `extract_cost.py` exist in source code
-  - `grep -r "from claudestep.cli.commands.extract_cost" src/` returned no results
+  - `grep -r "from claudechain.cli.commands.extract_cost" src/` returned no results
   - `grep -r "import extract_cost" src/` returned no results
-- Deleted `src/claudestep/cli/commands/extract_cost.py` successfully
+- Deleted `src/claudechain/cli/commands/extract_cost.py` successfully
 - Cleaned up `__pycache__` artifact for the deleted file
 - All 30 integration tests pass (9 prepare_summary + 21 post_pr_comment)
 - Python compilation succeeds for entire codebase
@@ -511,7 +511,7 @@ grep -r "extract_cost" tests/
 
 **5. Check coverage:**
 ```bash
-PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=term-missing
+PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudechain --cov-report=term-missing
 ```
 
 **6. Manual verification:**

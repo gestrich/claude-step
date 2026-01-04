@@ -4,7 +4,7 @@
 
 Currently, `parse_event.py` tries to determine the project name from:
 1. The `project_name` workflow input (for `workflow_dispatch`)
-2. The branch name pattern `claude-step-{project}-{hash}` (for `pull_request` events)
+2. The branch name pattern `claude-chain-{project}-{hash}` (for `pull_request` events)
 
 For **push events** (triggered when a PR is merged or code is pushed directly to main), neither of these work:
 - No `project_name` input is provided
@@ -12,7 +12,7 @@ For **push events** (triggered when a PR is merged or code is pushed directly to
 
 This causes the error: "Could not determine project name from branch pattern" and the workflow skips.
 
-**The Solution**: Use the GitHub Compare API to detect which spec files changed between `before_sha` and `after_sha`, then extract the project name from the file path (`claude-step/{project}/spec.md`).
+**The Solution**: Use the GitHub Compare API to detect which spec files changed between `before_sha` and `after_sha`, then extract the project name from the file path (`claude-chain/{project}/spec.md`).
 
 **Key Design Decisions**:
 1. Use this approach for ALL event types (push, workflow_dispatch without project_name, etc.) for consistency
@@ -23,10 +23,10 @@ This causes the error: "Could not determine project name from branch pattern" an
 
 - [x] Phase 1: Add `compare_commits` function to infrastructure layer
 
-Add a new function to `src/claudestep/infrastructure/github/operations.py` that calls the GitHub Compare API.
+Add a new function to `src/claudechain/infrastructure/github/operations.py` that calls the GitHub Compare API.
 
 **Files modified:**
-- `src/claudestep/infrastructure/github/operations.py` - Added `compare_commits` function
+- `src/claudechain/infrastructure/github/operations.py` - Added `compare_commits` function
 - `tests/unit/infrastructure/github/test_operations.py` - Added `TestCompareCommits` class with 7 test cases
 
 **Technical notes:**
@@ -65,11 +65,11 @@ def compare_commits(repo: str, base: str, head: str) -> List[str]:
 Add a helper function that takes a list of changed files and extracts the project name.
 
 **Files modified:**
-- `src/claudestep/infrastructure/github/operations.py` - Added `detect_project_from_diff` function
+- `src/claudechain/infrastructure/github/operations.py` - Added `detect_project_from_diff` function
 - `tests/unit/infrastructure/github/test_operations.py` - Added `TestDetectProjectFromDiff` class with 10 test cases
 
 **Technical notes:**
-- Function uses regex pattern `^claude-step/([^/]+)/spec\.md$` to match spec files
+- Function uses regex pattern `^claude-chain/([^/]+)/spec\.md$` to match spec files
 - Returns project name when exactly one spec.md is changed, None if none changed
 - Raises `ValueError` with sorted project names when multiple spec files are modified
 - Comprehensive test coverage including: single/no/multiple spec files, wrong directory structures, empty lists, project names with hyphens/underscores
@@ -79,7 +79,7 @@ Add a helper function that takes a list of changed files and extracts the projec
 def detect_project_from_diff(changed_files: List[str]) -> Optional[str]:
     """Extract project name from changed spec files.
 
-    Looks for files matching pattern: claude-step/{project}/spec.md
+    Looks for files matching pattern: claude-chain/{project}/spec.md
 
     Args:
         changed_files: List of file paths from compare_commits
@@ -90,7 +90,7 @@ def detect_project_from_diff(changed_files: List[str]) -> Optional[str]:
     Raises:
         ValueError: If multiple different spec.md files were changed
     """
-    spec_pattern = re.compile(r"^claude-step/([^/]+)/spec\.md$")
+    spec_pattern = re.compile(r"^claude-chain/([^/]+)/spec\.md$")
     projects = set()
 
     for file_path in changed_files:
@@ -108,10 +108,10 @@ def detect_project_from_diff(changed_files: List[str]) -> Optional[str]:
 
 - [x] Phase 3: Update `GitHubEventContext` to support project detection from diff
 
-Modify `src/claudestep/domain/github_event.py` to use the new approach.
+Modify `src/claudechain/domain/github_event.py` to use the new approach.
 
 **Files modified:**
-- `src/claudestep/domain/github_event.py` - Removed `extract_project_from_branch()`, added `get_changed_files_context()`
+- `src/claudechain/domain/github_event.py` - Removed `extract_project_from_branch()`, added `get_changed_files_context()`
 - `tests/unit/domain/test_github_event.py` - Replaced `TestGitHubEventContextProjectExtraction` with `TestGitHubEventContextChangedFilesContext`
 
 **Technical notes:**
@@ -148,8 +148,8 @@ def get_changed_files_context(self) -> Optional[Tuple[str, str]]:
 Modify the command to use the new detection approach.
 
 **Files modified:**
-- `src/claudestep/cli/commands/parse_event.py` - Updated project detection logic
-- `src/claudestep/domain/github_event.py` - Extended `get_changed_files_context()` to support pull_request events
+- `src/claudechain/cli/commands/parse_event.py` - Updated project detection logic
+- `src/claudechain/domain/github_event.py` - Extended `get_changed_files_context()` to support pull_request events
 - `tests/integration/cli/commands/test_parse_event.py` - Updated tests to use mocked API calls
 - `tests/unit/domain/test_github_event.py` - Updated tests for new pull_request support
 
@@ -230,7 +230,7 @@ Ensure the parse-event step has access to the repository name for the API call.
     GITHUB_REPOSITORY: ${{ github.repository }}
   run: |
     export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
-    python3 -m claudestep parse-event
+    python3 -m claudechain parse-event
 ```
 
 - [x] Phase 6: Revert E2E test workflow_dispatch changes
@@ -290,7 +290,7 @@ Add comprehensive unit tests for the new infrastructure and detection functions.
 
 **Manual verification (optional):**
 1. Push a spec file to `main-e2e` and verify workflow detects the project
-2. Merge a ClaudeStep PR and verify the next task is triggered
+2. Merge a ClaudeChain PR and verify the next task is triggered
 
 **Success criteria:**
 - All unit tests pass

@@ -2,35 +2,35 @@
 
 ## Background
 
-During e2e testing, the ClaudeStep Weekly statistics notifications are successfully posted to Slack, but PR creation notifications are not appearing. This issue occurs because:
+During e2e testing, the ClaudeChain Weekly statistics notifications are successfully posted to Slack, but PR creation notifications are not appearing. This issue occurs because:
 
-1. **Statistics notifications work** because the `claudestep-statistics.yml` workflow sets `SLACK_WEBHOOK_URL` as a job-level environment variable (line 22), and the `slackapi/slack-github-action@v2` automatically picks it up when no explicit `webhook:` parameter is provided.
+1. **Statistics notifications work** because the `claudechain-statistics.yml` workflow sets `SLACK_WEBHOOK_URL` as a job-level environment variable (line 22), and the `slackapi/slack-github-action@v2` automatically picks it up when no explicit `webhook:` parameter is provided.
 
 2. **PR notifications don't work** because:
    - The main `action.yml` requires `slack_webhook_url` to be passed as an action input parameter
    - This input is then passed explicitly to the Slack action via `webhook: ${{ steps.prepare.outputs.slack_webhook_url }}`
-   - The `claudestep-test.yml` workflow does NOT pass the `slack_webhook_url` input to the action
+   - The `claudechain-test.yml` workflow does NOT pass the `slack_webhook_url` input to the action
    - Therefore, `steps.prepare.outputs.slack_webhook_url` is empty
    - The condition `steps.prepare.outputs.slack_webhook_url != ''` fails
    - The Slack notification step is silently skipped
 
-The fix is straightforward: pass the `slack_webhook_url` input to the ClaudeStep action in the test workflow, just like we pass other secrets (anthropic_api_key, github_token).
+The fix is straightforward: pass the `slack_webhook_url` input to the ClaudeChain action in the test workflow, just like we pass other secrets (anthropic_api_key, github_token).
 
 ## Phases
 
-- [x] Phase 1: Update claudestep-test.yml workflow
+- [x] Phase 1: Update claudechain-test.yml workflow
 
-Modify `.github/workflows/claudestep-test.yml` to pass the Slack webhook URL as an input to the ClaudeStep action.
+Modify `.github/workflows/claudechain-test.yml` to pass the Slack webhook URL as an input to the ClaudeChain action.
 
 **Changes needed:**
-- Add `slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}` to the action inputs in the "Run ClaudeStep action" step (after line 35)
+- Add `slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}` to the action inputs in the "Run ClaudeChain action" step (after line 35)
 - This passes the GitHub secret to the action, enabling PR notifications
 
 **Files to modify:**
-- `.github/workflows/claudestep-test.yml` (line 35, after `claude_model`)
+- `.github/workflows/claudechain-test.yml` (line 35, after `claude_model`)
 
 **Expected outcome:**
-- The ClaudeStep action will receive the Slack webhook URL
+- The ClaudeChain action will receive the Slack webhook URL
 - `steps.prepare.outputs.slack_webhook_url` will be populated
 - The condition for posting to Slack will pass
 - PR creation notifications will be sent to Slack during e2e tests
@@ -93,7 +93,7 @@ Verify that Slack notifications work correctly in e2e tests.
 **Technical notes:**
 - Triggered e2e-test workflow (run ID: 20561962063) on 2025-12-29
 - E2E test created PRs successfully (#67, #68, #69 on e2e-test branch)
-- Examined ClaudeStep workflow run logs (run ID: 20561986562) for PR #67
+- Examined ClaudeChain workflow run logs (run ID: 20561986562) for PR #67
 - Confirmed Slack webhook URL was configured and passed to the action
 - Verified "✓ Slack webhook URL is configured - notification will be posted" message in logs
 - Confirmed slackapi/slack-github-action@v2 executed with proper payload containing:

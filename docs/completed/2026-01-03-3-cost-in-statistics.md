@@ -2,7 +2,7 @@
 
 ## Background
 
-ClaudeStep currently calculates and displays cost information when PRs are created (in PR comments, Slack notifications, and workflow summaries), but this cost data does **not** appear in statistics reports. The statistics command shows a "Cost" column that always displays "-".
+ClaudeChain currently calculates and displays cost information when PRs are created (in PR comments, Slack notifications, and workflow summaries), but this cost data does **not** appear in statistics reports. The statistics command shows a "Cost" column that always displays "-".
 
 **Current State:**
 - Cost is calculated using `CostBreakdown.from_execution_files()` during PR creation
@@ -51,7 +51,7 @@ Modify `finalize.py` to create a JSON artifact file with `TaskMetadata`:
 4. Use the existing `domain.models.TaskMetadata` class (not the duplicate in `artifact_service.py`)
 
 **Files to modify:**
-- `src/claudestep/cli/commands/finalize.py`
+- `src/claudechain/cli/commands/finalize.py`
 
 **Artifact naming convention:**
 - Name: `task-metadata-{project}-{task_hash}`
@@ -63,7 +63,7 @@ Modify `finalize.py` to create a JSON artifact file with `TaskMetadata`:
   "task_index": 1,
   "task_description": "Add user authentication",
   "project": "auth-refactor",
-  "branch_name": "claude-step-auth-refactor-a3f2b891",
+  "branch_name": "claude-chain-auth-refactor-a3f2b891",
   "reviewer": "alice",
   "created_at": "2026-01-03T10:30:00+00:00",
   "workflow_run_id": 12345678,
@@ -106,7 +106,7 @@ Add artifact download and cost aggregation to `StatisticsService`:
 5. Populate `stats.total_cost_usd` with the aggregated value
 
 **Files to modify:**
-- `src/claudestep/services/composite/statistics_service.py`
+- `src/claudechain/services/composite/statistics_service.py`
 
 **Considerations:**
 - Handle missing artifacts gracefully (legacy PRs won't have them)
@@ -124,7 +124,7 @@ Ensure cost displays correctly in all statistics output formats:
 4. Format cost consistently using existing `format_usd()` helper
 
 **Files to check:**
-- `src/claudestep/services/composite/statistics_service.py` (display logic)
+- `src/claudechain/services/composite/statistics_service.py` (display logic)
 
 **Expected output:**
 ```
@@ -169,12 +169,12 @@ pytest tests/unit/ tests/integration/ -v
 ```
 
 **Manual Verification:**
-1. Run ClaudeStep on a test project to create a PR with artifact
+1. Run ClaudeChain on a test project to create a PR with artifact
 2. Verify artifact is uploaded (check workflow run artifacts)
 3. Run statistics command and verify cost appears:
    ```bash
    source .venv/bin/activate
-   python -m claudestep statistics --repo "gestrich/swift-lambda-sample" --days-back 30
+   python -m claudechain statistics --repo "gestrich/swift-lambda-sample" --days-back 30
    ```
 4. Verify Slack output format shows cost column with values
 5. Verify GitHub step summary includes costs

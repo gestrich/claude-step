@@ -2,7 +2,7 @@
 
 ## Background
 
-This plan addresses several improvements to the ClaudeStep project:
+This plan addresses several improvements to the ClaudeChain project:
 
 1. **Architecture Documentation Cleanup**: The `docs/architecture/architecture.md` file has become too detailed with implementation specifics that should be in separate focused documents. We need to extract major components into their own documents and keep the main architecture doc high-level.
 
@@ -34,7 +34,7 @@ This plan addresses several improvements to the ClaudeStep project:
 **Details**:
 - Create `docs/architecture/branch-naming.md`
 - Extract branch naming details from `architecture.md`
-- Keep in `architecture.md` only: "Branch format: `claude-step-{project}-{task-hash}`"
+- Keep in `architecture.md` only: "Branch format: `claude-chain-{project}-{task-hash}`"
 - Move to new doc: branch name parsing logic, format detection, all detailed examples
 - Remove backward compatibility sections mentioning "Old Format" and dual-mode support
 
@@ -45,20 +45,20 @@ This plan addresses several improvements to the ClaudeStep project:
 - [x] Phase 3: Remove all backward compatibility code from codebase
 
 **Details**:
-- Delete `src/claudestep/cli/commands/migrate_to_hashes.py`
-- Remove from `src/claudestep/__main__.py`: migrate-to-hashes command registration
-- Remove from `src/claudestep/domain/github_models.py`:
+- Delete `src/claudechain/cli/commands/migrate_to_hashes.py`
+- Remove from `src/claudechain/__main__.py`: migrate-to-hashes command registration
+- Remove from `src/claudechain/domain/github_models.py`:
   - `task_index` property (lines 203-235)
   - Update docstrings that mention "legacy" format
-- Remove from `src/claudestep/services/core/task_service.py`:
+- Remove from `src/claudechain/services/core/task_service.py`:
   - `skip_indices` parameter from `find_next_available_task()` (line 41)
   - Index-based filtering logic (lines 59-61, 120-122)
-- Remove from `src/claudestep/domain/spec_content.py`:
+- Remove from `src/claudechain/domain/spec_content.py`:
   - `skip_indices` parameter from `get_next_available_task()`
   - Index-based filtering logic (line 186-188)
-- Remove from `src/claudestep/services/core/pr_service.py`:
+- Remove from `src/claudechain/services/core/pr_service.py`:
   - Index format detection from `parse_branch_name()` (keep only hash format)
-- Remove from `src/claudestep/services/composite/statistics_service.py`:
+- Remove from `src/claudechain/services/composite/statistics_service.py`:
   - Index-based PR handling logic (lines 264-265)
 - Update all related tests to remove index-based test cases
 
@@ -77,14 +77,14 @@ This plan addresses several improvements to the ClaudeStep project:
 
 **Details**:
 - Search for and remove fields marked as "compatibility", "legacy", or "unused"
-- Remove from `src/claudestep/services/composite/statistics_service.py`:
+- Remove from `src/claudechain/services/composite/statistics_service.py`:
   - `project_metadata: Optional metadata (unused, kept for compatibility)` parameter (line 304)
-- Review all domain models in `src/claudestep/domain/models.py` for unused compatibility fields
+- Review all domain models in `src/claudechain/domain/models.py` for unused compatibility fields
 - Update related docstrings that reference removed fields
 
 **Completed**: All unused compatibility fields successfully removed from domain models. Key changes:
 - Removed `project_metadata` parameter from `StatisticsService.collect_project_costs()` (line 290)
-- Removed `raw_config` field from `ProjectConfiguration` domain model in `src/claudestep/domain/project_configuration.py`
+- Removed `raw_config` field from `ProjectConfiguration` domain model in `src/claudechain/domain/project_configuration.py`
 - Updated `ProjectConfiguration.from_yaml_string()` to no longer store raw config
 - Removed test `test_from_yaml_string_stores_raw_config` which specifically tested the removed functionality
 - Updated all test assertions that referenced `raw_config` across:
@@ -103,7 +103,7 @@ This plan addresses several improvements to the ClaudeStep project:
 - [x] Phase 5: Fix application/ layer references in documentation
 
 **Details**:
-- Verify that `src/claudestep/application/` directory does not exist (confirmed in initial analysis)
+- Verify that `src/claudechain/application/` directory does not exist (confirmed in initial analysis)
 - Remove all references to "application/" layer from `docs/architecture/architecture.md`
 - Update layer descriptions to reflect actual structure:
   - CLI Layer (`cli/`)
@@ -116,7 +116,7 @@ This plan addresses several improvements to the ClaudeStep project:
 **Completed**: All application/ layer references successfully removed from architecture.md. Key changes:
 - Line 323: Changed "Service Layer (`application/services/`)" to "Service Layer (`services/`)"
 - Lines 935-950: Updated module organization diagram to show actual structure with `services/formatters/` instead of `application/formatters/`
-- Line 1609: Corrected statistics service path from `src/claudestep/application/services/statistics_service.py` to `src/claudestep/services/composite/statistics_service.py`
+- Line 1609: Corrected statistics service path from `src/claudechain/application/services/statistics_service.py` to `src/claudechain/services/composite/statistics_service.py`
 - Verified that formatters are actually in `services/formatters/table_formatter.py`, not in a non-existent application/ directory
 - 628 tests pass (3 pre-existing failures: 2 e2e GitHub API issues, 1 statistics service test)
 - Build succeeds
@@ -146,7 +146,7 @@ This plan addresses several improvements to the ClaudeStep project:
 - Removed "Benefits of Two-Level Organization" list (6 items)
 - Removed "Service Naming Conventions" section with examples
 - Kept concise two-paragraph explanation of core vs composite services
-- Added link to source code at `src/claudestep/services/` for implementation details
+- Added link to source code at `src/claudechain/services/` for implementation details
 - 628 tests pass (3 pre-existing failures: 2 e2e GitHub API issues, 1 statistics service test)
 - Build succeeds
 
@@ -193,7 +193,7 @@ This plan addresses several improvements to the ClaudeStep project:
 - `docs/architecture/hash-based-task-identification.md` - Extracted hash-based documentation
 - `docs/architecture/branch-naming.md` - Extracted branch naming documentation
 
-The only remaining "backward compatibility" references in architecture.md relate to the package structure migration (`scripts/claudestep/` → `src/claudestep/`), which is unrelated to task identification and should remain as they document the current transitional state of the codebase.
+The only remaining "backward compatibility" references in architecture.md relate to the package structure migration (`scripts/claudechain/` → `src/claudechain/`), which is unrelated to task identification and should remain as they document the current transitional state of the codebase.
 
 628 tests pass (3 pre-existing failures: 2 e2e GitHub API issues, 1 statistics service test). Build succeeds.
 
@@ -208,7 +208,7 @@ The only remaining "backward compatibility" references in architecture.md relate
 - [x] Phase 9: Restore cost tracking feature
 
 **Details**:
-- Examine `src/claudestep/cli/commands/add_cost_comment.py` - this command already exists
+- Examine `src/claudechain/cli/commands/add_cost_comment.py` - this command already exists
 - Review git history to understand how cost tracking was previously integrated
 - Look at completed refactor docs: `docs/completed/remove-metadata-branch-simplify-to-github-api.md` and `docs/completed/artifact-api-refactor.md`
 - Restore cost tracking integration in main workflow:
@@ -220,7 +220,7 @@ The only remaining "backward compatibility" references in architecture.md relate
 - Ensure cost data flows: Claude Code → action outputs → add_cost_comment → PR comment
 
 **Completed**: Cost tracking feature successfully restored. Key findings and changes:
-- `add_cost_comment.py` command already fully implemented at `src/claudestep/cli/commands/add_cost_comment.py`
+- `add_cost_comment.py` command already fully implemented at `src/claudechain/cli/commands/add_cost_comment.py`
 - Command already registered in `__main__.py` (line 12, 51-52)
 - Cost tracking already integrated in `action.yml` (lines 212-227) - step "Post cost breakdown to PR"
 - Cost extraction already integrated for both main task (lines 124-136) and PR summary (lines 195-210)
@@ -255,8 +255,8 @@ The only remaining "backward compatibility" references in architecture.md relate
 - Update any integration tests that rely on index-based identification
 
 **Completed**: All backward compatibility tests successfully removed or updated. Key changes:
-- Removed `Project.get_branch_name()` method that generated index-based branch names (format: `claude-step-{project}-{index}`)
-- Updated `Project.from_branch_name()` to only parse hash-based branch names (format: `claude-step-{project}-{8-char-hex}`)
+- Removed `Project.get_branch_name()` method that generated index-based branch names (format: `claude-chain-{project}-{index}`)
+- Updated `Project.from_branch_name()` to only parse hash-based branch names (format: `claude-chain-{project}-{8-char-hex}`)
 - Removed `TestProjectBranchName` test class (3 tests for index-based branch generation)
 - Updated `TestProjectFromBranchName` tests to validate hash-based format (8-character hex) instead of numeric indices
 - Added comprehensive test cases for hash validation (lowercase hex, exactly 8 chars, rejects uppercase/invalid chars)

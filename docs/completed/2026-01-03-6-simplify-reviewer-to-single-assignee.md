@@ -1,6 +1,6 @@
 ## Background
 
-ClaudeStep fundamentally assumes tasks are executed synchronously - one PR at a time per project. The current implementation with multiple reviewers and `maxOpenPRs` capacity settings contradicts this core assumption and adds unnecessary complexity:
+ClaudeChain fundamentally assumes tasks are executed synchronously - one PR at a time per project. The current implementation with multiple reviewers and `maxOpenPRs` capacity settings contradicts this core assumption and adds unnecessary complexity:
 
 1. **Multiple reviewers with capacity limits** implies concurrent PR execution, which breaks the sequential task model
 2. **Balancing assignment across multiple reviewers** is confusing and the logic for "first available" isn't intuitive
@@ -16,7 +16,7 @@ The simplification:
 - [ ] Phase 1: Simplify domain models
 
 **Files to modify:**
-- `src/claudestep/domain/project_configuration.py`
+- `src/claudechain/domain/project_configuration.py`
 
 **Changes:**
 1. Remove the `Reviewer` dataclass entirely
@@ -35,13 +35,13 @@ assignee: alice
 - [ ] Phase 2: Simplify ReviewerService to AssigneeService
 
 **Files to modify:**
-- `src/claudestep/services/core/reviewer_service.py` (rename to `assignee_service.py`)
-- `src/claudestep/services/__init__.py`
+- `src/claudechain/services/core/reviewer_service.py` (rename to `assignee_service.py`)
+- `src/claudechain/services/__init__.py`
 
 **Changes:**
 1. Rename `ReviewerService` to `AssigneeService`
 2. Simplify `find_available_reviewer()` to `check_capacity()` that:
-   - Checks if project has any open ClaudeStep PRs (count >= 1 means no capacity)
+   - Checks if project has any open ClaudeChain PRs (count >= 1 means no capacity)
    - Returns `(assignee: Optional[str], has_capacity: bool, open_prs: List)`
    - No per-reviewer capacity checking needed
 3. Remove `_check_project_capacity()` method (logic merged into simplified check)
@@ -50,7 +50,7 @@ assignee: alice
 - [ ] Phase 3: Simplify capacity result model
 
 **Files to modify:**
-- `src/claudestep/domain/models.py`
+- `src/claudechain/domain/models.py`
 
 **Changes:**
 1. Simplify `ReviewerCapacityResult` to `CapacityResult`:
@@ -65,9 +65,9 @@ assignee: alice
 - [ ] Phase 4: Update CLI commands
 
 **Files to modify:**
-- `src/claudestep/cli/commands/prepare.py`
-- `src/claudestep/cli/commands/finalize.py`
-- `src/claudestep/cli/commands/discover_ready.py`
+- `src/claudechain/cli/commands/prepare.py`
+- `src/claudechain/cli/commands/finalize.py`
+- `src/claudechain/cli/commands/discover_ready.py`
 
 **Changes in prepare.py:**
 1. Import `AssigneeService` instead of `ReviewerService`
@@ -168,7 +168,7 @@ assignee: alice
 ```bash
 export PYTHONPATH=src:scripts
 pytest tests/unit/ tests/integration/ -v
-pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=term-missing
+pytest tests/unit/ tests/integration/ --cov=src/claudechain --cov-report=term-missing
 ```
 
 **Success criteria:**

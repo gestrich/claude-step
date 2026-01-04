@@ -4,9 +4,9 @@
 
 **Important:** Before working on tasks in this project, please read the following documents once to understand the project structure, workflows, and conventions:
 
-1. **README.md** - Understand what ClaudeStep is, how it works, and how users interact with it
+1. **README.md** - Understand what ClaudeChain is, how it works, and how users interact with it
 2. **docs/README.md** - Navigate the documentation structure
-3. **docs/feature-guides/** - User-facing guides for ClaudeStep features
+3. **docs/feature-guides/** - User-facing guides for ClaudeChain features
 4. **docs/feature-architecture/** - Technical documentation for specific features
 5. **docs/general-architecture/** - General design patterns and coding conventions:
    - Testing philosophy and requirements
@@ -18,7 +18,7 @@ This context is crucial for making changes that align with the project's design 
 
 ## Project Overview
 
-ClaudeStep is a GitHub Action that automates code refactoring using AI. It:
+ClaudeChain is a GitHub Action that automates code refactoring using AI. It:
 - Reads task lists from spec.md files
 - Creates incremental PRs for each task
 - Manages reviewer assignments and capacity
@@ -28,7 +28,7 @@ Understanding how users interact with this system will help ensure any changes m
 
 ## Code Architecture
 
-ClaudeStep follows Martin Fowler's **Service Layer pattern** with a layered architecture:
+ClaudeChain follows Martin Fowler's **Service Layer pattern** with a layered architecture:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -63,7 +63,7 @@ export PYTHONPATH=src:scripts
 pytest tests/unit/ tests/integration/ -v
 
 # With coverage
-pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=term-missing
+pytest tests/unit/ tests/integration/ --cov=src/claudechain --cov-report=term-missing
 ```
 
 **Requirements:**

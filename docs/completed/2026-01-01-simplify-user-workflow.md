@@ -1,9 +1,9 @@
 ## Background
 
-Currently, users must maintain a complex `claudestep.yml` workflow file with significant bash logic to:
+Currently, users must maintain a complex `claudechain.yml` workflow file with significant bash logic to:
 1. Determine project name from branch patterns or inputs
 2. Infer base branch from GitHub event context
-3. Check for 'claudestep' label on PRs
+3. Check for 'claudechain' label on PRs
 4. Decide whether to skip execution
 5. Handle different event types (workflow_dispatch, pull_request:closed, push)
 
@@ -19,7 +19,7 @@ This complexity lives in the user's workflow file, making it:
 Before (~100+ lines):
 ```yaml
 jobs:
-  run-claudestep:
+  run-claudechain:
     steps:
       - name: Determine project and base branch
         id: project
@@ -29,7 +29,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.project.outputs.checkout_ref }}
-      - uses: gestrich/claude-step@v1
+      - uses: gestrich/claude-chain@v1
         with:
           project_name: ${{ steps.project.outputs.name }}
           base_branch: ${{ steps.project.outputs.base_branch }}
@@ -38,9 +38,9 @@ jobs:
 After (~20 lines):
 ```yaml
 jobs:
-  run-claudestep:
+  run-claudechain:
     steps:
-      - uses: gestrich/claude-step@v1
+      - uses: gestrich/claude-chain@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -95,7 +95,7 @@ inputs:
 ```yaml
 outputs:
   skipped:
-    description: 'Whether execution was skipped (no claudestep label, etc.)'
+    description: 'Whether execution was skipped (no claudechain label, etc.)'
   skip_reason:
     description: 'Reason for skipping if skipped'
   project_name:
@@ -119,12 +119,12 @@ outputs:
 
 Create a new Python module to parse GitHub event context and extract required information.
 
-**New file: `src/claudestep/domain/github_event.py`**
+**New file: `src/claudechain/domain/github_event.py`**
 
 ```python
 @dataclass
 class GitHubEventContext:
-    """Parsed GitHub event with extracted fields for ClaudeStep"""
+    """Parsed GitHub event with extracted fields for ClaudeChain"""
     event_name: str  # workflow_dispatch, pull_request, push
 
     # For pull_request events
@@ -149,8 +149,8 @@ class GitHubEventContext:
         ...
 
     def should_skip(self) -> Tuple[bool, str]:
-        """Determine if ClaudeStep should skip this event"""
-        # Check for claudestep label, merged state, etc.
+        """Determine if ClaudeChain should skip this event"""
+        # Check for claudechain label, merged state, etc.
         ...
 
     def get_checkout_ref(self) -> str:
@@ -180,7 +180,7 @@ class GitHubEventContext:
 - `should_skip()` method that checks for merged state and required labels on PRs
 - `get_checkout_ref()` method that determines the appropriate git ref for checkout
 - `get_default_base_branch()` method that returns the target branch for new PRs
-- `extract_project_from_branch()` method that parses ClaudeStep branch names (claude-step-{project}-{hash})
+- `extract_project_from_branch()` method that parses ClaudeChain branch names (claude-chain-{project}-{hash})
 - `has_label()` helper method for label checking
 - 40 comprehensive unit tests covering all parsing scenarios, skip logic, and edge cases
 - All 776 tests pass
@@ -203,7 +203,7 @@ runs:
       id: parse
       shell: bash
       run: |
-        python3 -m claudestep parse-event \
+        python3 -m claudechain parse-event \
           --event-name "${{ inputs.event_name }}" \
           --event-json '${{ inputs.github_event }}' \
           --project-name "${{ inputs.project_name }}"
@@ -226,12 +226,12 @@ runs:
     # ... rest of existing steps with conditions
 ```
 
-**New CLI command**: `python3 -m claudestep parse-event`
+**New CLI command**: `python3 -m claudechain parse-event`
 - Parses event JSON
 - Outputs: skip, skip_reason, checkout_ref, project_name, base_branch
 
 **Completed:** Updated `action.yml` with:
-- New `parse` step (id: `parse`) that runs `python3 -m claudestep parse-event` when `github_event` is provided
+- New `parse` step (id: `parse`) that runs `python3 -m claudechain parse-event` when `github_event` is provided
 - Environment variables: `EVENT_NAME`, `EVENT_JSON`, `PROJECT_NAME`, `DEFAULT_BASE_BRANCH`, `PR_LABEL`
 - New `Log skip reason` step that outputs a GitHub notice and step summary when skipping
 - New `Checkout repository` step using `actions/checkout@v4` with parsed `checkout_ref`
@@ -246,13 +246,13 @@ runs:
 
 Add new CLI command to handle event parsing.
 
-**Changes to `src/claudestep/cli/parser.py`:**
+**Changes to `src/claudechain/cli/parser.py`:**
 - Add `parse-event` subcommand with arguments:
   - `--event-name`: GitHub event name
   - `--event-json`: GitHub event JSON payload
   - `--project-name`: Optional project name override
 
-**New file: `src/claudestep/cli/commands/parse_event.py`:**
+**New file: `src/claudechain/cli/commands/parse_event.py`:**
 ```python
 def cmd_parse_event(
     gh: GitHubActionsHelper,
@@ -290,7 +290,7 @@ def cmd_parse_event(
 **Integration tests**: `tests/integration/cli/commands/test_parse_event.py`
 
 **Completed:** Implemented the `parse-event` CLI command with:
-- New `src/claudestep/cli/commands/parse_event.py` module with `cmd_parse_event()` function
+- New `src/claudechain/cli/commands/parse_event.py` module with `cmd_parse_event()` function
 - Environment variable-based parameter passing (EVENT_NAME, EVENT_JSON, PROJECT_NAME, DEFAULT_BASE_BRANCH, PR_LABEL) to match action.yml invocation
 - Added `parse-event` subcommand to parser.py with CLI argument support
 - Registered command handler in `__main__.py`
@@ -309,9 +309,9 @@ def cmd_parse_event(
 
 Create an example workflow file showing the simplified usage.
 
-**New file: `examples/claudestep-simplified.yml`:**
+**New file: `examples/claudechain-simplified.yml`:**
 ```yaml
-name: ClaudeStep
+name: ClaudeChain
 
 on:
   workflow_dispatch:
@@ -323,17 +323,17 @@ on:
     types: [closed]
   push:
     paths:
-      - 'claude-step/*/spec.md'
+      - 'claude-chain/*/spec.md'
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  run-claudestep:
+  run-claudechain:
     runs-on: ubuntu-latest
     steps:
-      - uses: gestrich/claude-step@v2
+      - uses: gestrich/claude-chain@v2
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_event: ${{ toJson(github.event) }}
@@ -346,8 +346,8 @@ jobs:
 - Document migration path from old workflow to new
 
 **Completed:**
-- Created `examples/claudestep-simplified.yml` with the simplified workflow example
-- Created missing `src/claudestep/domain/github_event.py` module (required by Phase 4 but not committed)
+- Created `examples/claudechain-simplified.yml` with the simplified workflow example
+- Created missing `src/claudechain/domain/github_event.py` module (required by Phase 4 but not committed)
 - Added 33 unit tests for `GitHubEventContext` class in `tests/unit/domain/test_github_event.py`
 - Updated README.md with:
   - Simplified workflow as "Option A (Recommended)" in Step 3
@@ -367,7 +367,7 @@ jobs:
 
 **Manual verification scenarios:**
 1. workflow_dispatch with project_name input → should work as before
-2. pull_request:closed with 'claudestep' label → should detect project and continue
+2. pull_request:closed with 'claudechain' label → should detect project and continue
 3. pull_request:closed without label → should skip with reason
 4. pull_request:closed but not merged → should skip
 5. push to spec.md → should trigger auto-start flow
@@ -388,6 +388,6 @@ jobs:
 - All success criteria met for code changes:
   - No regressions in existing functionality (775 total tests pass)
   - New event parsing module and CLI command work correctly
-  - Example workflow created (examples/claudestep-simplified.yml)
+  - Example workflow created (examples/claudechain-simplified.yml)
   - User workflow reduced from ~100 lines to ~20 lines
 - Note: E2E test infrastructure has a separate issue to be addressed (Python relative import in test_branch_manager.py)

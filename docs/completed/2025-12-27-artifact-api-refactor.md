@@ -59,7 +59,7 @@ This leads to:
 
 **Goal**: Create a clean, reusable API for artifact operations
 
-**New Module**: `scripts/claudestep/artifact_operations.py`
+**New Module**: `scripts/claudechain/artifact_operations.py`
 
 #### Core Data Models
 
@@ -117,7 +117,7 @@ class ProjectArtifact:
 def find_project_artifacts(
     repo: str,
     project: str,
-    label: str = "claudestep",
+    label: str = "claudechain",
     pr_state: str = "all",  # "open", "merged", "all"
     limit: int = 50,
     download_metadata: bool = False
@@ -130,7 +130,7 @@ def find_project_artifacts(
     Args:
         repo: GitHub repository (owner/name)
         project: Project name to filter artifacts
-        label: GitHub label to filter PRs (default: "claudestep")
+        label: GitHub label to filter PRs (default: "claudechain")
         pr_state: PR state filter - "open", "merged", or "all"
         limit: Maximum number of workflow runs to check
         download_metadata: Whether to download full metadata JSON
@@ -166,7 +166,7 @@ def get_artifact_metadata(
 def find_in_progress_tasks(
     repo: str,
     project: str,
-    label: str = "claudestep"
+    label: str = "claudechain"
 ) -> set[int]:
     """
     Get task indices for all in-progress tasks (open PRs).
@@ -194,7 +194,7 @@ def find_in_progress_tasks(
 def get_reviewer_assignments(
     repo: str,
     project: str,
-    label: str = "claudestep"
+    label: str = "claudechain"
 ) -> dict[int, str]:
     """
     Get mapping of PR numbers to assigned reviewers.
@@ -282,13 +282,13 @@ def _filter_project_artifacts(
 
 **After:**
 ```python
-from claudestep.artifact_operations import get_reviewer_assignments
+from claudechain.artifact_operations import get_reviewer_assignments
 
 def find_reviewer_with_capacity(
     reviewers: List[Dict[str, Any]],
     project: str,
     repo: str,
-    label: str = "claudestep"
+    label: str = "claudechain"
 ) -> Tuple[Optional[str], ReviewerCapacityReport]:
     # Get reviewer assignments from artifacts
     pr_to_reviewer = get_reviewer_assignments(repo, project, label)
@@ -314,7 +314,7 @@ def find_reviewer_with_capacity(
 
 **After:**
 ```python
-from claudestep.artifact_operations import find_in_progress_tasks
+from claudechain.artifact_operations import find_in_progress_tasks
 
 def get_in_progress_task_indices(
     repo: str,
@@ -334,12 +334,12 @@ def get_in_progress_task_indices(
 
 **After:**
 ```python
-from claudestep.artifact_operations import find_project_artifacts
+from claudechain.artifact_operations import find_project_artifacts
 
 def collect_project_costs(
     project_name: str,
     repo: str,
-    label: str = "claudestep"
+    label: str = "claudechain"
 ) -> float:
     """Collect total costs for a project from PR comments"""
     
@@ -422,7 +422,7 @@ metadata = {
 def collect_project_costs(
     project_name: str,
     repo: str,
-    label: str = "claudestep"
+    label: str = "claudechain"
 ) -> float:
     """Collect total costs for a project from artifact metadata"""
     
@@ -457,7 +457,7 @@ def collect_project_costs(
 
 **Completed**: 2025-12-27
 **Technical Notes**:
-- Created `/Users/bill/Developer/personal/claude-step/scripts/claudestep/artifact_operations.py` (404 lines)
+- Created `/Users/bill/Developer/personal/claude-chain/scripts/claudechain/artifact_operations.py` (404 lines)
 - Implemented all core data models and API functions as specified
 - Module compiles successfully with Python 3.13
 - All existing tests pass (86 passed, 5 pre-existing failures unrelated to this change)
@@ -474,7 +474,7 @@ def collect_project_costs(
 
 **Completed**: 2025-12-27
 **Technical Notes**:
-- Refactored `scripts/claudestep/reviewer_management.py` from 125 lines to 79 lines (46 line reduction)
+- Refactored `scripts/claudechain/reviewer_management.py` from 125 lines to 79 lines (46 line reduction)
 - Replaced complex artifact fetching logic with single call to `find_project_artifacts()`
 - Used `download_metadata=True` to get full task metadata including reviewer, task_index, and task_description
 - Simplified imports: removed `json`, `GitHubAPIError`, `download_artifact_json`, `gh_api_call`, `run_gh_command`
@@ -490,7 +490,7 @@ def collect_project_costs(
 
 **Completed**: 2025-12-27
 **Technical Notes**:
-- Refactored `scripts/claudestep/task_management.py` from 187 lines to 106 lines (81 line reduction)
+- Refactored `scripts/claudechain/task_management.py` from 187 lines to 106 lines (81 line reduction)
 - Replaced complex artifact fetching logic (92 lines) with single call to `find_in_progress_tasks()`
 - Simplified imports: removed `json`, `GitHubAPIError`, `gh_api_call`, `run_gh_command`
 - Added import: `artifact_operations.find_in_progress_tasks`
@@ -514,7 +514,7 @@ def collect_project_costs(
 
 **Completed**: 2025-12-27
 **Technical Notes**:
-- Refactored `scripts/claudestep/statistics_collector.py` from 424 lines to 396 lines (28 line reduction)
+- Refactored `scripts/claudechain/statistics_collector.py` from 424 lines to 396 lines (28 line reduction)
 - Replaced incorrect branch name matching logic with centralized `find_project_artifacts()` API
 - The `collect_project_costs()` function now:
   - Uses `find_project_artifacts(pr_state="merged", download_metadata=True)` to get merged PRs
@@ -553,7 +553,7 @@ def collect_project_costs(
 - New PRs created after this change will have cost data in both metadata and comments (redundant but ensures reliability)
 
 ### - [x] Phase 6: Add Statistics E2E Test and Validate (Priority: High) ✅ COMPLETED
-- Add new test to `claude-step-demo/tests/integration/test_statistics_e2e.py`:
+- Add new test to `claude-chain-demo/tests/integration/test_statistics_e2e.py`:
   - Trigger statistics workflow in demo repository
   - Verify statistics collection completes successfully
   - Verify cost data appears in statistics report
@@ -561,7 +561,7 @@ def collect_project_costs(
   - Verify project progress shows correct task counts
   - Verify leaderboard shows correct reviewer stats
 - Run full integration test suite in demo repository:
-  - `cd claude-step-demo && ./tests/integration/run_test.sh`
+  - `cd claude-chain-demo && ./tests/integration/run_test.sh`
   - Verify existing PR creation workflow still works
   - Verify all tests pass
 - Run unit tests in main repository:
@@ -574,9 +574,9 @@ def collect_project_costs(
 
 **Completed**: 2025-12-27
 **Technical Notes**:
-- Created new E2E test file at `/Users/bill/Developer/personal/claude-step-demo/tests/integration/test_statistics_e2e.py` (222 lines)
+- Created new E2E test file at `/Users/bill/Developer/personal/claude-chain-demo/tests/integration/test_statistics_e2e.py` (222 lines)
 - Test validates the complete statistics workflow:
-  - Triggers the `claudestep-statistics.yml` workflow using GitHub CLI
+  - Triggers the `claudechain-statistics.yml` workflow using GitHub CLI
   - Waits for workflow completion and verifies success status
   - Parses workflow logs to verify expected output sections are present
   - Checks for: "Statistics for", "Total PRs:", "Total Cost:"

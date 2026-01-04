@@ -43,7 +43,7 @@ Per our architecture documentation ([docs/architecture/python-code-style.md](../
 
 - [x] Phase 1: Create GitHub Domain Models ✅
 
-Create domain models in `src/claudestep/domain/github_models.py` to represent GitHub API objects:
+Create domain models in `src/claudechain/domain/github_models.py` to represent GitHub API objects:
 
 **Models created:**
 - `GitHubUser` - Represents a GitHub user (login, name, avatar_url)
@@ -66,7 +66,7 @@ Create domain models in `src/claudestep/domain/github_models.py` to represent Gi
 - All tests passing (100% code coverage for github_models.py)
 
 **Files created:**
-- `src/claudestep/domain/github_models.py` - 91 statements, fully tested
+- `src/claudechain/domain/github_models.py` - 91 statements, fully tested
 - `tests/unit/domain/test_github_models.py` - 34 tests, all passing
 
 **Example structure:**
@@ -110,7 +110,7 @@ class GitHubPullRequest:
 
 Add PR querying functions to existing `infrastructure/github/operations.py` that return domain models:
 
-**Location:** `src/claudestep/infrastructure/github/operations.py`
+**Location:** `src/claudechain/infrastructure/github/operations.py`
 
 **Functions implemented:**
 ```python
@@ -171,7 +171,7 @@ def list_open_pull_requests(
 - Tests extend existing `tests/unit/infrastructure/github/test_operations.py`
 
 **Files modified:**
-- `src/claudestep/infrastructure/github/operations.py` - Added 3 new functions (61 lines)
+- `src/claudechain/infrastructure/github/operations.py` - Added 3 new functions (61 lines)
 
 **Tests created:**
 - `tests/unit/infrastructure/github/test_operations.py` - Added 11 new tests across 3 test classes
@@ -215,7 +215,7 @@ Refactored `collect_team_member_stats()` method in `StatisticsService` to use me
 - Graceful degradation: continues processing other projects if one fails
 
 **Files modified:**
-- `src/claudestep/services/statistics_service.py`:
+- `src/claudechain/services/statistics_service.py`:
   - Refactored `collect_team_member_stats()` method (lines 243-322)
   - Removed imports: `json`, `run_gh_command`
   - Updated module docstring to reflect "metadata storage" instead of "GitHub API"
@@ -319,8 +319,8 @@ class TeamMemberStats:
 - ✅ Validation - constructor ensures required fields are present
 
 **Files modified:**
-- `src/claudestep/domain/models.py` - Added PRReference dataclass, updated TeamMemberStats
-- `src/claudestep/services/statistics_service.py` - Updated to create PRReference objects
+- `src/claudechain/domain/models.py` - Added PRReference dataclass, updated TeamMemberStats
+- `src/claudechain/services/statistics_service.py` - Updated to create PRReference objects
 - `tests/unit/domain/test_models.py` - Added 6 new tests for PRReference, updated TeamMemberStats tests
 - `tests/unit/services/test_statistics_service.py` - Updated all tests to use PRReference
 
@@ -360,14 +360,14 @@ Added `title` field to `PullRequest` model to store PR titles for display in sta
 - Marked as optional field with fallback to task description
 
 **Updated finalize command:**
-- `src/claudestep/cli/commands/finalize.py` - Modified to capture PR title from GitHub API
+- `src/claudechain/cli/commands/finalize.py` - Modified to capture PR title from GitHub API
 - Changed `gh pr view` to query both number and title: `--json "number,title"`
 - Added `pr_title` variable and passed to `PullRequest` constructor
 
 **Files modified:**
-- `src/claudestep/domain/models.py` - Added title field with proper serialization
+- `src/claudechain/domain/models.py` - Added title field with proper serialization
 - `docs/architecture/metadata-schema.md` - Updated schema and examples
-- `src/claudestep/cli/commands/finalize.py` - Capture and save PR title
+- `src/claudechain/cli/commands/finalize.py` - Capture and save PR title
 
 **Implementation notes:**
 - Title field is optional (default: None) for backward compatibility
@@ -411,7 +411,7 @@ Verified and enhanced the `PRReference.from_metadata_pr()` factory method to cor
      - When pr.title is None and no task_description → uses "Task N" format
 
 **Files modified:**
-- `src/claudestep/domain/models.py` (line 163) - Simplified title fallback logic
+- `src/claudechain/domain/models.py` (line 163) - Simplified title fallback logic
 - `tests/unit/domain/test_models.py` - Updated and added tests for PRReference title handling
 
 **Test results:**
@@ -435,9 +435,9 @@ Cleaned up the service by removing all direct GitHub API usage and unused import
 
 1. **Removed unused imports:**
    - Removed `import os` (unused)
-   - Removed `from claudestep.domain.config import load_config_from_string` (unused)
-   - Removed `from claudestep.domain.exceptions import FileNotFoundError as ClaudeStepFileNotFoundError` (unused)
-   - Removed `from claudestep.infrastructure.metadata.github_metadata_store import GitHubMetadataStore` (unused, accessed via metadata_service)
+   - Removed `from claudechain.domain.config import load_config_from_string` (unused)
+   - Removed `from claudechain.domain.exceptions import FileNotFoundError as ClaudeChainFileNotFoundError` (unused)
+   - Removed `from claudechain.infrastructure.metadata.github_metadata_store import GitHubMetadataStore` (unused, accessed via metadata_service)
    - Removed `Tuple` from typing imports (unused)
 
 2. **Updated class docstring:**
@@ -450,13 +450,13 @@ Cleaned up the service by removing all direct GitHub API usage and unused import
 ✅ No `run_gh_command()` calls (already removed in Phase 3)
 ✅ No `json.loads()` calls (already removed in Phase 3)
 ✅ No JSON dictionary navigation (already removed in Phase 3)
-✅ No imports from `claudestep.infrastructure.github.operations`
+✅ No imports from `claudechain.infrastructure.github.operations`
 ✅ No `json` module import
 ✅ No raw string command construction
 ✅ All data comes from `metadata_service` or `project_repository`
 
 **Files modified:**
-- `src/claudestep/services/statistics_service.py` - Cleaned up imports and docstring
+- `src/claudechain/services/statistics_service.py` - Cleaned up imports and docstring
 
 **Tests verified:**
 - ✅ All 57 tests in `tests/unit/services/test_statistics_service.py` passing
@@ -492,7 +492,7 @@ Documented GitHub PR operations for future synchronize command use cases.
 - Design principles (5 principles)
 - Related documentation links
 
-**Enhanced docstrings in `src/claudestep/infrastructure/github/operations.py`:**
+**Enhanced docstrings in `src/claudechain/infrastructure/github/operations.py`:**
 - `list_pull_requests()`: Added comprehensive docstring with:
   - Current usage note (not used in normal operations)
   - Future usage section (5 synchronize command capabilities)
@@ -512,7 +512,7 @@ Documented GitHub PR operations for future synchronize command use cases.
 
 **Files modified:**
 - `docs/architecture/architecture.md` - Added 165-line "Future: Metadata Synchronization" section
-- `src/claudestep/infrastructure/github/operations.py` - Enhanced docstrings for 3 PR functions
+- `src/claudechain/infrastructure/github/operations.py` - Enhanced docstrings for 3 PR functions
 
 **Implementation notes:**
 - Documentation clearly separates current usage (none) from future usage (synchronize command)
@@ -593,16 +593,16 @@ PYTHONPATH=src:scripts pytest tests/unit -v
 **Code Quality Checks Completed:**
 ```bash
 # Verified no architectural violations
-grep -n "run_gh_command" src/claudestep/services/statistics_service.py
+grep -n "run_gh_command" src/claudechain/services/statistics_service.py
 # Result: No matches ✅
 
-grep -n "json.loads" src/claudestep/services/statistics_service.py
+grep -n "json.loads" src/claudechain/services/statistics_service.py
 # Result: No matches ✅
 
-grep -n "import json" src/claudestep/services/statistics_service.py
+grep -n "import json" src/claudechain/services/statistics_service.py
 # Result: No matches ✅
 
-grep -n "from claudestep.infrastructure.github.operations import" src/claudestep/services/statistics_service.py
+grep -n "from claudechain.infrastructure.github.operations import" src/claudechain/services/statistics_service.py
 # Result: No matches ✅
 ```
 

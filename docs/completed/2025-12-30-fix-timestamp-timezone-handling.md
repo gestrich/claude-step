@@ -35,7 +35,7 @@ This makes timestamps:
 Fix the domain model parsing to handle both old (naive) and new (timezone-aware) formats during transition, but always produce timezone-aware datetimes:
 
 Files modified:
-- `src/claudestep/domain/models.py` - Updated all dataclasses to use timezone-aware parsing:
+- `src/claudechain/domain/models.py` - Updated all dataclasses to use timezone-aware parsing:
   - Added `parse_iso_timestamp()` helper function
   - Updated `PullRequest.from_dict()`
   - Updated `HybridProjectMetadata.from_dict()`
@@ -64,11 +64,11 @@ Expected outcome: ✅ Domain models always produce timezone-aware datetimes rega
 Fix all code that creates timestamps to use ISO 8601 with timezone:
 
 Files modified:
-- `src/claudestep/infrastructure/metadata/github_metadata_store.py` - Updated `save_project()` method (line 368)
-- `src/claudestep/cli/commands/finalize.py` - Updated PR metadata creation (lines 246, 259, 276)
-- `src/claudestep/services/metadata_service.py` - Updated `save_project()` method (line 70)
-- `src/claudestep/domain/models.py` - Updated `create_empty()` methods (lines 787, 880, 1218)
-- `src/claudestep/cli/commands/statistics.py` - Updated report generation timestamp (line 89)
+- `src/claudechain/infrastructure/metadata/github_metadata_store.py` - Updated `save_project()` method (line 368)
+- `src/claudechain/cli/commands/finalize.py` - Updated PR metadata creation (lines 246, 259, 276)
+- `src/claudechain/services/metadata_service.py` - Updated `save_project()` method (line 70)
+- `src/claudechain/domain/models.py` - Updated `create_empty()` methods (lines 787, 880, 1218)
+- `src/claudechain/cli/commands/statistics.py` - Updated report generation timestamp (line 89)
 
 Technical implementation:
 - Added `timezone` to imports in all affected files
@@ -113,15 +113,15 @@ Test results:
 
 Expected outcome: ✅ All tests pass with timezone-aware datetimes
 
-- [x] Phase 4: Delete existing metadata in claudestep-metadata branch ✅ **COMPLETED**
+- [x] Phase 4: Delete existing metadata in claudechain-metadata branch ✅ **COMPLETED**
 
 Delete all existing metadata files to force regeneration with correct format:
 
-Files deleted (in `claudestep-metadata` branch):
+Files deleted (in `claudechain-metadata` branch):
 - `projects/e2e-test-project.json`
 
 Technical implementation:
-- Checked out `claudestep-metadata` branch
+- Checked out `claudechain-metadata` branch
 - Deleted all JSON files in `projects/` directory using `rm -f projects/*.json`
 - Committed deletion with message explaining regeneration with timezone-aware timestamps
 - Pushed changes to remote (commit a6701e1)
@@ -129,7 +129,7 @@ Technical implementation:
 - Preserved branch structure (`projects/` directory remains empty)
 
 Verification:
-- ✅ Branch `claudestep-metadata` updated successfully
+- ✅ Branch `claudechain-metadata` updated successfully
 - ✅ All legacy metadata files deleted (1 file removed: e2e-test-project.json, 229 lines deleted)
 - ✅ Commit pushed to remote repository
 - ✅ All 137 timezone-related tests passing after changes
@@ -142,7 +142,7 @@ Expected outcome: ✅ Clean slate for metadata generation - all legacy naive tim
 Add runtime checks to catch naive datetime bugs early:
 
 Files modified:
-- `src/claudestep/domain/models.py` - Added `__post_init__` validation to all dataclasses with datetime fields
+- `src/claudechain/domain/models.py` - Added `__post_init__` validation to all dataclasses with datetime fields
 
 Technical implementation:
 - Added `__post_init__` validation to the following dataclasses:
@@ -225,7 +225,7 @@ pytest tests/integration/ -v
 **Manual verification:**
 1. Run finalize command to create new metadata
 2. Verify JSON contains timestamps with timezone: `"created_at": "..+00:00"` or `"...Z"`
-3. Run statistics command with `--repo gestrich/claude-step`
+3. Run statistics command with `--repo gestrich/claude-chain`
 4. Verify no timezone comparison errors
 5. Verify team member stats are collected correctly
 

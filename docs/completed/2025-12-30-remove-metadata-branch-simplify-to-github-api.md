@@ -2,16 +2,16 @@
 
 ## Background
 
-The ClaudeStep project originally used a simple approach: query GitHub API for PRs with ClaudeStep labels and derive all information from PR state, labels, assignees, and branch names. This was straightforward and worked well.
+The ClaudeChain project originally used a simple approach: query GitHub API for PRs with ClaudeChain labels and derive all information from PR state, labels, assignees, and branch names. This was straightforward and worked well.
 
-Later, a `claudestep-metadata` branch was added to track additional details like project associations and primary reviewers. However, this added significant complexity:
+Later, a `claudechain-metadata` branch was added to track additional details like project associations and primary reviewers. However, this added significant complexity:
 - Hybrid data model with Tasks and PullRequests
 - Need to keep metadata in sync with GitHub state
 - Architecture mentions "Future: Metadata Synchronization" indicating known sync problems
 - Additional storage layer that duplicates information available in GitHub
 
 **User's insight**: The information we need can be derived from GitHub alone:
-- **Project association**: Extract from branch name pattern `claude-step-<project>-<task-number>`
+- **Project association**: Extract from branch name pattern `claude-chain-<project>-<task-number>`
 - **Primary reviewer**: Use GitHub's "assignees" field on PRs
 - **Task status**: Derive from PR state (open/draft = in progress, merged = completed, closed without merge = failed/abandoned)
 - **Statistics**: Query GitHub API directly when statistics are requested, considering all PR states
@@ -40,17 +40,17 @@ This plan removes the metadata branch entirely and returns to a simpler GitHub-A
 ### Files Using Metadata Infrastructure
 
 **Source Code Files** (11 files):
-1. `src/claudestep/services/metadata_service.py` - Core metadata service
-2. `src/claudestep/infrastructure/metadata/github_metadata_store.py` - GitHub branch storage implementation
-3. `src/claudestep/infrastructure/metadata/operations.py` - MetadataStore interface
-4. `src/claudestep/infrastructure/metadata/__init__.py` - Package initialization
-5. `src/claudestep/services/task_management_service.py` - Uses metadata to find in-progress tasks
-6. `src/claudestep/services/statistics_service.py` - Reads metadata for project stats, team stats, costs
-7. `src/claudestep/services/reviewer_management_service.py` - Currently uses artifacts (NOT metadata!) for capacity checking
-8. `src/claudestep/cli/commands/prepare.py` - Initializes metadata store/service, updates PR state on merge
-9. `src/claudestep/cli/commands/finalize.py` - Writes PR metadata after creation
-10. `src/claudestep/cli/commands/statistics.py` - Uses metadata service for statistics
-11. `src/claudestep/cli/commands/discover_ready.py` - Uses metadata service
+1. `src/claudechain/services/metadata_service.py` - Core metadata service
+2. `src/claudechain/infrastructure/metadata/github_metadata_store.py` - GitHub branch storage implementation
+3. `src/claudechain/infrastructure/metadata/operations.py` - MetadataStore interface
+4. `src/claudechain/infrastructure/metadata/__init__.py` - Package initialization
+5. `src/claudechain/services/task_management_service.py` - Uses metadata to find in-progress tasks
+6. `src/claudechain/services/statistics_service.py` - Reads metadata for project stats, team stats, costs
+7. `src/claudechain/services/reviewer_management_service.py` - Currently uses artifacts (NOT metadata!) for capacity checking
+8. `src/claudechain/cli/commands/prepare.py` - Initializes metadata store/service, updates PR state on merge
+9. `src/claudechain/cli/commands/finalize.py` - Writes PR metadata after creation
+10. `src/claudechain/cli/commands/statistics.py` - Uses metadata service for statistics
+11. `src/claudechain/cli/commands/discover_ready.py` - Uses metadata service
 
 **Test Files** (8 files):
 - `tests/unit/services/test_metadata_service.py`
@@ -67,7 +67,7 @@ This plan removes the metadata branch entirely and returns to a simpler GitHub-A
 | Operation | File | Purpose | GitHub API Replacement |
 |-----------|------|---------|----------------------|
 | `get_project(project_name)` | metadata_service.py | Load project metadata | Query PRs by label + parse branch names |
-| `list_project_names()` | statistics_service.py | Discover all projects | Query all PRs with claudestep label, extract project from branch names |
+| `list_project_names()` | statistics_service.py | Discover all projects | Query all PRs with claudechain label, extract project from branch names |
 | `find_in_progress_tasks(project)` | task_management_service.py | Find tasks with open PRs | Query open PRs filtered by label + project (from branch name) |
 | `get_reviewer_assignments(project)` | metadata_service.py (currently unused!) | Map task → reviewer | Query open PRs, extract from assignees field |
 | `get_open_prs_by_reviewer()` | metadata_service.py | Group open PRs by reviewer | Query open PRs filtered by label + assignee |
@@ -158,7 +158,7 @@ This suggests the project is already partially migrated away from metadata branc
 
 | Feature | Current Source | Replacement |
 |---------|---------------|-------------|
-| Project detection | Metadata branch | Branch name parsing (`claude-step-<project>-<task>`) |
+| Project detection | Metadata branch | Branch name parsing (`claude-chain-<project>-<task>`) |
 | In-progress tasks | Metadata branch | GitHub API: open PRs with label filter |
 | Reviewer assignment | Artifacts (already!) | GitHub API: PR assignees field |
 | Reviewer capacity | Artifacts (already!) | GitHub API: count open PRs per assignee |
@@ -176,7 +176,7 @@ This suggests the project is already partially migrated away from metadata branc
 
 **Status**: ✅ Complete
 
-**Branch naming convention** (already exists): `claude-step-<project>-<task-number>`
+**Branch naming convention** (already exists): `claude-chain-<project>-<task-number>`
 
 **Tasks**:
 - Verify `PROperationsService.parse_branch_name()` exists and works correctly
@@ -185,15 +185,15 @@ This suggests the project is already partially migrated away from metadata branc
 - Add tests for edge cases (malformed branch names, missing parts)
 
 **Key changes**:
-- `src/claudestep/application/services/pr_operations.py` - verify static methods
+- `src/claudechain/application/services/pr_operations.py` - verify static methods
 - Any services using metadata to get project name should use `parse_branch_name()` instead
 
-**Success criteria**: Project name can be reliably extracted from any ClaudeStep PR branch.
+**Success criteria**: Project name can be reliably extracted from any ClaudeChain PR branch.
 
 **Technical Notes**:
-- ✅ `PROperationsService.parse_branch_name()` verified at `src/claudestep/services/pr_operations_service.py:131-164`
+- ✅ `PROperationsService.parse_branch_name()` verified at `src/claudechain/services/pr_operations_service.py:131-164`
 - ✅ Method correctly extracts both project name and task index from branch names
-- ✅ Already integrated and used by `ProjectDetectionService.detect_project_from_pr()` at `src/claudestep/services/project_detection_service.py:61`
+- ✅ Already integrated and used by `ProjectDetectionService.detect_project_from_pr()` at `src/claudechain/services/project_detection_service.py:61`
 - ✅ Added 8 additional edge case tests to cover:
   - Index 0 handling
   - Non-numeric indices (rejected)
@@ -201,10 +201,10 @@ This suggests the project is already partially migrated away from metadata branc
   - Single character project names
   - Numeric characters in project names
   - Whitespace in project names (accepted by regex, though not recommended)
-  - Case sensitivity of prefix (must be lowercase "claude-step")
+  - Case sensitivity of prefix (must be lowercase "claude-chain")
 - ✅ All 28 tests in test_pr_operations.py pass
 - ✅ All 17 project detection integration tests pass
-- ✅ Regex pattern `^claude-step-(.+)-(\d+)$` correctly handles complex project names with hyphens
+- ✅ Regex pattern `^claude-chain-(.+)-(\d+)$` correctly handles complex project names with hyphens
 
 ---
 
@@ -221,21 +221,21 @@ This suggests the project is already partially migrated away from metadata branc
 - Remove metadata service dependency from `ReviewerManagementService`
 
 **Key changes**:
-- `src/claudestep/services/reviewer_management_service.py`
+- `src/claudechain/services/reviewer_management_service.py`
   - ✅ Replaced artifact queries with GitHub PR list queries filtered by assignee
   - ✅ Uses `list_open_pull_requests()` from `infrastructure/github/operations.py`
   - ✅ Removed `metadata_service` dependency from constructor
   - ✅ Filters PRs by project name using branch name parsing
-- `src/claudestep/infrastructure/github/operations.py`
+- `src/claudechain/infrastructure/github/operations.py`
   - ✅ Added `assignee` parameter to `list_pull_requests()`
   - ✅ Added `assignee` parameter to `list_open_pull_requests()`
   - ✅ Added `headRefName` to JSON fields for branch name extraction
-- `src/claudestep/domain/github_models.py`
+- `src/claudechain/domain/github_models.py`
   - ✅ Added `head_ref_name` field to `GitHubPullRequest`
   - ✅ Updated `from_dict()` to parse `headRefName`
-- `src/claudestep/cli/commands/prepare.py`
+- `src/claudechain/cli/commands/prepare.py`
   - ✅ Removed `metadata_service` parameter from `ReviewerManagementService` constructor
-- `src/claudestep/cli/commands/finalize.py`
+- `src/claudechain/cli/commands/finalize.py`
   - ✅ Already sets assignee via `gh pr create --assignee` (line 207)
 
 **Technical Notes**:
@@ -263,7 +263,7 @@ This suggests the project is already partially migrated away from metadata branc
 **Tasks**:
 - Update `StatisticsService` to remove metadata service dependency
 - Implement GitHub-based statistics collection:
-  - Query all ClaudeStep PRs (`label="claudestep"`)
+  - Query all ClaudeChain PRs (`label="claudechain"`)
   - Extract project name from branch name for each PR
   - Group by project, count total/merged/open
   - Extract reviewer from PR assignees field
@@ -272,12 +272,12 @@ This suggests the project is already partially migrated away from metadata branc
 - Add caching or rate limit handling if needed
 
 **Key changes**:
-- `src/claudestep/services/statistics_service.py`
+- `src/claudechain/services/statistics_service.py`
   - ✅ Removed `metadata_service` from constructor
   - ✅ Replaced all metadata queries with GitHub PR list queries
   - ✅ Uses `list_pull_requests()`, `list_open_pull_requests()`
   - ✅ Parses project from branch names using `PROperationsService.parse_branch_name()`
-- `src/claudestep/cli/commands/statistics.py`
+- `src/claudechain/cli/commands/statistics.py`
   - ✅ Removed metadata service initialization
   - ✅ Updated to use new StatisticsService constructor
 - `tests/unit/services/test_statistics_service.py`
@@ -290,7 +290,7 @@ This suggests the project is already partially migrated away from metadata branc
 
 **Data flow**:
 ```
-GitHub API → list_pull_requests(label="claudestep")
+GitHub API → list_pull_requests(label="claudechain")
          → parse branch names → extract project
          → group by project → count by state
          → extract assignees → count by reviewer
@@ -298,7 +298,7 @@ GitHub API → list_pull_requests(label="claudestep")
 ```
 
 **Technical Notes**:
-- ✅ Project discovery now queries all PRs with claudestep label and extracts unique project names from branch names
+- ✅ Project discovery now queries all PRs with claudechain label and extracts unique project names from branch names
 - ✅ In-progress task counting queries open PRs and filters by project using branch name parsing
 - ✅ Team member stats collection queries all PRs since cutoff date and groups by assignee
 - ✅ Cost tracking temporarily dropped (returns 0.0) - can be re-implemented via PR comments if needed later
@@ -316,9 +316,9 @@ GitHub API → list_pull_requests(label="claudestep")
 **Status**: ✅ Complete
 
 **Tasks Completed**:
-- ✅ Removed `src/claudestep/services/metadata_service.py`
-- ✅ Removed `src/claudestep/infrastructure/metadata/` directory (github_metadata_store.py, operations.py, __init__.py)
-- ✅ Removed metadata-specific classes from `src/claudestep/domain/models.py`:
+- ✅ Removed `src/claudechain/services/metadata_service.py`
+- ✅ Removed `src/claudechain/infrastructure/metadata/` directory (github_metadata_store.py, operations.py, __init__.py)
+- ✅ Removed metadata-specific classes from `src/claudechain/domain/models.py`:
   - Removed: `Task`, `TaskStatus`, `PullRequest`, `AIOperation`, `HybridProjectMetadata`
   - Removed: `PRReference.from_metadata_pr()` method (referenced removed PullRequest class)
   - Kept: `GitHubPullRequest`, `GitHubUser`, `TaskMetadata`, `ProjectMetadata`, `AITask`, `PRReference`, and all statistics models
@@ -337,10 +337,10 @@ GitHub API → list_pull_requests(label="claudestep")
 - All 573 tests pass successfully
 - Test coverage is 66.92% (below 70% threshold due to untested CLI commands that still import deleted code)
 - The following files still have imports to deleted metadata infrastructure and need to be updated in Phase 6:
-  - `src/claudestep/cli/commands/prepare.py` (0% coverage - imports GitHubMetadataStore, MetadataService)
-  - `src/claudestep/cli/commands/finalize.py` (0% coverage - imports AIOperation, PullRequest, Task, TaskStatus)
-  - `src/claudestep/cli/commands/discover_ready.py` (0% coverage - imports GitHubMetadataStore)
-  - `src/claudestep/services/task_management_service.py` (0% coverage - imports MetadataService)
+  - `src/claudechain/cli/commands/prepare.py` (0% coverage - imports GitHubMetadataStore, MetadataService)
+  - `src/claudechain/cli/commands/finalize.py` (0% coverage - imports AIOperation, PullRequest, Task, TaskStatus)
+  - `src/claudechain/cli/commands/discover_ready.py` (0% coverage - imports GitHubMetadataStore)
+  - `src/claudechain/services/task_management_service.py` (0% coverage - imports MetadataService)
 - These files will be fixed in Phase 6 when CLI commands are updated to remove metadata dependencies
 
 **Success criteria**: ✅ All metadata infrastructure code has been removed. Remaining imports will be cleaned up in Phase 6.
@@ -354,7 +354,7 @@ GitHub API → list_pull_requests(label="claudestep")
 **Status**: ✅ Complete
 
 **Tasks Completed**:
-- ✅ Audited all commands in `src/claudestep/cli/commands/`
+- ✅ Audited all commands in `src/claudechain/cli/commands/`
 - ✅ Removed `metadata_store` and `metadata_service` initialization from commands
 - ✅ Removed metadata service parameters from service constructors
 - ✅ Updated command orchestration to use GitHub-based approaches
@@ -418,22 +418,22 @@ task_service = TaskManagementService(repo)
 
 All service constructors have been updated to remove metadata_service parameters:
 
-1. **ReviewerManagementService** (src/claudestep/services/reviewer_management_service.py:24)
+1. **ReviewerManagementService** (src/claudechain/services/reviewer_management_service.py:24)
    - Constructor now takes only: `repo: str`
    - Removed `metadata_service` parameter
 
-2. **TaskManagementService** (src/claudestep/services/task_management_service.py:25)
+2. **TaskManagementService** (src/claudechain/services/task_management_service.py:25)
    - Constructor now takes only: `repo: str`
    - Removed `metadata_service` parameter
 
-3. **StatisticsService** (src/claudestep/services/statistics_service.py:28-33)
+3. **StatisticsService** (src/claudechain/services/statistics_service.py:28-33)
    - Constructor now takes: `repo: str`, `project_repository: ProjectRepository`, `base_branch: str = "main"`
    - Removed `metadata_service` parameter
 
 **Technical Notes**:
 - All 573 unit and integration tests pass
 - Coverage is 67.95% (below 70% threshold only due to CLI commands with 0% coverage: prepare.py, finalize.py, discover_ready.py, task_management_service.py - this was already the case from Phase 6)
-- Verified no imports of `MetadataService` remain in src/claudestep
+- Verified no imports of `MetadataService` remain in src/claudechain
 - Verified no constructor signatures reference `metadata_service` anywhere in the codebase
 - Services now follow cleaner dependency injection pattern with only required dependencies
 
@@ -452,7 +452,7 @@ All service constructors have been updated to remove metadata_service parameters
 **Tasks Completed**:
 - ✅ Verified `list_pull_requests()` supports filtering by:
   - `state` (open, closed, merged)
-  - `label` (e.g., "claudestep")
+  - `label` (e.g., "claudechain")
   - `assignee` (reviewer username)
   - `since` (date filter)
   - `limit` (configurable max results)
@@ -461,7 +461,7 @@ All service constructors have been updated to remove metadata_service parameters
 - ✅ Added test coverage for assignee filter parameter
 
 **Key file**:
-- `src/claudestep/infrastructure/github/operations.py`
+- `src/claudechain/infrastructure/github/operations.py`
 
 **Technical Notes**:
 - ✅ `list_pull_requests()` at operations.py:183-262 verified to support all required filters
@@ -547,14 +547,14 @@ mock_list_prs = Mock(return_value=[
 
 3. **Coverage check**: Ensure coverage remains above 70% threshold
    ```bash
-   PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=term-missing --cov-fail-under=70
+   PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudechain --cov-report=term-missing --cov-fail-under=70
    ```
 
 4. **Manual verification** (optional):
    - Create a test project with spec.md
    - Run prepare command → verify it creates PR with correct assignee
    - Run statistics command → verify it generates report from GitHub data
-   - Check PR branch name follows `claude-step-<project>-<task>` pattern
+   - Check PR branch name follows `claude-chain-<project>-<task>` pattern
    - Verify reviewer capacity checking works by querying GitHub
 
 **Technical Notes**:
@@ -607,5 +607,5 @@ mock_list_prs = Mock(return_value=[
 ## Notes
 
 - The architecture documentation mentions GitHub PR operations infrastructure already exists in `infrastructure/github/operations.py` with functions like `list_pull_requests()` - we'll leverage this existing code
-- Branch naming convention `claude-step-<project>-<task>` is already established
+- Branch naming convention `claude-chain-<project>-<task>` is already established
 - This aligns with the original simple architecture that worked well

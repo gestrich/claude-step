@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from claudestep.infrastructure.filesystem.operations import (
+from claudechain.infrastructure.filesystem.operations import (
     file_exists,
     find_file,
     read_file,

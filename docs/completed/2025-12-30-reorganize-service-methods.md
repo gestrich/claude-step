@@ -1,6 +1,6 @@
 ## Background
 
-The service classes in `src/claudestep/application/services/` currently have methods organized in various orders without a consistent structure. To improve code readability and maintainability, we should reorganize all methods following Python best practices:
+The service classes in `src/claudechain/application/services/` currently have methods organized in various orders without a consistent structure. To improve code readability and maintainability, we should reorganize all methods following Python best practices:
 
 1. **Public before private**: Public methods (part of the API) should appear before private/internal methods (prefixed with `_`)
 2. **High-level before low-level**: More abstract, higher-level operations should come before detailed implementation helpers
@@ -25,7 +25,7 @@ The services to reorganize are:
 
 - [x] Phase 1: Reorganize TaskManagementService
 
-Reorganize methods in `src/claudestep/application/services/task_management_service.py` following this order:
+Reorganize methods in `src/claudechain/application/services/task_management_service.py` following this order:
 
 1. `__init__()` - Constructor
 2. **Public API methods** (high-level operations first):
@@ -43,7 +43,7 @@ Reorganize methods in `src/claudestep/application/services/task_management_servi
 
 - [x] Phase 2: Reorganize ReviewerManagementService
 
-Reorganize methods in `src/claudestep/application/services/reviewer_management_service.py`:
+Reorganize methods in `src/claudechain/application/services/reviewer_management_service.py`:
 
 1. `__init__()` - Constructor
 2. **Public API methods**:
@@ -58,7 +58,7 @@ Reorganize methods in `src/claudestep/application/services/reviewer_management_s
 
 - [x] Phase 3: Reorganize PROperationsService
 
-Reorganize methods in `src/claudestep/application/services/pr_operations_service.py` following this order:
+Reorganize methods in `src/claudechain/application/services/pr_operations_service.py` following this order:
 
 1. `__init__()` - Constructor
 2. **Public API methods** (high-level first):
@@ -76,7 +76,7 @@ Reorganize methods in `src/claudestep/application/services/pr_operations_service
 
 - [x] Phase 4: Reorganize ProjectDetectionService
 
-Reorganize methods in `src/claudestep/application/services/project_detection_service.py`:
+Reorganize methods in `src/claudechain/application/services/project_detection_service.py`:
 
 1. `__init__()` - Constructor
 2. **Public API methods** (instance methods first):
@@ -93,7 +93,7 @@ Reorganize methods in `src/claudestep/application/services/project_detection_ser
 
 - [x] Phase 5: Reorganize MetadataService
 
-Reorganize methods in `src/claudestep/application/services/metadata_service.py` following this order:
+Reorganize methods in `src/claudechain/application/services/metadata_service.py` following this order:
 
 1. `__init__()` - Constructor
 2. **Section: Core CRUD Operations** (already well-organized):
@@ -128,7 +128,7 @@ Reorganize methods in `src/claudestep/application/services/metadata_service.py` 
 
 - [x] Phase 6: Reorganize StatisticsService
 
-Reorganize methods in `src/claudestep/application/services/statistics_service.py` following this order:
+Reorganize methods in `src/claudechain/application/services/statistics_service.py` following this order:
 
 1. `__init__()` - Constructor
 2. **Public API methods** (high-level first):
@@ -152,7 +152,7 @@ Reorganize methods in `src/claudestep/application/services/statistics_service.py
 
 - [x] Phase 7: Reorganize artifact_operations_service.py
 
-Reorganize module-level code in `src/claudestep/application/services/artifact_operations_service.py`:
+Reorganize module-level code in `src/claudechain/application/services/artifact_operations_service.py`:
 
 1. **Classes** (public before private):
    - `TaskMetadata` (dataclass) - Public model

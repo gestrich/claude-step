@@ -2,7 +2,7 @@
 
 ## Background
 
-ClaudeStep stores PR metadata to track project progress, reviewer capacity, costs, and AI operations. This document specifies the decided metadata model using a **hybrid approach** that separates task definitions from PR execution details.
+ClaudeChain stores PR metadata to track project progress, reviewer capacity, costs, and AI operations. This document specifies the decided metadata model using a **hybrid approach** that separates task definitions from PR execution details.
 
 ### Key Requirements
 
@@ -18,12 +18,12 @@ The metadata model must support:
 1. **Clear separation of concerns**: Separate spec.md structure from PR execution tracking
 2. **Explicit relationships**: Make relationships between entities obvious
 3. **Minimal special cases**: Avoid "not started" vs "started" being fundamentally different
-4. **Easy to reason about**: Model should match mental model of how ClaudeStep works
+4. **Easy to reason about**: Model should match mental model of how ClaudeChain works
 5. **Self-contained**: All information accessible without reading spec.md
 
 ### No Backward Compatibility Required
 
-**Important:** Since ClaudeStep has not been released yet, there is no need to maintain backward compatibility. The implementation can move straight to this approach without migration from any previous format.
+**Important:** Since ClaudeChain has not been released yet, there is no need to maintain backward compatibility. The implementation can move straight to this approach without migration from any previous format.
 
 ## The Hybrid Model
 
@@ -165,7 +165,7 @@ Status Derivation:
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "ClaudeStep Hybrid Model",
+  "title": "ClaudeChain Hybrid Model",
   "type": "object",
   "required": ["schema_version", "project", "last_updated", "tasks", "pull_requests"],
   "properties": {
@@ -383,7 +383,7 @@ A mid-progress project showing all three task states:
     {
       "task_index": 1,
       "pr_number": 41,
-      "branch_name": "claudestep/auth-refactor/step-1",
+      "branch_name": "claudechain/auth-refactor/step-1",
       "reviewer": "alice",
       "pr_state": "merged",
       "created_at": "2025-12-28T10:15:00Z",
@@ -403,7 +403,7 @@ A mid-progress project showing all three task states:
     {
       "task_index": 2,
       "pr_number": 42,
-      "branch_name": "claudestep/auth-refactor/step-2",
+      "branch_name": "claudechain/auth-refactor/step-2",
       "reviewer": "bob",
       "pr_state": "open",
       "created_at": "2025-12-29T09:30:00Z",
@@ -456,7 +456,7 @@ A task that went through multiple refinement cycles:
     {
       "task_index": 1,
       "pr_number": 101,
-      "branch_name": "claudestep/api-performance/step-1",
+      "branch_name": "claudechain/api-performance/step-1",
       "reviewer": "charlie",
       "pr_state": "merged",
       "created_at": "2025-12-27T14:00:00Z",
@@ -506,7 +506,7 @@ A task that went through multiple refinement cycles:
     {
       "task_index": 2,
       "pr_number": 102,
-      "branch_name": "claudestep/api-performance/step-2",
+      "branch_name": "claudechain/api-performance/step-2",
       "reviewer": "charlie",
       "pr_state": "open",
       "created_at": "2025-12-29T10:00:00Z",
@@ -565,7 +565,7 @@ A task where the first PR was closed and a second attempt succeeded:
     {
       "task_index": 1,
       "pr_number": 50,
-      "branch_name": "claudestep/payment/step-1-attempt-1",
+      "branch_name": "claudechain/payment/step-1-attempt-1",
       "reviewer": "dana",
       "pr_state": "closed",
       "created_at": "2025-12-26T09:00:00Z",
@@ -585,7 +585,7 @@ A task where the first PR was closed and a second attempt succeeded:
     {
       "task_index": 1,
       "pr_number": 51,
-      "branch_name": "claudestep/payment/step-1-attempt-2",
+      "branch_name": "claudechain/payment/step-1-attempt-2",
       "reviewer": "dana",
       "pr_state": "merged",
       "created_at": "2025-12-27T14:00:00Z",
@@ -1216,10 +1216,10 @@ if not validation["errors"] and not validation["warnings"]:
 
 ### Storage Location
 
-Metadata will be stored in a dedicated `claudestep-metadata` branch in each repository:
+Metadata will be stored in a dedicated `claudechain-metadata` branch in each repository:
 
 ```
-claudestep-metadata/
+claudechain-metadata/
 ├── projects/
 │   ├── my-refactor.json
 │   ├── another-project.json
@@ -1229,9 +1229,9 @@ claudestep-metadata/
 
 ### API Integration
 
-The hybrid model will be integrated with ClaudeStep's branch-based metadata storage system (see `github-branch-metadata-storage.md`):
+The hybrid model will be integrated with ClaudeChain's branch-based metadata storage system (see `github-branch-metadata-storage.md`):
 
-1. **Finalize command**: Writes Project JSON to `claudestep-metadata` branch after PR creation
+1. **Finalize command**: Writes Project JSON to `claudechain-metadata` branch after PR creation
 2. **Statistics command**: Reads Project JSON files for fast statistics generation
 3. **Prepare command**: Reads Project JSON to check reviewer capacity
 4. **GitHub API**: Direct file operations via Contents API (no branch checkout needed)
@@ -1256,5 +1256,5 @@ If the model needs to evolve in the future:
 - This specification is complete and ready for implementation
 - All examples validated for JSON correctness
 - Dataclass structure includes full type hints for static analysis
-- Query operations optimized for ClaudeStep's common use cases
+- Query operations optimized for ClaudeChain's common use cases
 - Validation suite covers all known edge cases

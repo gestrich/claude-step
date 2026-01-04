@@ -24,7 +24,7 @@ Configuration and workflow improvements for V1 release.
 - PyYAML is installed via GitHub Actions during workflow setup
 
 **Next steps:**
-- Will need to update /Users/bill/Developer/personal/claude-step-demo to use YAML configuration
+- Will need to update /Users/bill/Developer/personal/claude-chain-demo to use YAML configuration
 
 - [x] **Improve branch name options**
 
@@ -50,9 +50,9 @@ Configuration and workflow improvements for V1 release.
 **Changes made:**
 - Removed `config_path`, `spec_path`, and `pr_template_path` inputs from `action.yml`
 - Updated `detect_project_paths()` function in `project_detection.py` to no longer accept override parameters
-- Modified `prepare.py` to always use the standard `claude-step/` directory structure
+- Modified `prepare.py` to always use the standard `claude-chain/` directory structure
 - Updated README.md to remove documentation for the removed inputs
-- All projects must now be located in `claude-step/{project-name}/` with standard file names:
+- All projects must now be located in `claude-chain/{project-name}/` with standard file names:
   - `configuration.yml` (or `configuration.json` for backwards compatibility)
   - `spec.md`
   - `pr-template.md`
@@ -146,14 +146,14 @@ Configuration and workflow improvements for V1 release.
 - This is a breaking change - projects must now pass the Slack webhook URL as an action input instead of in the config file
 - Better security practice: secrets should be stored in GitHub Secrets and passed as inputs, not committed in config files
 - More aligned with GitHub Actions best practices for handling sensitive data
-- Demo project at /Users/bill/Developer/personal/claude-step-demo will need to be updated to pass `slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}` as an action input
+- Demo project at /Users/bill/Developer/personal/claude-chain-demo will need to be updated to pass `slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}` as an action input
 
 - [x] **Make PR label an action input**
 
 **Status:** COMPLETED
 
 **Changes made:**
-- Added `pr_label` input to `action.yml` with default value "claude-step"
+- Added `pr_label` input to `action.yml` with default value "claude-chain"
 - Updated `prepare.py` to read PR label from `PR_LABEL` environment variable (passed from action input) instead of hardcoding it
 - Updated README.md:
   - Added `pr_label` to the inputs table
@@ -162,17 +162,17 @@ Configuration and workflow improvements for V1 release.
 - All Python files compile successfully
 
 **Technical notes:**
-- Defaults to "claude-step" for backwards compatibility
-- The label is used to identify ClaudeStep PRs, track reviewer workload, and auto-detect projects on PR merge
+- Defaults to "claude-chain" for backwards compatibility
+- The label is used to identify ClaudeChain PRs, track reviewer workload, and auto-detect projects on PR merge
 - Users can now customize the label to fit their own labeling conventions
-- The statistics collector functions still use "claudestep" as default in their parameters, but this is appropriate as they're utility functions that can be used independently
+- The statistics collector functions still use "claudechain" as default in their parameters, but this is appropriate as they're utility functions that can be used independently
 
 - [x] **Convert hourly job to daily in demo project**
 
 **Status:** COMPLETED
 
 **Changes made:**
-- Updated the cron schedule in `/Users/bill/Developer/personal/claude-step-demo/.github/workflows/claudestep.yml`
+- Updated the cron schedule in `/Users/bill/Developer/personal/claude-chain-demo/.github/workflows/claudechain.yml`
 - Changed from `0 2 * * *` (2am UTC) to `0 9 * * *` (9am UTC / 5am EST)
 - Updated the comment in the workflow file to reflect the new schedule
 
@@ -187,7 +187,7 @@ Configuration and workflow improvements for V1 release.
 **Status:** COMPLETED
 
 **Changes made:**
-- Copied all E2E test files to `/Users/bill/Developer/personal/claude-step-demo/tests/integration/`
+- Copied all E2E test files to `/Users/bill/Developer/personal/claude-chain-demo/tests/integration/`
   - `test_workflow_e2e.py` - Main test file
   - `README.md` - Test documentation
   - `run_test.sh` - Test runner script
@@ -212,14 +212,14 @@ Configuration and workflow improvements for V1 release.
 **Status:** COMPLETED
 
 **Changes made:**
-- Updated E2E test in demo project (`/Users/bill/Developer/personal/claude-step-demo/tests/integration/test_workflow_e2e.py`) to create only 1 PR instead of 3
+- Updated E2E test in demo project (`/Users/bill/Developer/personal/claude-chain-demo/tests/integration/test_workflow_e2e.py`) to create only 1 PR instead of 3
 - Modified spec.md template to have only 1 task instead of 3
 - Simplified test to validate:
   - Workflow creates PR for task
   - AI-generated summary is posted on PR
   - Cost information is posted on PR
 - Removed steps 2 and 3 that tested reviewer capacity and merge trigger
-- Created comprehensive unit test in action repository (`/Users/bill/Developer/personal/claude-step/tests/test_task_management.py`) that covers:
+- Created comprehensive unit test in action repository (`/Users/bill/Developer/personal/claude-chain/tests/test_task_management.py`) that covers:
   - Finding first unchecked task
   - Finding next task after completed tasks
   - Skipping in-progress tasks
@@ -241,7 +241,7 @@ Configuration and workflow improvements for V1 release.
 
 **Changes made:**
 - Pushed all changes to both action and demo project repositories
-- Ran E2E tests from demo project at `/Users/bill/Developer/personal/claude-step-demo`
+- Ran E2E tests from demo project at `/Users/bill/Developer/personal/claude-chain-demo`
 - All tests passed successfully (1 passed in ~3 minutes)
 - Verified unit tests pass (80 passed, 5 pre-existing failures unrelated to this change)
 

@@ -4,10 +4,10 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from claudestep.cli.commands.prepare import cmd_prepare
-from claudestep.domain.project import Project
-from claudestep.domain.project_configuration import ProjectConfiguration
-from claudestep.domain.spec_content import SpecContent
+from claudechain.cli.commands.prepare import cmd_prepare
+from claudechain.domain.project import Project
+from claudechain.domain.project_configuration import ProjectConfiguration
+from claudechain.domain.spec_content import SpecContent
 
 
 class TestPrepareBaseBranchResolution:
@@ -68,15 +68,15 @@ class TestPrepareBaseBranchResolution:
         monkeypatch.setenv("PROJECT_NAME", "test-project")
         monkeypatch.setenv("BASE_BRANCH", "main")  # Default from workflow
 
-        with patch("claudestep.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
-             patch("claudestep.cli.commands.prepare.PRService") as mock_pr_service_class, \
-             patch("claudestep.cli.commands.prepare.ProjectService"), \
-             patch("claudestep.cli.commands.prepare.TaskService") as mock_task_service_class, \
-             patch("claudestep.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
-             patch("claudestep.cli.commands.prepare.file_exists_in_branch") as mock_file_exists, \
-             patch("claudestep.cli.commands.prepare.ensure_label_exists"), \
-             patch("claudestep.cli.commands.prepare.validate_spec_format_from_string"), \
-             patch("claudestep.cli.commands.prepare.run_git_command"):
+        with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
+             patch("claudechain.cli.commands.prepare.PRService") as mock_pr_service_class, \
+             patch("claudechain.cli.commands.prepare.ProjectService"), \
+             patch("claudechain.cli.commands.prepare.TaskService") as mock_task_service_class, \
+             patch("claudechain.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
+             patch("claudechain.cli.commands.prepare.file_exists_in_branch") as mock_file_exists, \
+             patch("claudechain.cli.commands.prepare.ensure_label_exists"), \
+             patch("claudechain.cli.commands.prepare.validate_spec_format_from_string"), \
+             patch("claudechain.cli.commands.prepare.run_git_command"):
 
             # Mock file existence checks
             mock_file_exists.return_value = True
@@ -89,7 +89,7 @@ class TestPrepareBaseBranchResolution:
 
             # Mock PRService
             mock_pr_service = Mock()
-            mock_pr_service.format_branch_name.return_value = "claude-step-test-project-abc123"
+            mock_pr_service.format_branch_name.return_value = "claude-chain-test-project-abc123"
             mock_pr_service_class.return_value = mock_pr_service
 
             # Mock TaskService
@@ -130,15 +130,15 @@ class TestPrepareBaseBranchResolution:
         monkeypatch.setenv("PROJECT_NAME", "test-project")
         monkeypatch.setenv("BASE_BRANCH", "main")
 
-        with patch("claudestep.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
-             patch("claudestep.cli.commands.prepare.PRService") as mock_pr_service_class, \
-             patch("claudestep.cli.commands.prepare.ProjectService"), \
-             patch("claudestep.cli.commands.prepare.TaskService") as mock_task_service_class, \
-             patch("claudestep.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
-             patch("claudestep.cli.commands.prepare.file_exists_in_branch") as mock_file_exists, \
-             patch("claudestep.cli.commands.prepare.ensure_label_exists"), \
-             patch("claudestep.cli.commands.prepare.validate_spec_format_from_string"), \
-             patch("claudestep.cli.commands.prepare.run_git_command"):
+        with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
+             patch("claudechain.cli.commands.prepare.PRService") as mock_pr_service_class, \
+             patch("claudechain.cli.commands.prepare.ProjectService"), \
+             patch("claudechain.cli.commands.prepare.TaskService") as mock_task_service_class, \
+             patch("claudechain.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
+             patch("claudechain.cli.commands.prepare.file_exists_in_branch") as mock_file_exists, \
+             patch("claudechain.cli.commands.prepare.ensure_label_exists"), \
+             patch("claudechain.cli.commands.prepare.validate_spec_format_from_string"), \
+             patch("claudechain.cli.commands.prepare.run_git_command"):
 
             # Mock file existence checks
             mock_file_exists.return_value = True
@@ -151,7 +151,7 @@ class TestPrepareBaseBranchResolution:
 
             # Mock PRService
             mock_pr_service = Mock()
-            mock_pr_service.format_branch_name.return_value = "claude-step-test-project-abc123"
+            mock_pr_service.format_branch_name.return_value = "claude-chain-test-project-abc123"
             mock_pr_service_class.return_value = mock_pr_service
 
             # Mock TaskService
@@ -193,15 +193,15 @@ class TestPrepareBaseBranchResolution:
         monkeypatch.setenv("PROJECT_NAME", "test-project")
         monkeypatch.setenv("BASE_BRANCH", "main")
 
-        with patch("claudestep.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
-             patch("claudestep.cli.commands.prepare.PRService") as mock_pr_service_class, \
-             patch("claudestep.cli.commands.prepare.ProjectService"), \
-             patch("claudestep.cli.commands.prepare.TaskService") as mock_task_service_class, \
-             patch("claudestep.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
-             patch("claudestep.cli.commands.prepare.file_exists_in_branch") as mock_file_exists, \
-             patch("claudestep.cli.commands.prepare.ensure_label_exists"), \
-             patch("claudestep.cli.commands.prepare.validate_spec_format_from_string"), \
-             patch("claudestep.cli.commands.prepare.run_git_command"):
+        with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
+             patch("claudechain.cli.commands.prepare.PRService") as mock_pr_service_class, \
+             patch("claudechain.cli.commands.prepare.ProjectService"), \
+             patch("claudechain.cli.commands.prepare.TaskService") as mock_task_service_class, \
+             patch("claudechain.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
+             patch("claudechain.cli.commands.prepare.file_exists_in_branch") as mock_file_exists, \
+             patch("claudechain.cli.commands.prepare.ensure_label_exists"), \
+             patch("claudechain.cli.commands.prepare.validate_spec_format_from_string"), \
+             patch("claudechain.cli.commands.prepare.run_git_command"):
 
             # Mock file existence checks
             mock_file_exists.return_value = True
@@ -214,7 +214,7 @@ class TestPrepareBaseBranchResolution:
 
             # Mock PRService
             mock_pr_service = Mock()
-            mock_pr_service.format_branch_name.return_value = "claude-step-test-project-abc123"
+            mock_pr_service.format_branch_name.return_value = "claude-chain-test-project-abc123"
             mock_pr_service_class.return_value = mock_pr_service
 
             # Mock TaskService
@@ -264,15 +264,15 @@ class TestPrepareBaseBranchResolution:
         monkeypatch.setenv("PROJECT_NAME", "test-project")
         monkeypatch.setenv("BASE_BRANCH", "main")
 
-        with patch("claudestep.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
-             patch("claudestep.cli.commands.prepare.PRService") as mock_pr_service_class, \
-             patch("claudestep.cli.commands.prepare.ProjectService"), \
-             patch("claudestep.cli.commands.prepare.TaskService") as mock_task_service_class, \
-             patch("claudestep.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
-             patch("claudestep.cli.commands.prepare.file_exists_in_branch") as mock_file_exists, \
-             patch("claudestep.cli.commands.prepare.ensure_label_exists"), \
-             patch("claudestep.cli.commands.prepare.validate_spec_format_from_string"), \
-             patch("claudestep.cli.commands.prepare.run_git_command"):
+        with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
+             patch("claudechain.cli.commands.prepare.PRService") as mock_pr_service_class, \
+             patch("claudechain.cli.commands.prepare.ProjectService"), \
+             patch("claudechain.cli.commands.prepare.TaskService") as mock_task_service_class, \
+             patch("claudechain.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
+             patch("claudechain.cli.commands.prepare.file_exists_in_branch") as mock_file_exists, \
+             patch("claudechain.cli.commands.prepare.ensure_label_exists"), \
+             patch("claudechain.cli.commands.prepare.validate_spec_format_from_string"), \
+             patch("claudechain.cli.commands.prepare.run_git_command"):
 
             # Mock file existence checks
             mock_file_exists.return_value = True
@@ -285,7 +285,7 @@ class TestPrepareBaseBranchResolution:
 
             # Mock PRService
             mock_pr_service = Mock()
-            mock_pr_service.format_branch_name.return_value = "claude-step-test-project-abc123"
+            mock_pr_service.format_branch_name.return_value = "claude-chain-test-project-abc123"
             mock_pr_service_class.return_value = mock_pr_service
 
             # Mock TaskService
@@ -374,15 +374,15 @@ class TestPrepareAllowedToolsResolution:
         monkeypatch.setenv("PROJECT_NAME", "test-project")
         monkeypatch.setenv("BASE_BRANCH", "main")
 
-        with patch("claudestep.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
-             patch("claudestep.cli.commands.prepare.PRService") as mock_pr_service_class, \
-             patch("claudestep.cli.commands.prepare.ProjectService"), \
-             patch("claudestep.cli.commands.prepare.TaskService") as mock_task_service_class, \
-             patch("claudestep.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
-             patch("claudestep.cli.commands.prepare.file_exists_in_branch") as mock_file_exists, \
-             patch("claudestep.cli.commands.prepare.ensure_label_exists"), \
-             patch("claudestep.cli.commands.prepare.validate_spec_format_from_string"), \
-             patch("claudestep.cli.commands.prepare.run_git_command"):
+        with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
+             patch("claudechain.cli.commands.prepare.PRService") as mock_pr_service_class, \
+             patch("claudechain.cli.commands.prepare.ProjectService"), \
+             patch("claudechain.cli.commands.prepare.TaskService") as mock_task_service_class, \
+             patch("claudechain.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
+             patch("claudechain.cli.commands.prepare.file_exists_in_branch") as mock_file_exists, \
+             patch("claudechain.cli.commands.prepare.ensure_label_exists"), \
+             patch("claudechain.cli.commands.prepare.validate_spec_format_from_string"), \
+             patch("claudechain.cli.commands.prepare.run_git_command"):
 
             # Mock file existence checks
             mock_file_exists.return_value = True
@@ -395,7 +395,7 @@ class TestPrepareAllowedToolsResolution:
 
             # Mock PRService
             mock_pr_service = Mock()
-            mock_pr_service.format_branch_name.return_value = "claude-step-test-project-abc123"
+            mock_pr_service.format_branch_name.return_value = "claude-chain-test-project-abc123"
             mock_pr_service_class.return_value = mock_pr_service
 
             # Mock TaskService
@@ -436,15 +436,15 @@ class TestPrepareAllowedToolsResolution:
         monkeypatch.setenv("PROJECT_NAME", "test-project")
         monkeypatch.setenv("BASE_BRANCH", "main")
 
-        with patch("claudestep.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
-             patch("claudestep.cli.commands.prepare.PRService") as mock_pr_service_class, \
-             patch("claudestep.cli.commands.prepare.ProjectService"), \
-             patch("claudestep.cli.commands.prepare.TaskService") as mock_task_service_class, \
-             patch("claudestep.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
-             patch("claudestep.cli.commands.prepare.file_exists_in_branch") as mock_file_exists, \
-             patch("claudestep.cli.commands.prepare.ensure_label_exists"), \
-             patch("claudestep.cli.commands.prepare.validate_spec_format_from_string"), \
-             patch("claudestep.cli.commands.prepare.run_git_command"):
+        with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
+             patch("claudechain.cli.commands.prepare.PRService") as mock_pr_service_class, \
+             patch("claudechain.cli.commands.prepare.ProjectService"), \
+             patch("claudechain.cli.commands.prepare.TaskService") as mock_task_service_class, \
+             patch("claudechain.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
+             patch("claudechain.cli.commands.prepare.file_exists_in_branch") as mock_file_exists, \
+             patch("claudechain.cli.commands.prepare.ensure_label_exists"), \
+             patch("claudechain.cli.commands.prepare.validate_spec_format_from_string"), \
+             patch("claudechain.cli.commands.prepare.run_git_command"):
 
             # Mock file existence checks
             mock_file_exists.return_value = True
@@ -457,7 +457,7 @@ class TestPrepareAllowedToolsResolution:
 
             # Mock PRService
             mock_pr_service = Mock()
-            mock_pr_service.format_branch_name.return_value = "claude-step-test-project-abc123"
+            mock_pr_service.format_branch_name.return_value = "claude-chain-test-project-abc123"
             mock_pr_service_class.return_value = mock_pr_service
 
             # Mock TaskService

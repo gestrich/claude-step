@@ -1,10 +1,10 @@
-# How ClaudeStep Works
+# How ClaudeChain Works
 
-This guide explains the core concepts behind ClaudeStep—the mental model that helps you understand everything else.
+This guide explains the core concepts behind ClaudeChain—the mental model that helps you understand everything else.
 
 ## Table of Contents
 
-- [What ClaudeStep Does](#what-claudestep-does)
+- [What ClaudeChain Does](#what-claudechain-does)
 - [The PR Chain](#the-pr-chain)
 - [Task Identification](#task-identification)
 - [Branch Naming](#branch-naming)
@@ -14,9 +14,9 @@ This guide explains the core concepts behind ClaudeStep—the mental model that 
 
 ---
 
-## What ClaudeStep Does
+## What ClaudeChain Does
 
-ClaudeStep automates incremental code refactoring by:
+ClaudeChain automates incremental code refactoring by:
 
 1. Reading a task list you define in a `spec.md` file
 2. Creating a pull request for one task at a time
@@ -34,7 +34,7 @@ It's designed for work that would otherwise sit on the backlog forever—migrati
 
 ## The PR Chain
 
-ClaudeStep creates a chain of PRs, one task at a time:
+ClaudeChain creates a chain of PRs, one task at a time:
 
 ```
 spec.md                    PRs                           spec.md (after)
@@ -46,11 +46,11 @@ spec.md                    PRs                           spec.md (after)
 
 **Flow:**
 1. You write tasks in `spec.md` using checkbox syntax (`- [ ]`)
-2. ClaudeStep finds the first unchecked task
+2. ClaudeChain finds the first unchecked task
 3. Claude Code implements the task and creates a PR
 4. You review and merge the PR
 5. The task is automatically marked complete (`- [x]`)
-6. ClaudeStep creates the next PR
+6. ClaudeChain creates the next PR
 7. Process repeats until all tasks are done
 
 **Why one at a time?** Each PR is independently reviewable. If Claude makes a mistake, you catch it early. Changes stay small and focused.
@@ -59,7 +59,7 @@ spec.md                    PRs                           spec.md (after)
 
 ## Task Identification
 
-ClaudeStep uses **hash-based task identification**. Each task is identified by an 8-character SHA-256 hash of its description, not its position in the file.
+ClaudeChain uses **hash-based task identification**. Each task is identified by an 8-character SHA-256 hash of its description, not its position in the file.
 
 **Example:**
 ```markdown
@@ -90,18 +90,18 @@ ClaudeStep uses **hash-based task identification**. Each task is identified by a
 
 ## Branch Naming
 
-ClaudeStep branches follow a predictable pattern:
+ClaudeChain branches follow a predictable pattern:
 
 ```
-claude-step-{project}-{task-hash}
+claude-chain-{project}-{task-hash}
 ```
 
 **Examples:**
-- `claude-step-auth-refactor-39b1209d`
-- `claude-step-api-cleanup-a8f3c2d1`
+- `claude-chain-auth-refactor-39b1209d`
+- `claude-chain-api-cleanup-a8f3c2d1`
 
 **Components:**
-- `claude-step` - Fixed prefix identifying ClaudeStep branches
+- `claude-chain` - Fixed prefix identifying ClaudeChain branches
 - `{project}` - Your project folder name (e.g., `auth-refactor`)
 - `{task-hash}` - 8-character hash of the task description
 
@@ -111,9 +111,9 @@ claude-step-{project}-{task-hash}
 
 ## What Runs Where
 
-ClaudeStep involves two systems working together:
+ClaudeChain involves two systems working together:
 
-### GitHub Action (ClaudeStep)
+### GitHub Action (ClaudeChain)
 Runs in GitHub Actions. Handles orchestration:
 - Reads your `spec.md` to find the next task
 - Checks reviewer capacity
@@ -130,17 +130,17 @@ Runs in GitHub Actions (via `anthropics/claude-code-action`). Does the actual wo
 - Makes code changes
 - Commits to the branch
 
-**Separation of concerns:** ClaudeStep manages the workflow; Claude Code implements the code changes.
+**Separation of concerns:** ClaudeChain manages the workflow; Claude Code implements the code changes.
 
 ---
 
 ## Automatic Continuation
 
-When you merge a ClaudeStep PR, the next task automatically starts. Here's how:
+When you merge a ClaudeChain PR, the next task automatically starts. Here's how:
 
 ### Requirements for Auto-Continuation
 
-1. **PR has the `claudestep` label** - Added automatically when ClaudeStep creates the PR
+1. **PR has the `claudechain` label** - Added automatically when ClaudeChain creates the PR
 2. **PR is merged** - Not just closed (closing without merging won't trigger)
 3. **Tasks remain** - At least one unchecked task exists in `spec.md`
 
@@ -151,9 +151,9 @@ When you merge a ClaudeStep PR, the next task automatically starts. Here's how:
          ↓
 2. GitHub fires `pull_request: types: [closed]` event
          ↓
-3. ClaudeStep workflow runs
+3. ClaudeChain workflow runs
          ↓
-4. Checks: Has 'claudestep' label? Was merged?
+4. Checks: Has 'claudechain' label? Was merged?
          ↓
 5. If yes: Finds next task, creates PR #2
          ↓
@@ -166,8 +166,8 @@ When you merge a ClaudeStep PR, the next task automatically starts. Here's how:
 
 The first task for a new project cannot auto-trigger (there's no previous PR to merge). Start it by either:
 
-1. **Creating a PR with `claudestep` label that adds your spec files, then merging it** (recommended)
-2. **Manual trigger:** Actions → ClaudeStep → Run workflow → Enter project name
+1. **Creating a PR with `claudechain` label that adds your spec files, then merging it** (recommended)
+2. **Manual trigger:** Actions → ClaudeChain → Run workflow → Enter project name
 
 ---
 
@@ -192,21 +192,21 @@ Since tasks are identified by hash, changing the description creates a *new* has
 # After (you changed the description)
 - [ ] Add OAuth authentication   ← hash: a8f3c2d1 (NEW hash!)
 
-# Result: PR with branch 'claude-step-...-39b1209d' is orphaned
+# Result: PR with branch 'claude-chain-...-39b1209d' is orphaned
 ```
 
 ### Detection and Resolution
 
-ClaudeStep detects orphaned PRs and warns you:
+ClaudeChain detects orphaned PRs and warns you:
 
 ```
 ⚠️  Warning: Found 1 orphaned PR(s):
-  - PR #123 (claude-step-auth-39b1209d) - task hash 39b1209d no longer matches any task
+  - PR #123 (claude-chain-auth-39b1209d) - task hash 39b1209d no longer matches any task
 
 To resolve:
   1. Review the PR and verify if it should be closed
   2. Close the orphaned PR
-  3. ClaudeStep will automatically create a new PR for the current task
+  3. ClaudeChain will automatically create a new PR for the current task
 ```
 
 **To resolve:**
@@ -227,8 +227,8 @@ To resolve:
 |---------|-----------|
 | **PR Chain** | One task → one PR → merge → next task |
 | **Task Identification** | Hash of description, not position |
-| **Branch Naming** | `claude-step-{project}-{hash}` |
-| **Auto-Continuation** | Requires `claudestep` label + merge |
+| **Branch Naming** | `claude-chain-{project}-{hash}` |
+| **Auto-Continuation** | Requires `claudechain` label + merge |
 | **Orphaned PRs** | Occur when task descriptions change |
 
-Understanding these concepts helps you work effectively with ClaudeStep. For setup instructions, see [Setup Guide](./setup.md). For project configuration, see [Projects Guide](./projects.md).
+Understanding these concepts helps you work effectively with ClaudeChain. For setup instructions, see [Setup Guide](./setup.md). For project configuration, see [Projects Guide](./projects.md).

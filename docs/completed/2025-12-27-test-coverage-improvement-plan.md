@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines a comprehensive plan to improve test coverage in the ClaudeStep project by implementing Python testing best practices. The goal is to achieve robust, maintainable test coverage that enables confident refactoring and prevents regressions.
+This document outlines a comprehensive plan to improve test coverage in the ClaudeChain project by implementing Python testing best practices. The goal is to achieve robust, maintainable test coverage that enables confident refactoring and prevents regressions.
 
 **⚠️ IMPORTANT**: All tests written for this project MUST follow the **Test Style Guide and Conventions** section below. Consistency in test style is critical for maintainability, readability, and long-term project health. Code reviews will enforce adherence to these standards.
 
@@ -21,7 +21,7 @@ Following the completion of the architecture modernization (see `docs/completed/
 Following the completion of the branch naming simplification refactoring (see `docs/completed/simplify-branch-naming.md`):
 
 1. **New `pr_operations.py` module** - Centralized PR utilities with comprehensive tests (21 test cases) already implemented
-2. **Simplified branch naming** - All tests use the standard format `claude-step-{project}-{index}`
+2. **Simplified branch naming** - All tests use the standard format `claude-chain-{project}-{index}`
 3. **Removed `branchPrefix` configuration** - Tests verify this field is rejected with a helpful error message
 4. **Simplified `project_detection.py`** - Uses centralized `parse_branch_name()` utility
 5. **Centralized PR fetching** - Multiple modules now use shared `get_project_prs()` utility
@@ -71,7 +71,7 @@ These changes reduce code duplication and simplify the testing surface area.
 - `tests/unit/cli/commands/test_notify_pr.py` - PR notification command (23 tests)
 
 **Integration:**
-- Demo repository: `claude-step-demo/tests/integration/test_workflow_e2e.py` - End-to-end workflow
+- Demo repository: `claude-chain-demo/tests/integration/test_workflow_e2e.py` - End-to-end workflow
 
 ### Coverage Gaps
 The following modules lack unit tests:
@@ -185,11 +185,11 @@ def test_find_available_reviewer_calls_check_capacity_for_each(mock_check):
 ```python
 # ✅ GOOD - Clear what's being tested and why
 def test_format_branch_name_creates_correct_format():
-    """Should create branch name in format: claude-step-{project}-{index}"""
+    """Should create branch name in format: claude-chain-{project}-{index}"""
     result = format_branch_name("my-project", 5)
 
-    assert result == "claude-step-my-project-5"
-    assert result.startswith("claude-step-")
+    assert result == "claude-chain-my-project-5"
+    assert result.startswith("claude-chain-")
     assert result.endswith("-5")
 
 # ❌ BAD - Unclear what's being verified
@@ -258,7 +258,7 @@ def test_prepare_command():
 def test_parse_branch_name_extracts_project_and_index():
     """Should parse standard branch format correctly"""
     # Arrange
-    branch_name = "claude-step-my-project-42"
+    branch_name = "claude-chain-my-project-42"
 
     # Act
     project, index = parse_branch_name(branch_name)
@@ -269,7 +269,7 @@ def test_parse_branch_name_extracts_project_and_index():
 
 # ❌ BAD - Overly complex or irrelevant test data
 def test_parse_branch_name():
-    branch = "claude-step-" + "-".join([
+    branch = "claude-chain-" + "-".join([
         "my", "project", "with", "lots", "of", "parts"
     ]) + "-" + str(int("42"))  # Why so complex?
     project, index = parse_branch_name(branch)
@@ -340,7 +340,7 @@ def test_prepare_command_creates_branch_with_correct_name(
     mock_task_service,
     sample_config
 ):
-    """Should create branch using format: claude-step-{project}-{index}"""
+    """Should create branch using format: claude-chain-{project}-{index}"""
     # Arrange
     mock_task_service.find_next_task.return_value = Task(index=5, description="...")
 
@@ -349,7 +349,7 @@ def test_prepare_command_creates_branch_with_correct_name(
 
     # Assert
     mock_git_client.create_branch.assert_called_once_with(
-        "claude-step-my-project-5"
+        "claude-chain-my-project-5"
     )
 ```
 
@@ -690,8 +690,8 @@ pytest-benchmark>=4.0.0
 import pytest
 from unittest.mock import Mock, patch
 
-from claudestep.reviewer_management import check_reviewer_capacity
-from claudestep.models import ReviewerConfig
+from claudechain.reviewer_management import check_reviewer_capacity
+from claudechain.models import ReviewerConfig
 
 
 class TestCheckReviewerCapacity:
@@ -705,7 +705,7 @@ class TestCheckReviewerCapacity:
     @pytest.fixture
     def mock_github_api(self):
         """Fixture providing mocked GitHub API"""
-        with patch('claudestep.github_operations.get_open_prs') as mock:
+        with patch('claudechain.github_operations.get_open_prs') as mock:
             yield mock
 
     def test_reviewer_under_capacity(self, reviewer_config, mock_github_api):
@@ -718,7 +718,7 @@ class TestCheckReviewerCapacity:
 
         # Assert
         assert result is True
-        mock_github_api.assert_called_once_with("alice", label="claude-step")
+        mock_github_api.assert_called_once_with("alice", label="claude-chain")
 
     def test_reviewer_at_capacity(self, reviewer_config, mock_github_api):
         """Should return False when reviewer is at capacity"""

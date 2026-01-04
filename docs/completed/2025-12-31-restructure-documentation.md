@@ -1,6 +1,6 @@
 ## Background
 
-The ClaudeStep documentation has grown organically and needs reorganization to improve maintainability and discoverability. The current structure mixes:
+The ClaudeChain documentation has grown organically and needs reorganization to improve maintainability and discoverability. The current structure mixes:
 - User-facing guides with developer architecture docs
 - General patterns with feature-specific technical documentation
 - Durable documentation with ephemeral implementation specs
@@ -107,7 +107,7 @@ Move general architecture and coding patterns to the new general-architecture di
 **Completion Notes:**
 - All general architecture files successfully created and organized
 - python-code-style.md moved to python-style.md in general-architecture directory
-- Service layer pattern extracted into dedicated document with full details on ClaudeStep's implementation
+- Service layer pattern extracted into dedicated document with full details on ClaudeChain's implementation
 - Domain model design pattern extracted with comprehensive examples
 - Command dispatcher pattern extracted with module organization details
 - Testing documentation from three files merged into comprehensive testing-philosophy.md
@@ -236,7 +236,7 @@ Remove old directories and update any remaining references:
 - Updated documentation references to point to new locations:
   - `docs/feature-architecture/README.md` - Removed "Currently being organized" section
   - `docs/general-architecture/README.md` - Removed "Currently being organized" section
-  - `src/claudestep/infrastructure/github/operations.py` - Updated reference from old architecture.md to archived ADR specs
+  - `src/claudechain/infrastructure/github/operations.py` - Updated reference from old architecture.md to archived ADR specs
   - `docs/feature-architecture/e2e-testing.md` - Updated reference from `docs/proposed/` to `docs/specs/archive/`
 - Build passes (705 tests pass, 4 pre-existing failures unrelated to documentation changes)
 - Test coverage: 70.23% (meets 70% threshold)

@@ -1,12 +1,12 @@
 # End-to-End Testing Guide
 
-This guide explains how to run the ClaudeStep end-to-end integration tests.
+This guide explains how to run the ClaudeChain end-to-end integration tests.
 
 ## Overview
 
-The E2E tests are located in this repository at `tests/e2e/` and use a **recursive workflow pattern** where ClaudeStep tests itself. The tests validate the complete ClaudeStep workflow in a real GitHub environment:
-- Creates test projects in the same repository (`claude-step/test-*`)
-- Triggers the `claudestep-test.yml` workflow which runs the action on itself
+The E2E tests are located in this repository at `tests/e2e/` and use a **recursive workflow pattern** where ClaudeChain tests itself. The tests validate the complete ClaudeChain workflow in a real GitHub environment:
+- Creates test projects in the same repository (`claude-chain/test-*`)
+- Triggers the `claudechain-test.yml` workflow which runs the action on itself
 - Verifies PRs are created correctly
 - Verifies AI-generated PR summaries are posted as comments
 - Verifies cost information in PR comments
@@ -16,7 +16,7 @@ The E2E tests are located in this repository at `tests/e2e/` and use a **recursi
 
 ## Test Isolation Architecture
 
-To prevent test pollution of the main branch, ClaudeStep uses an **ephemeral test branch** strategy:
+To prevent test pollution of the main branch, ClaudeChain uses an **ephemeral test branch** strategy:
 
 ### Branch Isolation Model
 
@@ -24,17 +24,17 @@ To prevent test pollution of the main branch, ClaudeStep uses an **ephemeral tes
 - Contains all test code (`tests/e2e/`)
 - Contains the E2E test orchestration workflow (`.github/workflows/e2e-test.yml`)
 - NO test execution artifacts
-- NO test projects (`claude-step/` directory)
-- NO test-specific workflows (`claudestep-test.yml`)
+- NO test projects (`claude-chain/` directory)
+- NO test-specific workflows (`claudechain-test.yml`)
 
 **Ephemeral `main-e2e` Branch** - Created fresh for each test run:
 - Created from main at test start
-- Contains test projects (`claude-step/e2e-test-*`)
-- Uses the production `claudestep.yml` workflow (no test-specific workflows needed)
+- Contains test projects (`claude-chain/e2e-test-*`)
+- Uses the production `claudechain.yml` workflow (no test-specific workflows needed)
 - Used for all test execution (commits, pushes, PRs)
 - **Deleted after successful tests** or left for debugging on failure
 
-> **Note:** ClaudeStep workflows are generic and work on ANY branch automatically. Workflows automatically target the correct branch for PRs without any configuration. This eliminates the need for test-specific workflows.
+> **Note:** ClaudeChain workflows are generic and work on ANY branch automatically. Workflows automatically target the correct branch for PRs without any configuration. This eliminates the need for test-specific workflows.
 
 ### Test Branch Lifecycle
 
@@ -43,12 +43,12 @@ Each E2E test run follows this lifecycle:
 1. **Setup Phase**:
    - Delete old `main-e2e` branch if it exists (cleanup from previous runs)
    - Create fresh `main-e2e` branch from current `main`
-   - Create `claude-step/` workspace directory
+   - Create `claude-chain/` workspace directory
    - Push `main-e2e` branch to remote
 
 2. **Execution Phase**:
    - Tests run and operate on the `main-e2e` branch
-   - Test projects are created in `claude-step/e2e-test-*`
+   - Test projects are created in `claude-chain/e2e-test-*`
    - PRs are created with `main-e2e` as base branch
    - Production workflows automatically adapt to `main-e2e`
 
@@ -71,18 +71,18 @@ Each E2E test run follows this lifecycle:
 | Test code files | ✅ Yes | No |
 | Test helpers | ✅ Yes | No |
 | E2E orchestration workflow | ✅ Yes | No |
-| Test projects (`claude-step/`) | ❌ No | ✅ Yes |
+| Test projects (`claude-chain/`) | ❌ No | ✅ Yes |
 | Test execution (git ops) | ❌ No | ✅ Yes |
 
 > **Note:** Unlike earlier designs, test-specific workflows are no longer needed. The production workflows are generic and automatically work on any branch, including `main-e2e`.
 
 ### Recursive Workflow Pattern
 
-The key innovation is that the `claude-step` repository tests itself:
+The key innovation is that the `claude-chain` repository tests itself:
 
 1. **E2E Test Workflow** (`.github/workflows/e2e-test.yml`) sets up ephemeral `main-e2e` branch
-2. **Tests create** temporary projects in `claude-step/e2e-test-{id}/` on the `main-e2e` branch
-3. **Tests trigger** the ClaudeStep workflow via `workflow_dispatch` or PR merge
+2. **Tests create** temporary projects in `claude-chain/e2e-test-{id}/` on the `main-e2e` branch
+3. **Tests trigger** the ClaudeChain workflow via `workflow_dispatch` or PR merge
 4. **Action creates PRs** in the same repository for the test project tasks (base branch: `main-e2e`)
 5. **Tests verify** the PRs were created correctly with summaries
 6. **Tests clean up** all test resources (projects, PRs, branches)
@@ -107,9 +107,9 @@ gh auth login
 
 ### 2. Repository Access
 
-You need write access to the `claude-step` repository to trigger the e2e-test.yml workflow:
+You need write access to the `claude-chain` repository to trigger the e2e-test.yml workflow:
 - The tests will create/delete the ephemeral `main-e2e` branch
-- The tests will create/delete test projects in `claude-step/e2e-test-*` on the `main-e2e` branch
+- The tests will create/delete test projects in `claude-chain/e2e-test-*` on the `main-e2e` branch
 - The tests will create and close test PRs (with `main-e2e` as base branch)
 - The tests will create and delete test branches for each PR
 
@@ -131,8 +131,8 @@ You need write access to the `claude-step` repository to trigger the e2e-test.ym
 The recommended way to run the tests:
 
 ```bash
-# From the claude-step repository root
-cd /path/to/claude-step
+# From the claude-chain repository root
+cd /path/to/claude-chain
 ./tests/e2e/run_test.sh
 ```
 
@@ -150,7 +150,7 @@ When you run `./tests/e2e/run_test.sh`, you'll see:
 
 ```
 ========================================
-ClaudeStep E2E Test Runner
+ClaudeChain E2E Test Runner
 ========================================
 
 Checking prerequisites...
@@ -214,12 +214,12 @@ Or visit the GitHub Actions UI:
 
 ### test_workflow_e2e.py
 
-This file contains comprehensive tests of the main ClaudeStep workflow:
+This file contains comprehensive tests of the main ClaudeChain workflow:
 
 **test_creates_pr_with_summary:**
-1. Creates a test project with 3 tasks in `claude-step/test-project-<id>/`
-2. Commits and pushes to the claude-step repo's main branch
-3. Triggers the `claudestep-test.yml` workflow manually
+1. Creates a test project with 3 tasks in `claude-chain/test-project-<id>/`
+2. Commits and pushes to the claude-chain repo's main branch
+3. Triggers the `claudechain-test.yml` workflow manually
 4. Waits for workflow to complete (usually 60-120 seconds)
 5. Verifies PR was created for the first task
 6. Verifies AI-generated summary comment appears on the PR
@@ -248,7 +248,7 @@ This file contains comprehensive tests of the main ClaudeStep workflow:
 Tests the statistics collection workflow:
 
 **test_statistics_workflow_runs_successfully:**
-1. Triggers the `claudestep-statistics.yml` workflow
+1. Triggers the `claudechain-statistics.yml` workflow
 2. Waits for workflow completion
 3. Verifies workflow succeeds or is skipped appropriately
 
@@ -325,7 +325,7 @@ This usually means:
 **Solution:** Check the workflow run logs:
 ```bash
 # Get the workflow run ID from test output
-gh run view <run_id> --repo gestrich/claude-step --log | grep -i summary
+gh run view <run_id> --repo gestrich/claude-chain --log | grep -i summary
 ```
 
 ### Issue: Test hangs or times out
@@ -344,22 +344,22 @@ After the test completes, you can view the actual PRs and workflow runs:
 
 ```bash
 # View a specific PR (number from test output)
-gh pr view <pr_number> --repo gestrich/claude-step
+gh pr view <pr_number> --repo gestrich/claude-chain
 
 # View PR comments (including AI summary)
-gh pr view <pr_number> --repo gestrich/claude-step --json comments
+gh pr view <pr_number> --repo gestrich/claude-chain --json comments
 
 # View workflow run logs
-gh run view <run_id> --repo gestrich/claude-step --log
+gh run view <run_id> --repo gestrich/claude-chain --log
 ```
 
 ## Test Configuration
 
 The tests use fixtures defined in `tests/e2e/conftest.py`:
 
-- **Repository**: `gestrich/claude-step` (configured in `GitHubHelper`)
+- **Repository**: `gestrich/claude-chain` (configured in `GitHubHelper`)
 - **Test branch**: `main-e2e` (ephemeral branch created by E2E workflow)
-- **Workflow**: Uses production `claudestep.yml` (workflows are generic and work on any branch)
+- **Workflow**: Uses production `claudechain.yml` (workflows are generic and work on any branch)
 - **Base branch for PRs**: `main-e2e` (all test PRs merge to test branch, not main)
 - **Reviewer capacity**: 2 PRs (configured in test projects)
 - **Workflow timeout**: 300 seconds (5 minutes)
@@ -398,8 +398,8 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config --global user.name 'ClaudeStep E2E Tests'
-          git config --global user.email 'claudestep-e2e@users.noreply.github.com'
+          git config --global user.name 'ClaudeChain E2E Tests'
+          git config --global user.email 'claudechain-e2e@users.noreply.github.com'
 
       - name: Set up ephemeral test branch
         env:
@@ -447,7 +447,7 @@ jobs:
 ## Important Notes
 
 1. **Remote Execution**: The `run_test.sh` script triggers remote execution on GitHub - no local git mutations occur
-2. **Real GitHub Operations**: Tests create real PRs and trigger real workflows in the claude-step repository (on GitHub's runners)
+2. **Real GitHub Operations**: Tests create real PRs and trigger real workflows in the claude-chain repository (on GitHub's runners)
 3. **Ephemeral Test Branch**: All test execution happens on the `main-e2e` branch, which is created fresh and deleted after each run
 4. **Main Branch Protection**: The main branch never contains test artifacts - it stays completely clean
 5. **No Local Requirements**: Python, pytest, and git configuration are NOT needed locally - everything runs on GitHub
@@ -489,6 +489,6 @@ After running the tests successfully:
   - `tests/e2e/helpers/test_branch_manager.py` - Ephemeral branch lifecycle
 - Fixtures: `tests/e2e/conftest.py`
 - E2E workflow: `.github/workflows/e2e-test.yml` (on main branch)
-- Production workflows: `.github/workflows/claudestep.yml`, `.github/workflows/claudestep-auto-start.yml` (generic, work on any branch)
+- Production workflows: `.github/workflows/claudechain.yml`, `.github/workflows/claudechain-auto-start.yml` (generic, work on any branch)
 - Implementation plan: `docs/completed/2025-12-28-e2e-test-isolation.md`
 - E2E test redesign: `docs/completed/2026-01-01-redesign-e2e-tests.md`

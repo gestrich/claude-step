@@ -1,43 +1,43 @@
 # Setup Guide
 
-This guide walks you through the one-time setup to get ClaudeStep running in your repository.
+This guide walks you through the one-time setup to get ClaudeChain running in your repository.
 
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
 - [Create the Workflow File](#create-the-workflow-file)
 - [Configure GitHub Settings](#configure-github-settings)
-- [Start ClaudeStep](#start-claudestep)
+- [Start ClaudeChain](#start-claudechain)
 - [Action Reference](#action-reference)
 
 ---
 
 ## Prerequisites
 
-Before setting up ClaudeStep, you need:
+Before setting up ClaudeChain, you need:
 
 1. **Anthropic API key** - Get one from [console.anthropic.com](https://console.anthropic.com)
-2. **GitHub repository** - Where you want to run ClaudeStep
+2. **GitHub repository** - Where you want to run ClaudeChain
 3. **Write access** - You need permission to add workflows and secrets
 
 ---
 
 ## Create the Workflow File
 
-Create `.github/workflows/claudestep.yml` in your repository.
+Create `.github/workflows/claudechain.yml` in your repository.
 
 ### Simplified Workflow (Recommended)
 
 This format handles project detection and event routing automatically:
 
 ```yaml
-name: ClaudeStep
+name: ClaudeChain
 
 on:
   workflow_dispatch:
     inputs:
       project_name:
-        description: 'Project name (folder under claude-step/)'
+        description: 'Project name (folder under claude-chain/)'
         required: true
         type: string
   pull_request:
@@ -51,10 +51,10 @@ permissions:
   actions: read
 
 jobs:
-  run-claudestep:
+  run-claudechain:
     runs-on: ubuntu-latest
     steps:
-      - uses: gestrich/claude-step@v2
+      - uses: gestrich/claude-chain@v2
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -75,7 +75,7 @@ jobs:
 For more explicit control, specify the project name directly:
 
 ```yaml
-name: ClaudeStep
+name: ClaudeChain
 
 on:
   pull_request:
@@ -92,7 +92,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: gestrich/claude-step@v1
+      - uses: gestrich/claude-chain@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -112,7 +112,7 @@ jobs:
 | `workflow_dispatch` | Manual trigger for starting new projects |
 | `pull_request: types: [closed]` | Auto-continuation when PRs are merged |
 
-**Note:** The first task for a new project requires either a manual trigger or merging a PR with the `claudestep` label. Subsequent tasks auto-trigger on merge.
+**Note:** The first task for a new project requires either a manual trigger or merging a PR with the `claudechain` label. Subsequent tasks auto-trigger on merge.
 
 ---
 
@@ -155,31 +155,31 @@ For PR creation notifications:
 
 ---
 
-## Start ClaudeStep
+## Start ClaudeChain
 
-Before running ClaudeStep, you need at least one project. See the [Projects Guide](./projects.md) for creating `spec.md` and `configuration.yml`.
+Before running ClaudeChain, you need at least one project. See the [Projects Guide](./projects.md) for creating `spec.md` and `configuration.yml`.
 
 ### Option 1: Labeled PR (Recommended)
 
 1. Create a branch and add your project files:
    ```bash
    git checkout -b add-my-project-spec
-   mkdir -p claude-step/my-project
+   mkdir -p claude-chain/my-project
    # Create spec.md (see Projects Guide)
-   git add claude-step/my-project/
-   git commit -m "Add ClaudeStep project: my-project"
+   git add claude-chain/my-project/
+   git commit -m "Add ClaudeChain project: my-project"
    git push origin add-my-project-spec
    ```
 2. Create a PR from your branch
-3. Add the `claudestep` label to the PR
+3. Add the `claudechain` label to the PR
 4. Merge the PR
 
-ClaudeStep detects the merge and automatically creates the first task PR.
+ClaudeChain detects the merge and automatically creates the first task PR.
 
 ### Option 2: Manual Trigger
 
 1. Push your project files directly to main
-2. Go to **Actions** → **ClaudeStep** → **Run workflow**
+2. Go to **Actions** → **ClaudeChain** → **Run workflow**
 3. Select your branch (usually `main`)
 4. Enter your project name (e.g., `my-project`)
 5. Click **Run workflow**
@@ -191,8 +191,8 @@ The workflow runs and creates a PR for the first task.
 After triggering:
 1. Go to **Actions** and watch the workflow run (~2-5 minutes)
 2. Check **Pull requests** for a new PR
-3. The PR title will be "ClaudeStep: {task description}"
-4. The PR will have the `claudestep` label
+3. The PR title will be "ClaudeChain: {task description}"
+4. The PR will have the `claudechain` label
 
 ---
 
@@ -214,7 +214,7 @@ After triggering:
 | `working_directory` | No | `.` | Working directory |
 | `add_pr_summary` | No | `true` | Add AI-generated summary to PR |
 | `slack_webhook_url` | No | - | Slack webhook for notifications |
-| `pr_label` | No | `claudestep` | Label for ClaudeStep PRs |
+| `pr_label` | No | `claudechain` | Label for ClaudeChain PRs |
 
 ### Outputs
 
@@ -241,7 +241,7 @@ After triggering:
 
 ### Tool Permissions
 
-ClaudeStep uses minimal permissions by default for security. You can configure tools at the workflow level (`claude_allowed_tools` input) or per-project (`allowedTools` in `configuration.yml`).
+ClaudeChain uses minimal permissions by default for security. You can configure tools at the workflow level (`claude_allowed_tools` input) or per-project (`allowedTools` in `configuration.yml`).
 
 **Default tools:**
 
@@ -250,8 +250,8 @@ ClaudeStep uses minimal permissions by default for security. You can configure t
 | `Read` | Read spec.md and codebase files |
 | `Write` | Create new files |
 | `Edit` | Modify existing files |
-| `Bash(git add:*)` | Stage changes (required by ClaudeStep) |
-| `Bash(git commit:*)` | Commit changes (required by ClaudeStep) |
+| `Bash(git add:*)` | Stage changes (required by ClaudeChain) |
+| `Bash(git commit:*)` | Commit changes (required by ClaudeChain) |
 
 **Additional tools available:**
 
@@ -268,7 +268,7 @@ If your tasks require running tests, builds, or other shell commands, add them e
 
 ```yaml
 # Workflow-level: Full Bash access for all projects
-- uses: gestrich/claude-step@v2
+- uses: gestrich/claude-chain@v2
   with:
     claude_allowed_tools: 'Read,Write,Edit,Bash'
 ```

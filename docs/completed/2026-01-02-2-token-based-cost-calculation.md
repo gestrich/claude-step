@@ -65,7 +65,7 @@ Unknown models: raise `UnknownModelError` to fail fast and surface pricing gaps 
 
 - [x] Phase 1: Extract token data and update display format
 
-Extend `CostBreakdown` in `src/claudestep/domain/cost_breakdown.py`:
+Extend `CostBreakdown` in `src/claudechain/domain/cost_breakdown.py`:
 - Add fields: `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_write_tokens` (all `int`, default 0)
 - Update `_extract_from_file()` to also extract tokens from `modelUsage` section (sum across all models)
 - Update `format_for_github()` to show token breakdown alongside existing cost (from `total_cost_usd`)

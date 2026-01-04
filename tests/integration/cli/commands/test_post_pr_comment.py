@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from claudestep.cli.commands.post_pr_comment import cmd_post_pr_comment
+from claudechain.cli.commands.post_pr_comment import cmd_post_pr_comment
 
 
 class TestCmdPostPrComment:

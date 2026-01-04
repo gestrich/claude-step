@@ -5,11 +5,11 @@
 
 ## Summary
 
-Remove pytest-benchmark and all associated benchmarking infrastructure from ClaudeStep as it's considered overkill for this project's needs.
+Remove pytest-benchmark and all associated benchmarking infrastructure from ClaudeChain as it's considered overkill for this project's needs.
 
 ## Rationale
 
-- ClaudeStep is a focused GitHub Action with well-defined, limited scope
+- ClaudeChain is a focused GitHub Action with well-defined, limited scope
 - Performance-critical operations are simple string/file parsing tasks
 - No performance issues have been identified that would warrant ongoing monitoring
 - The complexity of maintaining benchmarks outweighs the benefits

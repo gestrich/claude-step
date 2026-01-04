@@ -2,7 +2,7 @@
 
 ## Overview
 
-ClaudeStep uses a layered architecture for GitHub PR operations, following the Service Layer pattern. PR data retrieval and parsing is centralized in `PRService`, providing type-safe domain models and hiding GitHub API details from business logic.
+ClaudeChain uses a layered architecture for GitHub PR operations, following the Service Layer pattern. PR data retrieval and parsing is centralized in `PRService`, providing type-safe domain models and hiding GitHub API details from business logic.
 
 ## Architecture
 
@@ -34,37 +34,37 @@ ClaudeStep uses a layered architecture for GitHub PR operations, following the S
 
 **Get PRs for a project**:
 ```python
-def get_project_prs(project: str, state: str = "all", label: str = "claudestep") -> List[GitHubPullRequest]
+def get_project_prs(project: str, state: str = "all", label: str = "claudechain") -> List[GitHubPullRequest]
 ```
 
 **Get open PRs for a project** (convenience):
 ```python
-def get_open_prs_for_project(project: str, label: str = "claudestep") -> List[GitHubPullRequest]
+def get_open_prs_for_project(project: str, label: str = "claudechain") -> List[GitHubPullRequest]
 ```
 
 **Get all PRs with label**:
 ```python
-def get_all_prs(label: str = "claudestep", state: str = "all", limit: int = 500) -> List[GitHubPullRequest]
+def get_all_prs(label: str = "claudechain", state: str = "all", limit: int = 500) -> List[GitHubPullRequest]
 ```
 
 **Get PRs assigned to reviewer**:
 ```python
-def get_open_prs_for_reviewer(username: str, label: str = "claudestep") -> List[GitHubPullRequest]
+def get_open_prs_for_reviewer(username: str, label: str = "claudechain") -> List[GitHubPullRequest]
 ```
 
 **Get reviewer PRs for specific project**:
 ```python
-def get_reviewer_prs_for_project(username: str, project: str, label: str = "claudestep") -> List[GitHubPullRequest]
+def get_reviewer_prs_for_project(username: str, project: str, label: str = "claudechain") -> List[GitHubPullRequest]
 ```
 
 **Get reviewer PR count** (for capacity checking):
 ```python
-def get_reviewer_pr_count(username: str, project: str, label: str = "claudestep") -> int
+def get_reviewer_pr_count(username: str, project: str, label: str = "claudechain") -> int
 ```
 
 **Discover unique projects**:
 ```python
-def get_unique_projects(label: str = "claudestep") -> Set[str]
+def get_unique_projects(label: str = "claudechain") -> Set[str]
 ```
 
 ### Branch Name Operations
@@ -73,7 +73,7 @@ def get_unique_projects(label: str = "claudestep") -> Set[str]
 ```python
 @staticmethod
 def format_branch_name(project: str, task_hash: str) -> str
-    # Returns: "claude-step-{project}-{task_hash}"
+    # Returns: "claude-chain-{project}-{task_hash}"
 ```
 
 **Parse branch name**:
@@ -103,12 +103,12 @@ All properties compute on access (no caching):
 - Returns `None` for index-based branches or invalid formats
 
 **`task_description: str`**
-- Returns PR title with "ClaudeStep: " prefix stripped if present
+- Returns PR title with "ClaudeChain: " prefix stripped if present
 - Handles titles without prefix gracefully
 
-**`is_claudestep_pr: bool`**
-- Checks if branch name matches ClaudeStep pattern
-- Returns `True` for valid ClaudeStep branches
+**`is_claudechain_pr: bool`**
+- Checks if branch name matches ClaudeChain pattern
+- Returns `True` for valid ClaudeChain branches
 
 ### Example Usage
 
@@ -122,7 +122,7 @@ for pr in prs:
     print(f"PR #{pr.number}: {pr.task_description}")
     print(f"  Project: {pr.project_name}")
     print(f"  Task hash: {pr.task_hash}")
-    print(f"  ClaudeStep PR: {pr.is_claudestep_pr}")
+    print(f"  ClaudeChain PR: {pr.is_claudechain_pr}")
 ```
 
 ## Service Integration Pattern
@@ -134,17 +134,17 @@ for pr in prs:
 class ReviewerService:
     def find_available_reviewer(self, reviewers, project):
         # Direct infrastructure call
-        prs = list_open_pull_requests(label="claudestep", assignee=reviewer)
+        prs = list_open_pull_requests(label="claudechain", assignee=reviewer)
 
         # Manual branch parsing
         for pr in prs:
-            match = re.match(r"claude-step-([^-]+)-(\d+)", pr["headRefName"])
+            match = re.match(r"claude-chain-([^-]+)-(\d+)", pr["headRefName"])
             project_name = match.group(1) if match else None
 
         # Manual title prefix stripping
         description = pr["title"]
-        if description.startswith("ClaudeStep: "):
-            description = description[len("ClaudeStep: "):]
+        if description.startswith("ClaudeChain: "):
+            description = description[len("ClaudeChain: "):]
 ```
 
 ### After Refactoring (Clean pattern)
@@ -200,11 +200,11 @@ def test_get_open_prs_for_project():
     # Mock infrastructure layer
     mock_github = Mock()
     mock_github.list_pull_requests.return_value = [
-        {"number": 1, "title": "ClaudeStep: Task 1", "headRefName": "claude-step-auth-a3f2b891"}
+        {"number": 1, "title": "ClaudeChain: Task 1", "headRefName": "claude-chain-auth-a3f2b891"}
     ]
 
     # Test service
-    with patch('claudestep.services.core.pr_service.list_pull_requests', mock_github.list_pull_requests):
+    with patch('claudechain.services.core.pr_service.list_pull_requests', mock_github.list_pull_requests):
         pr_service = PRService(repo="owner/repo")
         prs = pr_service.get_open_prs_for_project("auth")
 
@@ -220,8 +220,8 @@ def test_get_open_prs_for_project():
 def test_github_pull_request_properties():
     pr = GitHubPullRequest(
         number=123,
-        title="ClaudeStep: Add authentication",
-        headRefName="claude-step-auth-a3f2b891",
+        title="ClaudeChain: Add authentication",
+        headRefName="claude-chain-auth-a3f2b891",
         baseRefName="main",
         state="OPEN",
         url="https://github.com/owner/repo/pull/123"
@@ -230,7 +230,7 @@ def test_github_pull_request_properties():
     assert pr.project_name == "auth"
     assert pr.task_hash == "a3f2b891"
     assert pr.task_description == "Add authentication"
-    assert pr.is_claudestep_pr is True
+    assert pr.is_claudechain_pr is True
 ```
 
 ### Integration Testing Services
@@ -240,7 +240,7 @@ def test_reviewer_service_uses_pr_service():
     # Mock PRService (not infrastructure)
     mock_pr_service = Mock()
     mock_pr_service.get_reviewer_prs_for_project.return_value = [
-        GitHubPullRequest(number=1, title="Task 1", headRefName="claude-step-auth-abc123")
+        GitHubPullRequest(number=1, title="Task 1", headRefName="claude-chain-auth-abc123")
     ]
 
     # Test ReviewerService
@@ -255,8 +255,8 @@ def test_reviewer_service_uses_pr_service():
 
 | File | Purpose |
 |------|---------|
-| `src/claudestep/services/core/pr_service.py` | PRService implementation |
-| `src/claudestep/domain/github_models.py` | GitHubPullRequest domain model |
-| `src/claudestep/infrastructure/github/operations.py` | Raw GitHub API calls |
+| `src/claudechain/services/core/pr_service.py` | PRService implementation |
+| `src/claudechain/domain/github_models.py` | GitHubPullRequest domain model |
+| `src/claudechain/infrastructure/github/operations.py` | Raw GitHub API calls |
 | `tests/unit/services/core/test_pr_service.py` | PRService unit tests (96% coverage) |
 | `tests/unit/domain/test_github_models.py` | Domain model tests (100% coverage) |

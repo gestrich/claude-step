@@ -5,11 +5,11 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from unittest.mock import Mock, patch
 
-from claudestep.domain.models import TeamMemberStats, ProjectStats, StatisticsReport, PRReference, TaskStatus, TaskWithPR
-from claudestep.domain.github_models import GitHubPullRequest, GitHubUser
-from claudestep.domain.project import Project
-from claudestep.domain.spec_content import SpecContent
-from claudestep.services.composite.statistics_service import StatisticsService
+from claudechain.domain.models import TeamMemberStats, ProjectStats, StatisticsReport, PRReference, TaskStatus, TaskWithPR
+from claudechain.domain.github_models import GitHubPullRequest, GitHubUser
+from claudechain.domain.project import Project
+from claudechain.domain.spec_content import SpecContent
+from claudechain.services.composite.statistics_service import StatisticsService
 
 from tests.builders import SpecFileBuilder
 
@@ -442,8 +442,8 @@ class TestStatisticsReport:
             number=99,
             title="Orphaned PR",
             state="open",
-            head_ref_name="claude-step-project-deadbeef",
-            labels=["claudestep"],
+            head_ref_name="claude-chain-project-deadbeef",
+            labels=["claudechain"],
             created_at=datetime.now(timezone.utc),
             merged_at=None,
             assignees=[],
@@ -461,7 +461,7 @@ class TestStatisticsReport:
         report.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
         slack_msg = report.format_for_slack()
-        assert "ClaudeStep Statistics Report" in slack_msg
+        assert "ClaudeChain Statistics Report" in slack_msg
         assert "No projects found" in slack_msg
         # Empty report doesn't show leaderboard section
 
@@ -484,7 +484,7 @@ class TestStatisticsReport:
 
         # Without show_assignee_stats, leaderboard is hidden
         slack_msg = report.format_for_slack()
-        assert "ClaudeStep Statistics Report" in slack_msg
+        assert "ClaudeChain Statistics Report" in slack_msg
         assert "test-project" in slack_msg
         assert "alice" not in slack_msg  # Hidden by default
         assert "Leaderboard" not in slack_msg  # Hidden by default
@@ -530,8 +530,8 @@ class TestStatisticsReport:
             title="Orphaned Merged PR",
             state="closed",
             merged_at=datetime.now(timezone.utc),
-            head_ref_name="claude-step-project-deadbeef",
-            labels=["claudestep"],
+            head_ref_name="claude-chain-project-deadbeef",
+            labels=["claudechain"],
             created_at=datetime.now(timezone.utc),
             assignees=[],
         )
@@ -540,8 +540,8 @@ class TestStatisticsReport:
             number=43,
             title="Orphaned Open PR",
             state="open",
-            head_ref_name="claude-step-project-abcd1234",
-            labels=["claudestep"],
+            head_ref_name="claude-chain-project-abcd1234",
+            labels=["claudechain"],
             created_at=datetime.now(timezone.utc) - timedelta(days=5),
             merged_at=None,
             assignees=[],
@@ -892,7 +892,7 @@ class TestWarningsSection:
 
     def test_warnings_section_with_stale_prs(self):
         """Should show detailed warnings section with stale PR info"""
-        from claudestep.domain.github_models import GitHubPullRequest, GitHubUser
+        from claudechain.domain.github_models import GitHubPullRequest, GitHubUser
         from datetime import timedelta
 
         report = StatisticsReport()
@@ -906,8 +906,8 @@ class TestWarningsSection:
             created_at=datetime.now(timezone.utc) - timedelta(days=10),
             merged_at=None,
             assignees=[GitHubUser(login="alice")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-a1b2c3d4"
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-a1b2c3d4"
         )
 
         project = ProjectStats("api-cleanup", "/path/spec.md")
@@ -960,7 +960,7 @@ class TestWarningsSection:
 
     def test_stale_threshold_respected_in_warnings(self):
         """Should respect stale_pr_days threshold when formatting warnings"""
-        from claudestep.domain.github_models import GitHubPullRequest, GitHubUser
+        from claudechain.domain.github_models import GitHubPullRequest, GitHubUser
         from datetime import timedelta
 
         report = StatisticsReport()
@@ -974,8 +974,8 @@ class TestWarningsSection:
             created_at=datetime.now(timezone.utc) - timedelta(days=5),
             merged_at=None,
             assignees=[GitHubUser(login="bob")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-e5f6g7h8"
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-e5f6g7h8"
         )
 
         project = ProjectStats("test-project", "/path/spec.md")
@@ -1014,7 +1014,7 @@ This PR was generated using Claude Code with the following costs:
 | **Total** | **$0.13** |
 
 ---
-*Cost tracking by ClaudeStep • [View workflow run](https://example.com)*
+*Cost tracking by ClaudeChain • [View workflow run](https://example.com)*
 """
         cost = StatisticsService.extract_cost_from_comment(comment)
         assert cost == 0.13
@@ -1110,11 +1110,11 @@ This PR was generated using Claude Code with the following costs:
 class TestCostAggregationFromArtifacts:
     """Test cost aggregation from artifacts in statistics collection"""
 
-    @patch("claudestep.services.composite.statistics_service.find_project_artifacts")
+    @patch("claudechain.services.composite.statistics_service.find_project_artifacts")
     def test_aggregate_costs_from_multiple_artifacts(self, mock_find_artifacts):
         """Should sum costs from all artifacts for a project"""
-        from claudestep.services.composite.artifact_service import ProjectArtifact
-        from claudestep.domain.models import TaskMetadata, AITask
+        from claudechain.services.composite.artifact_service import ProjectArtifact
+        from claudechain.domain.models import TaskMetadata, AITask
 
         now = datetime.now(timezone.utc)
 
@@ -1128,7 +1128,7 @@ class TestCostAggregationFromArtifacts:
                     task_index=1,
                     task_description="Task 1",
                     project="test",
-                    branch_name="claude-step-test-abc12345",
+                    branch_name="claude-chain-test-abc12345",
                     assignee="alice",
                     created_at=now,
                     workflow_run_id=100,
@@ -1147,7 +1147,7 @@ class TestCostAggregationFromArtifacts:
                     task_index=2,
                     task_description="Task 2",
                     project="test",
-                    branch_name="claude-step-test-def67890",
+                    branch_name="claude-chain-test-def67890",
                     assignee="bob",
                     created_at=now,
                     workflow_run_id=101,
@@ -1165,7 +1165,7 @@ class TestCostAggregationFromArtifacts:
                     task_index=3,
                     task_description="Task 3",
                     project="test",
-                    branch_name="claude-step-test-ghi11111",
+                    branch_name="claude-chain-test-ghi11111",
                     assignee="charlie",
                     created_at=now,
                     workflow_run_id=102,
@@ -1183,16 +1183,16 @@ class TestCostAggregationFromArtifacts:
         mock_pr_service = Mock()
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
 
-        total = service._aggregate_costs_from_artifacts("test", "claudestep")
+        total = service._aggregate_costs_from_artifacts("test", "claudechain")
 
         # Assert: 0.15 + 0.02 + 0.25 + 0.50 + 0.03 = 0.95
         assert total == pytest.approx(0.95, rel=1e-6)
 
-    @patch("claudestep.services.composite.statistics_service.find_project_artifacts")
+    @patch("claudechain.services.composite.statistics_service.find_project_artifacts")
     def test_aggregate_costs_handles_missing_metadata(self, mock_find_artifacts):
         """Should skip artifacts without metadata (legacy PRs)"""
-        from claudestep.services.composite.artifact_service import ProjectArtifact
-        from claudestep.domain.models import TaskMetadata, AITask
+        from claudechain.services.composite.artifact_service import ProjectArtifact
+        from claudechain.domain.models import TaskMetadata, AITask
 
         now = datetime.now(timezone.utc)
 
@@ -1205,7 +1205,7 @@ class TestCostAggregationFromArtifacts:
                     task_index=1,
                     task_description="Task 1",
                     project="test",
-                    branch_name="claude-step-test-abc12345",
+                    branch_name="claude-chain-test-abc12345",
                     assignee="alice",
                     created_at=now,
                     workflow_run_id=100,
@@ -1227,12 +1227,12 @@ class TestCostAggregationFromArtifacts:
         mock_pr_service = Mock()
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
 
-        total = service._aggregate_costs_from_artifacts("test", "claudestep")
+        total = service._aggregate_costs_from_artifacts("test", "claudechain")
 
         # Should only count the first artifact
         assert total == pytest.approx(0.20, rel=1e-6)
 
-    @patch("claudestep.services.composite.statistics_service.find_project_artifacts")
+    @patch("claudechain.services.composite.statistics_service.find_project_artifacts")
     def test_aggregate_costs_returns_zero_when_no_artifacts(self, mock_find_artifacts):
         """Should return 0.0 when no artifacts are found"""
         mock_find_artifacts.return_value = []
@@ -1241,7 +1241,7 @@ class TestCostAggregationFromArtifacts:
         mock_pr_service = Mock()
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
 
-        total = service._aggregate_costs_from_artifacts("test", "claudestep")
+        total = service._aggregate_costs_from_artifacts("test", "claudechain")
 
         assert total == 0.0
 
@@ -1252,7 +1252,7 @@ class TestCollectTeamMemberStats:
     def test_collect_stats_basic(self):
         """Test basic team member stats collection from GitHub"""
         from datetime import datetime, timezone, timedelta
-        from claudestep.domain.github_models import GitHubPullRequest
+        from claudechain.domain.github_models import GitHubPullRequest
 
         # Create mock GitHub PRs with valid 8-char hex hashes
         pr1 = GitHubPullRequest(
@@ -1262,8 +1262,8 @@ class TestCollectTeamMemberStats:
             created_at=datetime.now(timezone.utc) - timedelta(days=5),
             merged_at=datetime.now(timezone.utc) - timedelta(days=4),
             assignees=["alice"],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-project-a3f2b891"
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-project-a3f2b891"
         )
 
         pr2 = GitHubPullRequest(
@@ -1273,8 +1273,8 @@ class TestCollectTeamMemberStats:
             created_at=datetime.now(timezone.utc) - timedelta(days=3),
             merged_at=datetime.now(timezone.utc) - timedelta(days=2),
             assignees=["bob"],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-project-f7c4d3e2"
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-project-f7c4d3e2"
         )
 
         pr3 = GitHubPullRequest(
@@ -1284,8 +1284,8 @@ class TestCollectTeamMemberStats:
             created_at=datetime.now(timezone.utc) - timedelta(days=1),
             merged_at=None,
             assignees=["alice"],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-project-1a2b3c4d"
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-project-1a2b3c4d"
         )
 
         # Mock PROperationsService
@@ -1341,7 +1341,7 @@ class TestCollectProjectStats:
     def test_collect_stats_success(self):
         """Test successful project stats collection"""
         from datetime import datetime, timezone
-        from claudestep.domain.github_models import GitHubPullRequest, GitHubUser
+        from claudechain.domain.github_models import GitHubPullRequest, GitHubUser
 
         spec_content = """
 - [x] Task 1
@@ -1358,8 +1358,8 @@ class TestCollectProjectStats:
             created_at=datetime.now(timezone.utc),
             merged_at=None,
             assignees=[GitHubUser(login="alice")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-project-1a2b3c4d"
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-project-1a2b3c4d"
         )
 
         # Mock PROperationsService
@@ -1369,15 +1369,15 @@ class TestCollectProjectStats:
 
         # Mock ProjectRepository
         mock_repo = Mock()
-        from claudestep.domain.project import Project
-        from claudestep.domain.spec_content import SpecContent
+        from claudechain.domain.project import Project
+        from claudechain.domain.spec_content import SpecContent
 
         project = Project("test-project")
         mock_repo.load_spec.return_value = SpecContent(project, spec_content)
 
         # Create service and test
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
-        stats = service.collect_project_stats("test-project", "main", "claudestep")
+        stats = service.collect_project_stats("test-project", "main", "claudechain")
 
         assert stats.project_name == "test-project"
         assert stats.total_tasks == 4
@@ -1397,7 +1397,7 @@ class TestCollectProjectStats:
         mock_pr_service = Mock()
 
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
-        stats = service.collect_project_stats("test-project", "main", "claudestep")
+        stats = service.collect_project_stats("test-project", "main", "claudechain")
 
         assert stats is None
 
@@ -1411,8 +1411,8 @@ class TestCollectProjectStats:
 
         # Mock ProjectRepository
         mock_repo = Mock()
-        from claudestep.domain.project import Project
-        from claudestep.domain.spec_content import SpecContent
+        from claudechain.domain.project import Project
+        from claudechain.domain.spec_content import SpecContent
 
         project = Project("test-project")
         mock_repo.load_spec.return_value = SpecContent(project, spec_content)
@@ -1420,7 +1420,7 @@ class TestCollectProjectStats:
         # Create service and test - exception should propagate
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
         with pytest.raises(Exception, match="API error"):
-            service.collect_project_stats("test-project", "main", "claudestep")
+            service.collect_project_stats("test-project", "main", "claudechain")
 
     def test_collect_stats_custom_base_branch(self):
         """Test that custom base_branch value is used correctly"""
@@ -1433,15 +1433,15 @@ class TestCollectProjectStats:
 
         # Mock ProjectRepository
         mock_repo = Mock()
-        from claudestep.domain.project import Project
-        from claudestep.domain.spec_content import SpecContent
+        from claudechain.domain.project import Project
+        from claudechain.domain.spec_content import SpecContent
 
         project = Project("test-project")
         mock_repo.load_spec.return_value = SpecContent(project, spec_content)
 
         # Create service with custom base_branch
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="develop")
-        stats = service.collect_project_stats("test-project", "develop", "claudestep")
+        stats = service.collect_project_stats("test-project", "develop", "claudechain")
 
         # Verify the service uses the custom base_branch
         assert stats.project_name == "test-project"
@@ -1470,9 +1470,9 @@ assignee: alice
 
         # Mock ProjectRepository
         mock_repo = Mock()
-        from claudestep.domain.project import Project
-        from claudestep.domain.project_configuration import ProjectConfiguration
-        from claudestep.domain.spec_content import SpecContent
+        from claudechain.domain.project import Project
+        from claudechain.domain.project_configuration import ProjectConfiguration
+        from claudechain.domain.spec_content import SpecContent
 
         project = Project("project1")
         mock_repo.load_configuration.return_value = ProjectConfiguration.from_yaml_string(project, config_content)
@@ -1482,14 +1482,14 @@ assignee: alice
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
 
         # Default: show_assignee_stats=False, so team stats not collected
-        report = service.collect_all_statistics("claude-step/project1/configuration.yml")
+        report = service.collect_all_statistics("claude-chain/project1/configuration.yml")
         assert len(report.project_stats) == 1
         assert "project1" in report.project_stats
         assert len(report.team_stats) == 0  # Not collected by default
 
         # With show_assignee_stats=True, team stats are collected
         report_with_reviewers = service.collect_all_statistics(
-            "claude-step/project1/configuration.yml",
+            "claude-chain/project1/configuration.yml",
             show_assignee_stats=True
         )
         assert len(report_with_reviewers.project_stats) == 1
@@ -1530,7 +1530,7 @@ class TestGitHubPullRequestStaleness:
     def test_days_open_for_open_pr(self):
         """Should calculate days_open from created_at to now for open PRs"""
         from datetime import datetime, timezone, timedelta
-        from claudestep.domain.github_models import GitHubPullRequest, GitHubUser
+        from claudechain.domain.github_models import GitHubPullRequest, GitHubUser
 
         # Arrange - PR created 3 days ago
         created_at = datetime.now(timezone.utc) - timedelta(days=3)
@@ -1541,8 +1541,8 @@ class TestGitHubPullRequestStaleness:
             created_at=created_at,
             merged_at=None,
             assignees=[GitHubUser(login="alice")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-1a2b3c4d"
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-1a2b3c4d"
         )
 
         # Assert
@@ -1557,7 +1557,7 @@ class TestGitHubPullRequestStaleness:
     def test_is_stale_when_old_enough(self):
         """Should mark PR as stale when days_open >= stale_pr_days"""
         from datetime import datetime, timezone, timedelta
-        from claudestep.domain.github_models import GitHubPullRequest, GitHubUser
+        from claudechain.domain.github_models import GitHubPullRequest, GitHubUser
 
         # Arrange - PR created 10 days ago
         created_at = datetime.now(timezone.utc) - timedelta(days=10)
@@ -1568,8 +1568,8 @@ class TestGitHubPullRequestStaleness:
             created_at=created_at,
             merged_at=None,
             assignees=[GitHubUser(login="bob")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-5e6f7a8b"
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-5e6f7a8b"
         )
 
         # Assert
@@ -1579,7 +1579,7 @@ class TestGitHubPullRequestStaleness:
     def test_first_assignee_with_no_assignees(self):
         """Should return None when no assignees"""
         from datetime import datetime, timezone
-        from claudestep.domain.github_models import GitHubPullRequest
+        from claudechain.domain.github_models import GitHubPullRequest
 
         # Arrange - PR with no assignees
         pr = GitHubPullRequest(
@@ -1589,8 +1589,8 @@ class TestGitHubPullRequestStaleness:
             created_at=datetime.now(timezone.utc),
             merged_at=None,
             assignees=[],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-9c0d1e2f"
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-9c0d1e2f"
         )
 
         # Assert
@@ -1599,7 +1599,7 @@ class TestGitHubPullRequestStaleness:
     def test_first_assignee_uses_first_when_multiple(self):
         """Should use first assignee when multiple are present"""
         from datetime import datetime, timezone
-        from claudestep.domain.github_models import GitHubPullRequest, GitHubUser
+        from claudechain.domain.github_models import GitHubPullRequest, GitHubUser
 
         # Arrange - PR with multiple assignees
         pr = GitHubPullRequest(
@@ -1609,8 +1609,8 @@ class TestGitHubPullRequestStaleness:
             created_at=datetime.now(timezone.utc),
             merged_at=None,
             assignees=[GitHubUser(login="alice"), GitHubUser(login="bob")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-3g4h5i6j"
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-3g4h5i6j"
         )
 
         # Assert
@@ -1619,7 +1619,7 @@ class TestGitHubPullRequestStaleness:
     def test_days_open_for_merged_pr(self):
         """Should calculate days_open from created_at to merged_at for merged PRs"""
         from datetime import datetime, timezone, timedelta
-        from claudestep.domain.github_models import GitHubPullRequest, GitHubUser
+        from claudechain.domain.github_models import GitHubPullRequest, GitHubUser
 
         # Arrange - PR created 10 days ago, merged 5 days ago
         created_at = datetime.now(timezone.utc) - timedelta(days=10)
@@ -1631,8 +1631,8 @@ class TestGitHubPullRequestStaleness:
             created_at=created_at,
             merged_at=merged_at,
             assignees=[GitHubUser(login="charlie")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-m1n2o3p4"
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-m1n2o3p4"
         )
 
         # Assert - days_open should be 5 (created to merged), not 10 (created to now)
@@ -1646,7 +1646,7 @@ class TestStalePRTracking:
     def test_collect_stats_tracks_stale_prs(self):
         """Should track stale PRs and populate open_prs list"""
         from datetime import datetime, timezone, timedelta
-        from claudestep.domain.github_models import GitHubPullRequest, GitHubUser
+        from claudechain.domain.github_models import GitHubPullRequest, GitHubUser
 
         spec_content = "- [ ] Task 1\n- [ ] Task 2\n- [ ] Task 3"
 
@@ -1658,8 +1658,8 @@ class TestStalePRTracking:
             created_at=datetime.now(timezone.utc) - timedelta(days=2),
             merged_at=None,
             assignees=[GitHubUser(login="alice")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-a1b2c3d4"
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-a1b2c3d4"
         )
         pr_stale = GitHubPullRequest(
             number=2,
@@ -1668,8 +1668,8 @@ class TestStalePRTracking:
             created_at=datetime.now(timezone.utc) - timedelta(days=10),
             merged_at=None,
             assignees=[GitHubUser(login="bob")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-e5f6g7h8"
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-e5f6g7h8"
         )
 
         # Mock PROperationsService
@@ -1679,15 +1679,15 @@ class TestStalePRTracking:
 
         # Mock ProjectRepository
         mock_repo = Mock()
-        from claudestep.domain.project import Project
-        from claudestep.domain.spec_content import SpecContent
+        from claudechain.domain.project import Project
+        from claudechain.domain.spec_content import SpecContent
 
         project = Project("test-project")
         mock_repo.load_spec.return_value = SpecContent(project, spec_content)
 
         # Create service and test with 7-day stale threshold
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
-        stats = service.collect_project_stats("test-project", "main", "claudestep", stale_pr_days=7)
+        stats = service.collect_project_stats("test-project", "main", "claudechain", stale_pr_days=7)
 
         # Assert
         assert len(stats.open_prs) == 2
@@ -1706,7 +1706,7 @@ class TestStalePRTracking:
     def test_collect_stats_custom_stale_threshold(self):
         """Should respect custom stale_pr_days threshold"""
         from datetime import datetime, timezone, timedelta
-        from claudestep.domain.github_models import GitHubPullRequest, GitHubUser
+        from claudechain.domain.github_models import GitHubPullRequest, GitHubUser
 
         spec_content = "- [ ] Task 1"
 
@@ -1718,8 +1718,8 @@ class TestStalePRTracking:
             created_at=datetime.now(timezone.utc) - timedelta(days=5),
             merged_at=None,
             assignees=[GitHubUser(login="charlie")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-i9j0k1l2"
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-i9j0k1l2"
         )
 
         mock_pr_service = Mock()
@@ -1727,8 +1727,8 @@ class TestStalePRTracking:
         mock_pr_service.get_merged_prs_for_project.return_value = []
 
         mock_repo = Mock()
-        from claudestep.domain.project import Project
-        from claudestep.domain.spec_content import SpecContent
+        from claudechain.domain.project import Project
+        from claudechain.domain.spec_content import SpecContent
 
         project = Project("test-project")
         mock_repo.load_spec.return_value = SpecContent(project, spec_content)
@@ -1736,13 +1736,13 @@ class TestStalePRTracking:
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
 
         # With 7-day threshold: not stale
-        stats_7 = service.collect_project_stats("test-project", "main", "claudestep", stale_pr_days=7)
+        stats_7 = service.collect_project_stats("test-project", "main", "claudechain", stale_pr_days=7)
         assert stats_7.stale_pr_count == 0
         # GitHubPullRequest.is_stale() uses the threshold passed to it
         assert stats_7.open_prs[0].is_stale(7) is False
 
         # With 3-day threshold: stale
-        stats_3 = service.collect_project_stats("test-project", "main", "claudestep", stale_pr_days=3)
+        stats_3 = service.collect_project_stats("test-project", "main", "claudechain", stale_pr_days=3)
         assert stats_3.stale_pr_count == 1
         assert stats_3.open_prs[0].is_stale(3) is True
 
@@ -1755,14 +1755,14 @@ class TestStalePRTracking:
         mock_pr_service.get_merged_prs_for_project.return_value = []
 
         mock_repo = Mock()
-        from claudestep.domain.project import Project
-        from claudestep.domain.spec_content import SpecContent
+        from claudechain.domain.project import Project
+        from claudechain.domain.spec_content import SpecContent
 
         project = Project("test-project")
         mock_repo.load_spec.return_value = SpecContent(project, spec_content)
 
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
-        stats = service.collect_project_stats("test-project", "main", "claudestep")
+        stats = service.collect_project_stats("test-project", "main", "claudechain")
 
         assert len(stats.open_prs) == 0
         assert stats.stale_pr_count == 0
@@ -1775,7 +1775,7 @@ class TestTaskPRMappings:
     def test_task_matched_to_open_pr_is_in_progress(self):
         """Task with matching open PR should be IN_PROGRESS"""
         from datetime import datetime, timezone
-        from claudestep.domain.spec_content import SpecContent
+        from claudechain.domain.spec_content import SpecContent
 
         spec_content = "- [ ] Implement feature X"
 
@@ -1791,8 +1791,8 @@ class TestTaskPRMappings:
             created_at=datetime.now(timezone.utc),
             merged_at=None,
             assignees=[GitHubUser(login="alice")],
-            labels=["claudestep"],
-            head_ref_name=f"claude-step-test-project-{task_hash}"
+            labels=["claudechain"],
+            head_ref_name=f"claude-chain-test-project-{task_hash}"
         )
 
         # Mock services
@@ -1805,7 +1805,7 @@ class TestTaskPRMappings:
 
         # Collect stats
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
-        stats = service.collect_project_stats("test-project", "main", "claudestep")
+        stats = service.collect_project_stats("test-project", "main", "claudechain")
 
         # Assert
         assert len(stats.tasks) == 1
@@ -1816,7 +1816,7 @@ class TestTaskPRMappings:
     def test_task_matched_to_merged_pr_and_completed(self):
         """Completed task with merged PR should be COMPLETED with PR reference"""
         from datetime import datetime, timezone, timedelta
-        from claudestep.domain.spec_content import SpecContent
+        from claudechain.domain.spec_content import SpecContent
 
         spec_content = "- [x] Implement feature X"
 
@@ -1832,8 +1832,8 @@ class TestTaskPRMappings:
             created_at=datetime.now(timezone.utc) - timedelta(days=2),
             merged_at=datetime.now(timezone.utc) - timedelta(days=1),
             assignees=[GitHubUser(login="bob")],
-            labels=["claudestep"],
-            head_ref_name=f"claude-step-test-project-{task_hash}"
+            labels=["claudechain"],
+            head_ref_name=f"claude-chain-test-project-{task_hash}"
         )
 
         # Mock services
@@ -1846,7 +1846,7 @@ class TestTaskPRMappings:
 
         # Collect stats
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
-        stats = service.collect_project_stats("test-project", "main", "claudestep")
+        stats = service.collect_project_stats("test-project", "main", "claudechain")
 
         # Assert
         assert len(stats.tasks) == 1
@@ -1856,7 +1856,7 @@ class TestTaskPRMappings:
 
     def test_task_with_no_pr_is_pending(self):
         """Task with no matching PR should be PENDING"""
-        from claudestep.domain.spec_content import SpecContent
+        from claudechain.domain.spec_content import SpecContent
 
         spec_content = "- [ ] Implement feature X"
 
@@ -1873,7 +1873,7 @@ class TestTaskPRMappings:
 
         # Collect stats
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
-        stats = service.collect_project_stats("test-project", "main", "claudestep")
+        stats = service.collect_project_stats("test-project", "main", "claudechain")
 
         # Assert
         assert len(stats.tasks) == 1
@@ -1883,7 +1883,7 @@ class TestTaskPRMappings:
     def test_orphaned_pr_detected(self):
         """PR with no matching task in spec should be orphaned"""
         from datetime import datetime, timezone
-        from claudestep.domain.spec_content import SpecContent
+        from claudechain.domain.spec_content import SpecContent
 
         spec_content = "- [ ] Task A"
 
@@ -1898,8 +1898,8 @@ class TestTaskPRMappings:
             created_at=datetime.now(timezone.utc),
             merged_at=None,
             assignees=[GitHubUser(login="charlie")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-project-deadbeef"  # Hash not in spec
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-project-deadbeef"  # Hash not in spec
         )
 
         # Mock services
@@ -1912,7 +1912,7 @@ class TestTaskPRMappings:
 
         # Collect stats
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
-        stats = service.collect_project_stats("test-project", "main", "claudestep")
+        stats = service.collect_project_stats("test-project", "main", "claudechain")
 
         # Assert - task A has no PR, orphaned PR detected
         assert len(stats.tasks) == 1
@@ -1925,7 +1925,7 @@ class TestTaskPRMappings:
     def test_mixed_tasks_and_prs(self):
         """Test scenario with completed, in-progress, pending tasks and orphaned PR"""
         from datetime import datetime, timezone, timedelta
-        from claudestep.domain.spec_content import SpecContent
+        from claudechain.domain.spec_content import SpecContent
 
         spec_content = """- [x] Task completed
 - [ ] Task in progress
@@ -1947,8 +1947,8 @@ class TestTaskPRMappings:
             created_at=datetime.now(timezone.utc) - timedelta(days=5),
             merged_at=datetime.now(timezone.utc) - timedelta(days=3),
             assignees=[GitHubUser(login="alice")],
-            labels=["claudestep"],
-            head_ref_name=f"claude-step-test-project-{completed_hash}"
+            labels=["claudechain"],
+            head_ref_name=f"claude-chain-test-project-{completed_hash}"
         )
 
         open_pr = GitHubPullRequest(
@@ -1958,8 +1958,8 @@ class TestTaskPRMappings:
             created_at=datetime.now(timezone.utc) - timedelta(days=1),
             merged_at=None,
             assignees=[GitHubUser(login="bob")],
-            labels=["claudestep"],
-            head_ref_name=f"claude-step-test-project-{in_progress_hash}"
+            labels=["claudechain"],
+            head_ref_name=f"claude-chain-test-project-{in_progress_hash}"
         )
 
         orphaned_pr = GitHubPullRequest(
@@ -1969,8 +1969,8 @@ class TestTaskPRMappings:
             created_at=datetime.now(timezone.utc) - timedelta(days=10),
             merged_at=datetime.now(timezone.utc) - timedelta(days=8),
             assignees=[GitHubUser(login="charlie")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-test-project-abcd1234"  # Not in spec
+            labels=["claudechain"],
+            head_ref_name="claude-chain-test-project-abcd1234"  # Not in spec
         )
 
         # Mock services
@@ -1983,7 +1983,7 @@ class TestTaskPRMappings:
 
         # Collect stats
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
-        stats = service.collect_project_stats("test-project", "main", "claudestep")
+        stats = service.collect_project_stats("test-project", "main", "claudechain")
 
         # Assert task statuses
         assert len(stats.tasks) == 3
@@ -2008,7 +2008,7 @@ class TestTaskPRMappings:
 
     def test_completed_task_without_pr(self):
         """Completed task without PR should still be COMPLETED"""
-        from claudestep.domain.spec_content import SpecContent
+        from claudechain.domain.spec_content import SpecContent
 
         spec_content = "- [x] Manually completed task"
 
@@ -2025,7 +2025,7 @@ class TestTaskPRMappings:
 
         # Collect stats
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
-        stats = service.collect_project_stats("test-project", "main", "claudestep")
+        stats = service.collect_project_stats("test-project", "main", "claudechain")
 
         # Assert - status comes from spec checkbox, not PR
         assert len(stats.tasks) == 1
@@ -2035,28 +2035,28 @@ class TestTaskPRMappings:
     def test_pr_without_task_hash_not_orphaned(self):
         """PR without parseable task hash should not appear in orphaned list"""
         from datetime import datetime, timezone
-        from claudestep.domain.spec_content import SpecContent
+        from claudechain.domain.spec_content import SpecContent
 
         spec_content = "- [ ] Task A"
 
         project = Project("test-project")
         spec = SpecContent(project, spec_content)
 
-        # Create PR with non-ClaudeStep branch name
-        non_claudestep_pr = GitHubPullRequest(
+        # Create PR with non-ClaudeChain branch name
+        non_claudechain_pr = GitHubPullRequest(
             number=77,
             title="Manual PR",
             state="open",
             created_at=datetime.now(timezone.utc),
             merged_at=None,
             assignees=[GitHubUser(login="dave")],
-            labels=["claudestep"],
-            head_ref_name="feature/manual-work"  # Not a ClaudeStep branch
+            labels=["claudechain"],
+            head_ref_name="feature/manual-work"  # Not a ClaudeChain branch
         )
 
         # Mock services
         mock_pr_service = Mock()
-        mock_pr_service.get_open_prs_for_project.return_value = [non_claudestep_pr]
+        mock_pr_service.get_open_prs_for_project.return_value = [non_claudechain_pr]
         mock_pr_service.get_merged_prs_for_project.return_value = []
 
         mock_repo = Mock()
@@ -2064,7 +2064,7 @@ class TestTaskPRMappings:
 
         # Collect stats
         service = StatisticsService("owner/repo", mock_repo, mock_pr_service, base_branch="main")
-        stats = service.collect_project_stats("test-project", "main", "claudestep")
+        stats = service.collect_project_stats("test-project", "main", "claudechain")
 
         # Assert - PR has no task hash, so it's not tracked as orphaned
         assert len(stats.orphaned_prs) == 0
@@ -2107,8 +2107,8 @@ class TestFormatProjectDetails:
                     created_at=datetime.now(timezone.utc) - timedelta(days=2),
                     merged_at=None,
                     assignees=[GitHubUser(login="alice")],
-                    labels=["claudestep"],
-                    head_ref_name="claude-step-my-project-e5f6g7h8"
+                    labels=["claudechain"],
+                    head_ref_name="claude-chain-my-project-e5f6g7h8"
                 )
             ),
             TaskWithPR(
@@ -2163,8 +2163,8 @@ class TestFormatProjectDetails:
                 created_at=datetime.now(timezone.utc) - timedelta(days=10),
                 merged_at=datetime.now(timezone.utc) - timedelta(days=5),
                 assignees=[GitHubUser(login="bob")],
-                labels=["claudestep"],
-                head_ref_name="claude-step-my-project-x9y8z7w6"
+                labels=["claudechain"],
+                head_ref_name="claude-chain-my-project-x9y8z7w6"
             ),
             GitHubPullRequest(
                 number=28,
@@ -2173,8 +2173,8 @@ class TestFormatProjectDetails:
                 created_at=datetime.now(timezone.utc) - timedelta(days=5),
                 merged_at=None,
                 assignees=[GitHubUser(login="alice")],
-                labels=["claudestep"],
-                head_ref_name="claude-step-my-project-m3n4o5p6"
+                labels=["claudechain"],
+                head_ref_name="claude-chain-my-project-m3n4o5p6"
             )
         ]
         report.add_project(stats)
@@ -2202,8 +2202,8 @@ class TestFormatProjectDetails:
             created_at=datetime.now(timezone.utc) - timedelta(days=3),
             merged_at=datetime.now(timezone.utc) - timedelta(days=1),
             assignees=[GitHubUser(login="alice")],
-            labels=["claudestep"],
-            head_ref_name="claude-step-my-project-a1b2c3d4"
+            labels=["claudechain"],
+            head_ref_name="claude-chain-my-project-a1b2c3d4"
         )
 
         stats.tasks = [

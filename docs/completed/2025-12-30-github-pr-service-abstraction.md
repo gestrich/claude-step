@@ -9,15 +9,15 @@ Currently, business logic for working with GitHub PRs is scattered across multip
 1. **Business logic in wrong layer**: Services like `ReviewerManagementService` and `StatisticsService` contain code that:
    - Calls GitHub API operations directly (`list_pull_requests()`, `list_open_pull_requests()`)
    - Parses branch names to extract project and task index
-   - Strips "ClaudeStep: " prefix from PR titles
+   - Strips "ClaudeChain: " prefix from PR titles
    - Constructs PR info dictionaries manually
 
 2. **Duplicated parsing logic**: The same patterns appear in multiple services:
    ```python
    # Extract task description from PR title
    task_description = pr.title
-   if task_description.startswith("ClaudeStep: "):
-       task_description = task_description[len("ClaudeStep: "):]
+   if task_description.startswith("ClaudeChain: "):
+       task_description = task_description[len("ClaudeChain: "):]
    ```
 
 3. **Mixed concerns**: Services mix PR data retrieval with business logic (reviewer capacity, statistics collection)
@@ -28,9 +28,9 @@ Currently, business logic for working with GitHub PRs is scattered across multip
 
 Following the Service Layer pattern documented in `docs/architecture/architecture.md`, we need:
 
-- **Infrastructure Layer** (`src/claudestep/infrastructure/github/operations.py`): Already exists, handles raw GitHub API calls
-- **Domain Layer** (`src/claudestep/domain/github_models.py`): Already has `GitHubPullRequest`, needs enhancement
-- **EXISTING Service Layer** (`src/claudestep/services/pr_operations_service.py`): Extend to provide comprehensive PR querying with typed domain models
+- **Infrastructure Layer** (`src/claudechain/infrastructure/github/operations.py`): Already exists, handles raw GitHub API calls
+- **Domain Layer** (`src/claudechain/domain/github_models.py`): Already has `GitHubPullRequest`, needs enhancement
+- **EXISTING Service Layer** (`src/claudechain/services/pr_operations_service.py`): Extend to provide comprehensive PR querying with typed domain models
 - **Application Services** (ReviewerManagementService, StatisticsService, TaskManagementService): Call through PROperationsService
 
 This aligns with the "Parse Once Into Well-Formed Models" principle from `docs/architecture/python-code-style.md`.
@@ -54,21 +54,21 @@ Refactor the existing `PROperationsService` to use typed `GitHubPullRequest` dom
   - Change infrastructure call from `run_gh_command()` to `list_pull_requests()` for consistency
   - Parse JSON response into `GitHubPullRequest` domain models
   - Keep existing filtering by project name (branch prefix)
-- Add method `get_open_prs_for_project(project: str, label: str = "claudestep") -> List[GitHubPullRequest]`
+- Add method `get_open_prs_for_project(project: str, label: str = "claudechain") -> List[GitHubPullRequest]`
   - Convenience wrapper for `get_project_prs(project, state="open", label=label)`
-- Add method `get_open_prs_for_reviewer(username: str, label: str = "claudestep") -> List[GitHubPullRequest]`
+- Add method `get_open_prs_for_reviewer(username: str, label: str = "claudechain") -> List[GitHubPullRequest]`
   - Calls `list_open_pull_requests()` with `assignee` parameter
   - Returns typed domain models
-- Add method `get_all_prs(label: str = "claudestep", state: str = "all", limit: int = 500) -> List[GitHubPullRequest]`
+- Add method `get_all_prs(label: str = "claudechain", state: str = "all", limit: int = 500) -> List[GitHubPullRequest]`
   - Calls `list_pull_requests()` from infrastructure layer
   - Returns all PRs with the label (for statistics and project discovery)
-- Add method `get_unique_projects(label: str = "claudestep") -> Set[str]`
+- Add method `get_unique_projects(label: str = "claudechain") -> Set[str]`
   - Calls `get_all_prs()` internally
   - Extracts unique project names from branch names using `parse_branch_name()`
   - Used by statistics service for multi-project discovery
 
 **Files modified:**
-- `src/claudestep/services/pr_operations_service.py` - Refactored to use typed domain models and added new querying methods
+- `src/claudechain/services/pr_operations_service.py` - Refactored to use typed domain models and added new querying methods
 - `tests/unit/services/test_pr_operations.py` - Updated tests to mock infrastructure layer instead of removed `run_gh_command` import
 
 **Technical notes:**
@@ -84,15 +84,15 @@ Refactor the existing `PROperationsService` to use typed `GitHubPullRequest` dom
 Extend the existing `GitHubPullRequest` domain model to include parsed project and task information as properties, eliminating the need for services to parse these manually.
 
 **Tasks:**
-- Add `@property` methods to `GitHubPullRequest` in `src/claudestep/domain/github_models.py`:
+- Add `@property` methods to `GitHubPullRequest` in `src/claudechain/domain/github_models.py`:
   - `project_name: Optional[str]` - Parses branch name, returns project (uses `PROperationsService.parse_branch_name()`)
   - `task_index: Optional[int]` - Parses branch name, returns task index
-  - `task_description: str` - Returns title with "ClaudeStep: " prefix stripped if present
-  - `is_claudestep_pr: bool` - Checks if branch name matches ClaudeStep pattern
+  - `task_description: str` - Returns title with "ClaudeChain: " prefix stripped if present
+  - `is_claudechain_pr: bool` - Checks if branch name matches ClaudeChain pattern
 - Add helper method `_parse_branch_info()` that calls `PROperationsService.parse_branch_name()` once and caches result
 
 **Files modified:**
-- `src/claudestep/domain/github_models.py` - Added 4 new @property methods
+- `src/claudechain/domain/github_models.py` - Added 4 new @property methods
 
 **Technical notes:**
 - Properties compute on each access (no caching to keep implementation simple)
@@ -108,18 +108,18 @@ Extend the existing `GitHubPullRequest` domain model to include parsed project a
 Add convenience methods to `PROperationsService` for reviewer capacity checking operations.
 
 **Tasks:**
-- Add `get_reviewer_prs_for_project(username: str, project: str, label: str = "claudestep") -> List[GitHubPullRequest]`
+- Add `get_reviewer_prs_for_project(username: str, project: str, label: str = "claudechain") -> List[GitHubPullRequest]`
   - Calls `get_open_prs_for_reviewer(username)`
   - Filters by `pr.project_name == project` (using domain model property)
   - Returns list of typed `GitHubPullRequest` models (not dicts!)
   - Used by ReviewerManagementService to get PR info for capacity checking
-- Add `get_reviewer_pr_count(username: str, project: str, label: str = "claudestep") -> int`
+- Add `get_reviewer_pr_count(username: str, project: str, label: str = "claudechain") -> int`
   - Convenience method returning count of open PRs for reviewer on project
   - Internally calls `get_reviewer_prs_for_project()` and returns `len()`
   - Used for capacity checking
 
 **Files modified:**
-- `src/claudestep/services/pr_operations_service.py` - Added two new reviewer-specific methods
+- `src/claudechain/services/pr_operations_service.py` - Added two new reviewer-specific methods
 
 **Technical notes:**
 - Both methods implemented successfully with comprehensive docstrings and examples
@@ -143,9 +143,9 @@ Refactor `ReviewerManagementService` to use the enhanced `PROperationsService` i
 - Update all call sites in CLI commands to instantiate and pass `PROperationsService`
 
 **Files modified:**
-- `src/claudestep/services/reviewer_management_service.py` - Updated to accept and use PROperationsService
-- `src/claudestep/cli/commands/prepare.py` - Updated to instantiate PROperationsService and pass to ReviewerManagementService
-- `src/claudestep/cli/commands/discover_ready.py` - Updated to instantiate PROperationsService and pass to ReviewerManagementService
+- `src/claudechain/services/reviewer_management_service.py` - Updated to accept and use PROperationsService
+- `src/claudechain/cli/commands/prepare.py` - Updated to instantiate PROperationsService and pass to ReviewerManagementService
+- `src/claudechain/cli/commands/discover_ready.py` - Updated to instantiate PROperationsService and pass to ReviewerManagementService
 - `tests/unit/services/test_reviewer_management.py` - Updated all 16 tests to mock PROperationsService
 
 **Technical notes:**
@@ -171,9 +171,9 @@ Refactor `TaskManagementService` to use `PROperationsService` instead of calling
 - Update all call sites in CLI commands to instantiate and pass `PROperationsService`
 
 **Files modified:**
-- `src/claudestep/services/task_management_service.py` - Updated to accept PROperationsService dependency
-- `src/claudestep/cli/commands/prepare.py` - Updated to pass PROperationsService to TaskManagementService
-- `src/claudestep/cli/commands/discover_ready.py` - Updated to pass PROperationsService to TaskManagementService
+- `src/claudechain/services/task_management_service.py` - Updated to accept PROperationsService dependency
+- `src/claudechain/cli/commands/prepare.py` - Updated to pass PROperationsService to TaskManagementService
+- `src/claudechain/cli/commands/discover_ready.py` - Updated to pass PROperationsService to TaskManagementService
 
 **Technical notes:**
 - Successfully implemented dependency injection pattern: CLI creates PROperationsService before TaskManagementService
@@ -198,8 +198,8 @@ Refactor `StatisticsService` to use `PROperationsService` instead of calling Git
 - Update all call sites in CLI commands to instantiate and pass `PROperationsService`
 
 **Files modified:**
-- `src/claudestep/services/statistics_service.py` - Updated to accept and use PROperationsService dependency
-- `src/claudestep/cli/commands/statistics.py` - Updated to instantiate PROperationsService and pass to StatisticsService
+- `src/claudechain/services/statistics_service.py` - Updated to accept and use PROperationsService dependency
+- `src/claudechain/cli/commands/statistics.py` - Updated to instantiate PROperationsService and pass to StatisticsService
 - `tests/unit/services/test_statistics_service.py` - Updated all 13 tests to mock PROperationsService instead of infrastructure layer
 
 **Technical notes:**
@@ -208,7 +208,7 @@ Refactor `StatisticsService` to use `PROperationsService` instead of calling Git
 - Service now uses get_unique_projects() for project discovery (cleaner API)
 - Service now uses get_open_prs_for_project() for in-progress task counting
 - Service now uses get_all_prs() for team member statistics collection
-- All manual branch parsing replaced with domain model properties (pr.project_name, pr.task_index, pr.task_description, pr.is_claudestep_pr)
+- All manual branch parsing replaced with domain model properties (pr.project_name, pr.task_index, pr.task_description, pr.is_claudechain_pr)
 - All 574 unit/integration tests pass (2 E2E tests fail due to unrelated missing e2e-test branch)
 - Coverage for StatisticsService improved from 15.58% to 76.62%
 - Overall coverage at 67.81% (slightly below 70% target, but significant improvement from Phase 5)
@@ -220,7 +220,7 @@ Refactor `StatisticsService` to use `PROperationsService` instead of calling Git
 Find and refactor any remaining services that directly call GitHub API operations.
 
 **Tasks:**
-- Use `Grep` to search for `list_pull_requests`, `list_open_pull_requests`, `list_merged_pull_requests` in `src/claudestep/services/`
+- Use `Grep` to search for `list_pull_requests`, `list_open_pull_requests`, `list_merged_pull_requests` in `src/claudechain/services/`
 - Identify any services still calling infrastructure layer directly (excluding `PROperationsService` itself)
 - Refactor each to use `PROperationsService`
 - Update their constructors and call sites
@@ -329,11 +329,11 @@ Add unit tests for the new properties on `GitHubPullRequest`.
   - Extracts task index from branch name
   - Returns None for invalid formats
 - Test `task_description` property:
-  - Strips "ClaudeStep: " prefix
+  - Strips "ClaudeChain: " prefix
   - Handles titles without prefix
   - Handles empty titles
-- Test `is_claudestep_pr` property:
-  - Returns True for valid ClaudeStep branch names
+- Test `is_claudechain_pr` property:
+  - Returns True for valid ClaudeChain branch names
   - Returns False for other branch names
 
 **Files modified:**
@@ -342,10 +342,10 @@ Add unit tests for the new properties on `GitHubPullRequest`.
 **Technical notes:**
 - Added 20 new test methods in `TestGitHubPullRequestPropertyEnhancements` test class
 - Tests cover all edge cases:
-  - **project_name** (5 tests): Valid ClaudeStep branches, multi-part project names with hyphens, invalid branches, main branch, None branch
+  - **project_name** (5 tests): Valid ClaudeChain branches, multi-part project names with hyphens, invalid branches, main branch, None branch
   - **task_index** (5 tests): Valid task indices, single-digit, large numbers (999), invalid branches, None branch
-  - **task_description** (5 tests): Strips "ClaudeStep: " prefix, handles titles without prefix, empty titles, prefix-only titles, case-sensitive prefix matching
-  - **is_claudestep_pr** (5 tests): Valid ClaudeStep branches, feature branches, main branch, None branch, similar but invalid patterns
+  - **task_description** (5 tests): Strips "ClaudeChain: " prefix, handles titles without prefix, empty titles, prefix-only titles, case-sensitive prefix matching
+  - **is_claudechain_pr** (5 tests): Valid ClaudeChain branches, feature branches, main branch, None branch, similar but invalid patterns
 - All 622 tests in full test suite pass successfully
 - GitHubPullRequest domain model coverage improved from 57.38% to 100%
 - Overall project coverage: 68.85% (slightly below 70% target, but GitHubPullRequest is now fully tested)
@@ -399,9 +399,9 @@ Validate the refactoring with comprehensive testing.
    - Coverage must remain ≥85%
 
 2. **Manual verification:**
-   - Review `src/claudestep/services/` - no services should call infrastructure GitHub operations directly (except `PROperationsService`)
+   - Review `src/claudechain/services/` - no services should call infrastructure GitHub operations directly (except `PROperationsService`)
    - Confirm `PROperationsService` is the only service calling `list_pull_requests()` etc.
-   - Verify no manual branch parsing or "ClaudeStep: " prefix stripping outside domain models and `PROperationsService`
+   - Verify no manual branch parsing or "ClaudeChain: " prefix stripping outside domain models and `PROperationsService`
 
 3. **Architecture compliance:**
    - CLI commands instantiate `PROperationsService` and pass to other services (dependency injection)
@@ -413,7 +413,7 @@ Validate the refactoring with comprehensive testing.
 4. **Code review checklist:**
    - [x] No `list_pull_requests()` calls outside `PROperationsService`
    - [x] No manual `parse_branch_name()` calls in services except `PROperationsService` (use domain model properties)
-   - [x] No `startswith("ClaudeStep: ")` checks in services (use domain model `task_description`)
+   - [x] No `startswith("ClaudeChain: ")` checks in services (use domain model `task_description`)
    - [x] All services follow dependency injection pattern
    - [x] `PROperationsService.get_project_prs()` returns `List[GitHubPullRequest]` not `List[dict]`
    - [x] Test coverage ≥90% for new code
@@ -429,7 +429,7 @@ Validate the refactoring with comprehensive testing.
 - **Architecture compliance verified:**
   - ✅ Only `PROperationsService` calls GitHub infrastructure operations (`list_pull_requests`, `list_open_pull_requests`)
   - ✅ No manual `parse_branch_name()` calls in application services (except appropriate usage in `ProjectDetectionService` for merged PR detection)
-  - ✅ No "ClaudeStep: " prefix stripping in services - only in `GitHubPullRequest.task_description` property
+  - ✅ No "ClaudeChain: " prefix stripping in services - only in `GitHubPullRequest.task_description` property
   - ✅ All services use dependency injection pattern - CLI commands instantiate `PROperationsService` and pass to other services
   - ✅ `PROperationsService.get_project_prs()` returns `List[GitHubPullRequest]` typed models
   - ✅ Services use domain model properties (`pr.project_name`, `pr.task_index`, `pr.task_description`) instead of manual parsing

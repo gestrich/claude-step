@@ -2,7 +2,7 @@
 
 ## Overview
 
-ClaudeStep follows Martin Fowler's **Service Layer pattern** from "Patterns of Enterprise Application Architecture" (2002). This architectural pattern defines the application's boundary with a layer of services that establishes available operations and coordinates responses.
+ClaudeChain follows Martin Fowler's **Service Layer pattern** from "Patterns of Enterprise Application Architecture" (2002). This architectural pattern defines the application's boundary with a layer of services that establishes available operations and coordinates responses.
 
 **Reference**: [Service Layer - Martin Fowler's PoEAA Catalog](https://martinfowler.com/eaaCatalog/serviceLayer.html)
 
@@ -18,9 +18,9 @@ The Service Layer pattern:
 - **Provides a unified API** for different client types (CLI, API, etc.)
 - **Manages transactions** and orchestrates responses
 
-## ClaudeStep's Implementation
+## ClaudeChain's Implementation
 
-ClaudeStep implements Service Layer with a **lightweight, pragmatic approach**:
+ClaudeChain implements Service Layer with a **lightweight, pragmatic approach**:
 
 ✅ **We follow the spirit, not the letter** - Rough alignment with Fowler's principles, not dogmatic adherence
 ✅ **Service classes encapsulate business logic** - All operations coordinated through services
@@ -34,7 +34,7 @@ ClaudeStep implements Service Layer with a **lightweight, pragmatic approach**:
 
 ## Layer Responsibilities
 
-ClaudeStep's architecture consists of four layers:
+ClaudeChain's architecture consists of four layers:
 
 ### 1. CLI Layer (`cli/`)
 - **Purpose**: Thin orchestration layer - entry point for user interactions
@@ -154,7 +154,7 @@ def get_file_from_branch(repo: str, branch: str, file_path: str) -> Optional[str
 
 ## Service Class Conventions
 
-All services in ClaudeStep follow consistent patterns:
+All services in ClaudeChain follow consistent patterns:
 
 ### Constructor-Based Dependency Injection
 ```python
@@ -190,7 +190,7 @@ class StatisticsService:
 
     def collect_project_stats(self, project: str) -> ProjectStats:
         # Uses infrastructure directly with instance config
-        spec_content = get_file_from_branch(self.repo, self.base_branch, f"claude-step/{project}/spec.md")
+        spec_content = get_file_from_branch(self.repo, self.base_branch, f"claude-chain/{project}/spec.md")
 
         # Uses other services
         metadata = self.metadata_service.get_project(project)
@@ -273,17 +273,17 @@ def get_file_from_branch(repo: str, branch: str, path: str) -> str:
 
 ### Convention: Two-Level Service Architecture
 
-ClaudeStep organizes services into **two architectural levels**:
+ClaudeChain organizes services into **two architectural levels**:
 
 **Core Services** (`services/core/`) provide foundational operations for specific domain areas (PRs, tasks, reviewers, projects). These are building blocks with minimal dependencies that can be used independently or composed together. Examples include `PRService`, `TaskService`, `ReviewerService`, and `ProjectService`.
 
 **Composite Services** (`services/composite/`) orchestrate complex multi-step operations by coordinating multiple core services. They aggregate data from various sources and implement higher-level business logic. Examples include `StatisticsService` and `ArtifactService`.
 
-This organization provides clear dependency direction (Composite → Core → Infrastructure), makes the architecture visible in the filesystem, and enables independent testing of each layer. For implementation details, see the service source code in [`src/claudestep/services/`](../../src/claudestep/services/).
+This organization provides clear dependency direction (Composite → Core → Infrastructure), makes the architecture visible in the filesystem, and enables independent testing of each layer. For implementation details, see the service source code in [`src/claudechain/services/`](../../src/claudechain/services/).
 
 ## Available Services
 
-### Core Services (`src/claudestep/services/core/`)
+### Core Services (`src/claudechain/services/core/`)
 
 1. **TaskService** - Task finding, marking, and tracking
    - Constructor: `__init__(self, repo: str, metadata_service: MetadataService)`
@@ -304,7 +304,7 @@ This organization provides clear dependency direction (Composite → Core → In
    - Instance methods: `detect_project_from_pr()`
    - Static methods: `detect_project_paths()`
 
-### Composite Services (`src/claudestep/services/composite/`)
+### Composite Services (`src/claudechain/services/composite/`)
 
 5. **StatisticsService** - Statistics collection and aggregation
    - Constructor: `__init__(self, repo: str, metadata_service: MetadataService, base_branch: str = "main")`
@@ -322,10 +322,10 @@ This organization provides clear dependency direction (Composite → Core → In
 
 8. **WorkflowService** - GitHub workflow triggering
    - Constructor: `__init__(self, repo: str)`
-   - Instance methods: `trigger_claudestep_workflow()`, `batch_trigger_claudestep_workflows()`
+   - Instance methods: `trigger_claudechain_workflow()`, `batch_trigger_claudechain_workflows()`
    - Uses infrastructure layer for `gh` command execution
 
-### Infrastructure Services (`src/claudestep/infrastructure/`)
+### Infrastructure Services (`src/claudechain/infrastructure/`)
 
 9. **MetadataService** - Project and artifact metadata management
    - Constructor: `__init__(self, metadata_store: GitHubMetadataStore)`
@@ -435,8 +435,8 @@ class TestTaskService:
 ```python
 def test_prepare_command_with_services(mock_subprocess):
     """Should use services to orchestrate preparation workflow"""
-    with patch('claudestep.cli.commands.prepare.ProjectService') as MockProject:
-        with patch('claudestep.cli.commands.prepare.TaskService') as MockTask:
+    with patch('claudechain.cli.commands.prepare.ProjectService') as MockProject:
+        with patch('claudechain.cli.commands.prepare.TaskService') as MockTask:
             # Mock service instances
             mock_project_service = MockProject.return_value
             mock_task_service = MockTask.return_value

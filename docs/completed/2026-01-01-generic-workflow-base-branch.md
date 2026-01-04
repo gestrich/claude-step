@@ -1,10 +1,10 @@
 ## Background
 
-Currently, the ClaudeStep workflows (`claudestep-auto-start.yml` and `claudestep.yml`) use hardcoded or explicitly configured base branches. This creates coupling between the workflow configuration and the branch being worked on, requiring different configurations for production (`main`) vs E2E testing (`main-e2e`).
+Currently, the ClaudeChain workflows (`claudechain-auto-start.yml` and `claudechain.yml`) use hardcoded or explicitly configured base branches. This creates coupling between the workflow configuration and the branch being worked on, requiring different configurations for production (`main`) vs E2E testing (`main-e2e`).
 
 **The Problem:**
 - Auto-start workflow needs to know which base branch to use (`main` vs `main-e2e`)
-- ClaudeStep workflow needs to know which base branch PRs should target
+- ClaudeChain workflow needs to know which base branch PRs should target
 - This creates duplication and requires branch-specific logic
 
 **The Insight:**
@@ -20,9 +20,9 @@ The branch context flows through the workflow naturally:
 This makes workflows completely generic - they work on ANY branch without configuration.
 
 **Architectural Constraint (from [docs/general-architecture/github-actions.md](../general-architecture/github-actions.md)):**
-ClaudeStep follows a **base branch source of truth** pattern where spec files (`spec.md`, `configuration.yml`) are **always fetched from the base branch via GitHub API**, never from the filesystem. This means:
+ClaudeChain follows a **base branch source of truth** pattern where spec files (`spec.md`, `configuration.yml`) are **always fetched from the base branch via GitHub API**, never from the filesystem. This means:
 - The base branch determines where specs are read from
-- All ClaudeStep operations fetch specs using `get_file_from_branch(repo, base_branch, file_path)`
+- All ClaudeChain operations fetch specs using `get_file_from_branch(repo, base_branch, file_path)`
 - PRs **do** modify spec files (they mark tasks as complete in `spec.md`)
 - When PRs merge, the updated spec is now in the base branch for the next workflow run
 - The base branch must be correctly determined for workflows to function
@@ -31,7 +31,7 @@ This architectural principle makes the base branch detection even more critical 
 
 ## User Requirements
 
-1. **Generic workflows**: Auto-start and ClaudeStep workflows should work on ANY branch (main, main-e2e, feature branches, etc.)
+1. **Generic workflows**: Auto-start and ClaudeChain workflows should work on ANY branch (main, main-e2e, feature branches, etc.)
 2. **No hardcoded branches**: Remove all hardcoded `main` or `main-e2e` references from workflow logic
 3. **Infer base from context**: Derive the base branch from the GitHub event context (push, PR merge)
 4. **Maintain compatibility**: Existing production usage on `main` should work unchanged
@@ -44,19 +44,19 @@ This architectural principle makes the base branch detection even more critical 
 **Goal**: Understand where and how base branches are currently used in workflows.
 
 **Tasks**:
-1. Review [claudestep-auto-start.yml](../.github/workflows/claudestep-auto-start.yml) for base branch usage:
+1. Review [claudechain-auto-start.yml](../.github/workflows/claudechain-auto-start.yml) for base branch usage:
    - Trigger conditions (`on.push.branches`)
    - Environment variables (`BASE_BRANCH`)
    - How base branch is passed to the auto-start command
 
-2. Review [claudestep.yml](../.github/workflows/claudestep.yml) for base branch usage:
+2. Review [claudechain.yml](../.github/workflows/claudechain.yml) for base branch usage:
    - Workflow inputs (`base_branch`, `checkout_ref`)
    - How base branch is determined for PR merge events
-   - How base branch is passed to ClaudeStep commands
+   - How base branch is passed to ClaudeChain commands
 
-3. Review [src/claudestep/cli/commands/auto_start.py](../../src/claudestep/cli/commands/) to understand how auto-start uses `BASE_BRANCH`
+3. Review [src/claudechain/cli/commands/auto_start.py](../../src/claudechain/cli/commands/) to understand how auto-start uses `BASE_BRANCH`
 
-4. Review [src/claudestep/cli/commands/prepare.py](../../src/claudestep/cli/commands/) to understand how prepare command uses base branch
+4. Review [src/claudechain/cli/commands/prepare.py](../../src/claudechain/cli/commands/) to understand how prepare command uses base branch
 
 5. Document current flow:
    - How base branch flows from workflow → CLI → services
@@ -69,7 +69,7 @@ This architectural principle makes the base branch detection even more critical 
 
 ### Phase 1 Analysis Results
 
-#### 1. Current Base Branch Usage in `claudestep-auto-start.yml`
+#### 1. Current Base Branch Usage in `claudechain-auto-start.yml`
 
 **Trigger Conditions:**
 - Lines 6-11: Hardcoded to trigger only on `main` and `main-e2e` branches
@@ -82,9 +82,9 @@ This architectural principle makes the base branch detection even more critical 
 
 **How BASE_BRANCH is used:**
 - Passed to `auto-start` command via environment variable
-- Used by auto-start command to trigger subsequent ClaudeStep workflows
+- Used by auto-start command to trigger subsequent ClaudeChain workflows
 
-#### 2. Current Base Branch Usage in `claudestep.yml`
+#### 2. Current Base Branch Usage in `claudechain.yml`
 
 **Workflow Inputs:**
 - Lines 15-18: `base_branch` input with default value `'main'`
@@ -99,7 +99,7 @@ This architectural principle makes the base branch detection even more critical 
 - Manual dispatch falls back to hardcoded `'main'`
 
 **How base_branch is passed:**
-- Line 79: Passed to ClaudeStep action via `base_branch` input
+- Line 79: Passed to ClaudeChain action via `base_branch` input
 - Flows through to all downstream commands
 
 #### 3. Base Branch Usage in `auto_start.py`
@@ -110,8 +110,8 @@ This architectural principle makes the base branch detection even more critical 
 
 **How auto_start uses base_branch:**
 - Lines 54-56: Logs the base branch for debugging
-- Lines 115-119: Passes base_branch to `WorkflowService.batch_trigger_claudestep_workflows()`
-  - This triggers the main ClaudeStep workflow for each detected project
+- Lines 115-119: Passes base_branch to `WorkflowService.batch_trigger_claudechain_workflows()`
+  - This triggers the main ClaudeChain workflow for each detected project
   - Sets the base_branch that will be used for spec file fetching and PR targeting
 
 **Impact:**
@@ -146,17 +146,17 @@ This architectural principle makes the base branch detection even more critical 
 
 #### 5. Base Branch Usage in Other Components
 
-**`action.yml` (main ClaudeStep action):**
+**`action.yml` (main ClaudeChain action):**
 - Lines 31-34: Defines `base_branch` input with default `'main'`
 - Line 93: Passes to prepare step via `BASE_BRANCH` env var
 - Line 142: Passes to finalize step via `BASE_BRANCH` env var
 
-**`WorkflowService` (`src/claudestep/services/composite/workflow_service.py`):**
-- Lines 32-66: `trigger_claudestep_workflow()` method
+**`WorkflowService` (`src/claudechain/services/composite/workflow_service.py`):**
+- Lines 32-66: `trigger_claudechain_workflow()` method
 - Line 60: Passes `base_branch` as workflow input parameter: `-f base_branch={base_branch}`
 - This is how auto-start propagates the base branch to the triggered workflow
 
-**`ProjectRepository` (`src/claudestep/infrastructure/repositories/project_repository.py`):**
+**`ProjectRepository` (`src/claudechain/infrastructure/repositories/project_repository.py`):**
 - Lines 21-43: `load_configuration()` method accepts `base_branch` parameter
 - Lines 45-66: `load_spec()` method accepts `base_branch` parameter
 - Both methods call `get_file_from_branch(repo, base_branch, file_path)`
@@ -167,18 +167,18 @@ This architectural principle makes the base branch detection even more critical 
 **Scenario A: Auto-Start Workflow (spec pushed to branch)**
 
 ```
-1. Push to branch triggers claudestep-auto-start.yml
+1. Push to branch triggers claudechain-auto-start.yml
 2. Workflow: BASE_BRANCH = github.ref_name (e.g., "main-e2e")
 3. CLI (__main__.py line 91): Passes to cmd_auto_start(base_branch=BASE_BRANCH)
-4. Service (auto_start.py line 117): Calls workflow_service.batch_trigger_claudestep_workflows(base_branch)
-5. Infrastructure (workflow_service.py line 60): Triggers claudestep.yml with -f base_branch={base_branch}
-6. claudestep.yml receives base_branch input and uses it for all operations
+4. Service (auto_start.py line 117): Calls workflow_service.batch_trigger_claudechain_workflows(base_branch)
+5. Infrastructure (workflow_service.py line 60): Triggers claudechain.yml with -f base_branch={base_branch}
+6. claudechain.yml receives base_branch input and uses it for all operations
 ```
 
-**Scenario B: ClaudeStep Workflow (PR merged)**
+**Scenario B: ClaudeChain Workflow (PR merged)**
 
 ```
-1. PR merge triggers claudestep.yml
+1. PR merge triggers claudechain.yml
 2. Workflow (line 57): BASE_BRANCH = github.base_ref (the branch PR merged INTO)
 3. Workflow (line 79): Passes to action via base_branch input
 4. Action (action.yml line 93): Sets BASE_BRANCH env var
@@ -226,7 +226,7 @@ This architectural principle makes the base branch detection even more critical 
 
 3. **Workflow triggering** (auto-start):
    - Auto-start must pass correct base_branch to downstream workflows
-   - Creates the chain: spec push → auto-start → claudestep → PR → merge → next task
+   - Creates the chain: spec push → auto-start → claudechain → PR → merge → next task
 
 4. **Task detection**:
    - In-progress tasks detected by querying PRs with specific labels
@@ -249,7 +249,7 @@ This architectural principle makes the base branch detection even more critical 
 
 **Architectural insight confirmed:**
 - Base branch is **not just for PR targeting** - it's the **source of truth for spec files**
-- Every ClaudeStep operation starts by fetching spec files from base branch via GitHub API
+- Every ClaudeChain operation starts by fetching spec files from base branch via GitHub API
 - Correct base branch is essential for workflow correctness
 
 ---
@@ -266,18 +266,18 @@ This architectural principle makes the base branch detection even more critical 
    - Base branch = `${{ github.ref_name }}` (the branch that was pushed to)
    - Example: Push to `main-e2e` → base branch is `main-e2e`
 
-   **ClaudeStep Workflow (triggered by workflow_dispatch):**
+   **ClaudeChain Workflow (triggered by workflow_dispatch):**
    - Triggered when: Manually invoked or called by auto-start
    - Base branch = `${{ inputs.base_branch }}` OR `${{ github.ref_name }}`
    - Fallback: If not provided, use the branch being checked out
 
-   **ClaudeStep Workflow (triggered by PR merge):**
-   - Triggered when: PR with "claudestep" label is merged
+   **ClaudeChain Workflow (triggered by PR merge):**
+   - Triggered when: PR with "claudechain" label is merged
    - Base branch = `${{ github.base_ref }}` (the branch the PR was merged INTO)
    - Example: PR merges into `main-e2e` → base branch is `main-e2e`
 
 2. Design validation logic:
-   - Ensure base branch is always set before running ClaudeStep commands
+   - Ensure base branch is always set before running ClaudeChain commands
    - Log the derived base branch for debugging
    - Fail fast if base branch cannot be determined
 
@@ -302,7 +302,7 @@ The design establishes clear inference rules for each workflow trigger type:
 
 **Trigger Context:**
 - Event: `push`
-- Triggered when: Spec file (`claude-step/*/spec.md`) is pushed to any branch
+- Triggered when: Spec file (`claude-chain/*/spec.md`) is pushed to any branch
 
 **Inference Rule:**
 ```yaml
@@ -320,7 +320,7 @@ BASE_BRANCH: ${{ github.ref_name }}
 - Push to `main-e2e` → `BASE_BRANCH = "main-e2e"`
 - Push to `feature/new-thing` → `BASE_BRANCH = "feature/new-thing"`
 
-##### ClaudeStep Workflow (workflow_dispatch Event)
+##### ClaudeChain Workflow (workflow_dispatch Event)
 
 **Trigger Context:**
 - Event: `workflow_dispatch`
@@ -357,11 +357,11 @@ fi
 - Manual trigger with `checkout_ref=main-e2e`, no base_branch → `BASE_BRANCH = "main-e2e"`
 - Manual trigger with neither → ERROR (fail fast)
 
-##### ClaudeStep Workflow (pull_request Event)
+##### ClaudeChain Workflow (pull_request Event)
 
 **Trigger Context:**
 - Event: `pull_request` with `types: [closed]`
-- Triggered when: PR with "claudestep" label is merged
+- Triggered when: PR with "claudechain" label is merged
 
 **Inference Rule:**
 ```yaml
@@ -383,10 +383,10 @@ BASE_BRANCH: ${{ github.base_ref }}
 
 **Validation Requirements:**
 
-1. **Always validate before ClaudeStep execution:**
+1. **Always validate before ClaudeChain execution:**
    - Add validation step in workflow after base branch determination
    - Check that `BASE_BRANCH` is set and non-empty
-   - Fail immediately if not set (don't proceed to ClaudeStep commands)
+   - Fail immediately if not set (don't proceed to ClaudeChain commands)
 
 2. **Clear error messages:**
    - Explain what went wrong ("Base branch could not be determined")
@@ -434,7 +434,7 @@ BASE_BRANCH: ${{ github.base_ref }}
 ```
 
 **Benefits:**
-- Fails fast with clear errors (before wasting time on ClaudeStep setup)
+- Fails fast with clear errors (before wasting time on ClaudeChain setup)
 - Provides actionable guidance for fixing the issue
 - Logs all context needed for debugging
 - Prevents silent failures or incorrect base branch usage
@@ -457,7 +457,7 @@ inputs:
 ```yaml
 inputs:
   project_name:
-    description: 'Project name in claude-step directory'
+    description: 'Project name in claude-chain directory'
     required: true
     default: 'e2e-test-project'
 
@@ -535,7 +535,7 @@ inputs:
      │
      ▼
 ┌────────────────────────────────────────────────────────────┐
-│ ClaudeStep Execution                                       │
+│ ClaudeChain Execution                                       │
 │ - Fetch spec from: get_file_from_branch(repo, BASE_BRANCH)│
 │ - Create PR targeting: BASE_BRANCH                        │
 └────────────────────────────────────────────────────────────┘
@@ -565,9 +565,9 @@ inputs:
 
 #### 6. Implementation Checklist
 
-To implement this design in Phase 4 (Update main ClaudeStep workflow):
+To implement this design in Phase 4 (Update main ClaudeChain workflow):
 
-- [ ] Update `claudestep.yml` input definitions (remove `base_branch` default)
+- [ ] Update `claudechain.yml` input definitions (remove `base_branch` default)
 - [ ] Update "Determine project and checkout ref" step with new inference logic
 - [ ] Add "Validate base branch" step with clear error messages
 - [ ] Add debug logging for all derived values
@@ -587,7 +587,7 @@ Phase 2 design is complete when:
 
 **Next Steps:**
 - Phase 3 already completed (auto-start workflow updated)
-- Phase 4: Implement this design in `claudestep.yml`
+- Phase 4: Implement this design in `claudechain.yml`
 - Phase 5: Add documentation
 - Phases 6-8: Handle edge cases and validation
 
@@ -598,7 +598,7 @@ Phase 2 design is complete when:
 **Goal**: Make auto-start workflow derive base branch from push event.
 
 **Tasks**:
-1. Update [claudestep-auto-start.yml](../.github/workflows/claudestep-auto-start.yml):
+1. Update [claudechain-auto-start.yml](../.github/workflows/claudechain-auto-start.yml):
 
    ```yaml
    on:
@@ -606,10 +606,10 @@ Phase 2 design is complete when:
        branches:
          - '**'  # Trigger on ANY branch
        paths:
-         - 'claude-step/*/spec.md'
+         - 'claude-chain/*/spec.md'
    ```
 
-   **Why `'**'`?** Makes the workflow truly generic - works on main, main-e2e, feature branches, or any branch users want to use for ClaudeStep projects.
+   **Why `'**'`?** Makes the workflow truly generic - works on main, main-e2e, feature branches, or any branch users want to use for ClaudeChain projects.
 
 2. Update environment variable to use event context:
 
@@ -655,11 +655,11 @@ Phase 2 design is complete when:
 
 Successfully updated the auto-start workflow to be fully generic and work on any branch:
 
-1. **Updated workflow trigger** (.github/workflows/claudestep-auto-start.yml:11):
+1. **Updated workflow trigger** (.github/workflows/claudechain-auto-start.yml:11):
    - Changed `branches: [main, main-e2e]` to `branches: ['**']`
    - Workflow now triggers on push to ANY branch with spec.md changes
 
-2. **Added logging** (.github/workflows/claudestep-auto-start.yml:36-39):
+2. **Added logging** (.github/workflows/claudechain-auto-start.yml:36-39):
    - New "Log derived base branch" step displays the branch being used
    - Provides visibility into which base branch PRs will target
 
@@ -698,12 +698,12 @@ Successfully updated the auto-start workflow to be fully generic and work on any
 
 ---
 
-- [x] Phase 4: Update main ClaudeStep workflow
+- [x] Phase 4: Update main ClaudeChain workflow
 
-**Goal**: Make ClaudeStep workflow derive base branch from event context.
+**Goal**: Make ClaudeChain workflow derive base branch from event context.
 
 **Tasks**:
-1. Update [claudestep.yml](../.github/workflows/claudestep.yml) workflow_dispatch inputs:
+1. Update [claudechain.yml](../.github/workflows/claudechain.yml) workflow_dispatch inputs:
 
    ```yaml
    on:
@@ -742,7 +742,7 @@ Successfully updated the auto-start workflow to be fully generic and work on any
        elif [ "${{ github.event_name }}" = "pull_request" ]; then
          # Extract project from branch name
          BRANCH="${{ github.head_ref }}"
-         PROJECT=$(echo "$BRANCH" | sed -E 's/^claude-step-([^-]+)-[0-9]+$/\1/')
+         PROJECT=$(echo "$BRANCH" | sed -E 's/^claude-chain-([^-]+)-[0-9]+$/\1/')
 
          # Base branch is where the PR was merged INTO
          BASE_BRANCH="${{ github.base_ref }}"
@@ -767,16 +767,16 @@ Successfully updated the auto-start workflow to be fully generic and work on any
        echo "✓ Base branch: ${{ steps.project.outputs.base_branch }}"
    ```
 
-4. Update ClaudeStep action call to use derived base branch:
+4. Update ClaudeChain action call to use derived base branch:
 
    ```yaml
-   - name: Run ClaudeStep action
+   - name: Run ClaudeChain action
      uses: ./
      with:
        base_branch: ${{ steps.project.outputs.base_branch }}
    ```
 
-**Expected outcome**: ClaudeStep workflow infers base branch from PR merge events or uses checkout_ref as fallback.
+**Expected outcome**: ClaudeChain workflow infers base branch from PR merge events or uses checkout_ref as fallback.
 
 ---
 
@@ -786,19 +786,19 @@ Successfully updated the auto-start workflow to be fully generic and work on any
 
 #### Implementation Summary
 
-Successfully updated the main ClaudeStep workflow to be fully generic and infer base branch from event context:
+Successfully updated the main ClaudeChain workflow to be fully generic and infer base branch from event context:
 
-1. **Updated workflow header comments** (.github/workflows/claudestep.yml:1-14):
+1. **Updated workflow header comments** (.github/workflows/claudechain.yml:1-14):
    - Changed from hardcoded "supports main and main-e2e" to "Generic workflow that works on ANY branch"
    - Added clear documentation of base branch inference rules for each event type
    - Explains branch-agnostic behavior
 
-2. **Removed base_branch default** (.github/workflows/claudestep.yml:25-28):
+2. **Removed base_branch default** (.github/workflows/claudechain.yml:25-28):
    - Changed from `default: 'main'` to no default (commented out)
    - Updated description to explain inference behavior
    - Allows proper inference from checkout_ref when not explicitly provided
 
-3. **Updated "Determine project and base branch" step** (.github/workflows/claudestep.yml:48-87):
+3. **Updated "Determine project and base branch" step** (.github/workflows/claudechain.yml:48-87):
    - Renamed from "Determine project and checkout ref" to reflect new responsibility
    - Added event type logging for debugging
    - Implemented inference logic for workflow_dispatch:
@@ -807,7 +807,7 @@ Successfully updated the main ClaudeStep workflow to be fully generic and infer 
    - PR merge path already correctly uses `github.base_ref`
    - Added clear logging showing which inference path was taken
 
-4. **Added validation step** (.github/workflows/claudestep.yml:89-102):
+4. **Added validation step** (.github/workflows/claudechain.yml:89-102):
    - New "Validate base branch" step ensures base_branch is set
    - Fails fast with clear error message if not determined
    - Provides actionable guidance for fixing manual trigger issues
@@ -852,7 +852,7 @@ Successfully updated the main ClaudeStep workflow to be fully generic and infer 
 **Goal**: Document the new generic workflow behavior.
 
 **Tasks**:
-1. Add comments to [claudestep-auto-start.yml](../.github/workflows/claudestep-auto-start.yml):
+1. Add comments to [claudechain-auto-start.yml](../.github/workflows/claudechain-auto-start.yml):
    ```yaml
    # This workflow is generic and works on ANY branch.
    # The base branch is automatically derived from the push event (github.ref_name).
@@ -860,7 +860,7 @@ Successfully updated the main ClaudeStep workflow to be fully generic and infer 
    # When a spec is pushed to 'main-e2e', PRs target 'main-e2e'.
    ```
 
-2. Add comments to [claudestep.yml](../.github/workflows/claudestep.yml):
+2. Add comments to [claudechain.yml](../.github/workflows/claudechain.yml):
    ```yaml
    # This workflow is generic and works on ANY branch.
    # Base branch inference:
@@ -890,7 +890,7 @@ All documentation was already updated in previous phases. This phase verified th
 
 ##### 1. Workflow File Comments
 
-**claudestep-auto-start.yml** (lines 3-7):
+**claudechain-auto-start.yml** (lines 3-7):
 ```yaml
 # This workflow is generic and works on ANY branch.
 # The base branch is automatically derived from the push event (github.ref_name).
@@ -899,9 +899,9 @@ All documentation was already updated in previous phases. This phase verified th
 # When a spec is pushed to any other branch, PRs target that branch.
 ```
 
-**claudestep.yml** (lines 1-14):
+**claudechain.yml** (lines 1-14):
 ```yaml
-# ClaudeStep workflow - Generic workflow that works on ANY branch
+# ClaudeChain workflow - Generic workflow that works on ANY branch
 #
 # This workflow is branch-agnostic and adapts to any branch without configuration.
 #
@@ -948,7 +948,7 @@ All documentation was already updated in previous phases. This phase verified th
 **Tasks**:
 1. Update [docs/proposed/2026-01-01-redesign-e2e-tests.md](2026-01-01-redesign-e2e-tests.md):
    - Remove Phase 8 (Update auto-start workflow) - no longer needed
-   - Remove Phase 9 (Update main claudestep workflow) - no longer needed
+   - Remove Phase 9 (Update main claudechain workflow) - no longer needed
    - Update remaining phases to reflect that workflows are already generic
 
 2. Update test expectations:
@@ -975,7 +975,7 @@ Updated E2E testing documentation to reflect that workflows are now generic:
 2. **Updated `docs/feature-architecture/e2e-testing.md`**:
    - Changed all `e2e-test` branch references to `main-e2e`
    - Updated branch isolation model to explain that production workflows are used (no test-specific workflows needed)
-   - Removed references to `claudestep-test.yml` test-specific workflow
+   - Removed references to `claudechain-test.yml` test-specific workflow
    - Updated test lifecycle to note that production workflows automatically adapt to `main-e2e`
    - Added note about generic workflows in "Important Notes" section
    - Updated project naming convention to `e2e-test-{uuid}`
@@ -984,7 +984,7 @@ Updated E2E testing documentation to reflect that workflows are now generic:
 #### Key Simplifications
 
 The E2E test infrastructure is now simpler because:
-- **No test-specific workflows**: Tests use production `claudestep.yml` and `claudestep-auto-start.yml`
+- **No test-specific workflows**: Tests use production `claudechain.yml` and `claudechain-auto-start.yml`
 - **No workflow configuration**: Tests just push specs to `main-e2e` and workflows automatically target that branch
 - **Reduced coupling**: Tests don't need to understand or modify workflow base branch logic
 - **True integration testing**: Tests exercise the actual production workflows, not test doubles
@@ -1032,19 +1032,19 @@ The E2E test infrastructure is now simpler because:
 
 Successfully implemented edge case handling and validation for generic workflows:
 
-##### 1. Fixed Project Name Extraction Pattern (claudestep.yml:74-87)
+##### 1. Fixed Project Name Extraction Pattern (claudechain.yml:74-87)
 
-**Issue Found**: The workflow used an outdated regex pattern `^claude-step-([^-]+)-[0-9]+$` that:
+**Issue Found**: The workflow used an outdated regex pattern `^claude-chain-([^-]+)-[0-9]+$` that:
 - Only matched project names without hyphens
 - Expected numeric index instead of 8-char hex hash
 
 **Fix Applied**: Updated to use the correct pattern matching the domain model:
-- Pattern: `^claude-step-(.+)-([0-9a-f]{8})$`
+- Pattern: `^claude-chain-(.+)-([0-9a-f]{8})$`
 - Now correctly extracts hyphenated project names (e.g., `my-project`, `api-v2-refactor`)
 - Validates 8-character lowercase hex hash
 - Uses bash regex (`=~`) with `BASH_REMATCH` for proper extraction
 
-##### 2. Enhanced Error Messages for Branch Validation (claudestep.yml:80-86)
+##### 2. Enhanced Error Messages for Branch Validation (claudechain.yml:80-86)
 
 Added clear error messages when branch name doesn't match expected pattern:
 - Shows the actual branch name
@@ -1054,23 +1054,23 @@ Added clear error messages when branch name doesn't match expected pattern:
 
 ##### 3. Security Considerations Documentation
 
-**claudestep.yml** (lines 16-21):
-- PR merge trigger: Only runs for PRs with 'claudestep' label (requires write access)
+**claudechain.yml** (lines 16-21):
+- PR merge trigger: Only runs for PRs with 'claudechain' label (requires write access)
 - workflow_dispatch: Requires repository write access to trigger
 - Branch names validated against strict pattern
 - Spec files fetched from base branch via GitHub API (source of truth)
 - No arbitrary code execution from PR branches
 
-**claudestep-auto-start.yml** (lines 9-14):
+**claudechain-auto-start.yml** (lines 9-14):
 - Only triggers on push events (requires write access)
-- Path filter limits to spec.md files in claude-step/ directory
+- Path filter limits to spec.md files in claude-chain/ directory
 - Cannot be triggered by PRs on protected branches
 - AUTO_START_ENABLED variable allows repository admins to disable
 - Branch names handled safely (no shell injection)
 
 ##### 4. Comprehensive Test Coverage (test_auto_start_workflow.py:239-330)
 
-Added new test class `TestClaudeStepBranchNameEdgeCases` with tests for:
+Added new test class `TestClaudeChainBranchNameEdgeCases` with tests for:
 - Hyphenated project names extraction
 - Invalid pattern rejection (wrong hash length, uppercase, invalid chars)
 - Long project names
@@ -1084,7 +1084,7 @@ Added new test class `TestClaudeStepBranchNameEdgeCases` with tests for:
 - **Backwards compatibility**: Changes are fully backwards compatible - valid branch names continue to work
 - **Security model**: Documented that workflows are safe because:
   - Push triggers require write access to the repository
-  - PR merge triggers require the 'claudestep' label (write access to add)
+  - PR merge triggers require the 'claudechain' label (write access to add)
   - Spec files are always fetched from base branch, not PR branches
 
 #### Build Verification
@@ -1104,11 +1104,11 @@ Added new test class `TestClaudeStepBranchNameEdgeCases` with tests for:
    - Push spec to `main-e2e` → verify PR created targeting `main-e2e`
    - Push spec to `feature/test` → verify PR created targeting `feature/test`
 
-2. Test ClaudeStep workflow (PR merge):
+2. Test ClaudeChain workflow (PR merge):
    - Merge PR into `main` → verify next PR targets `main`
    - Merge PR into `main-e2e` → verify next PR targets `main-e2e`
 
-3. Test ClaudeStep workflow (manual dispatch):
+3. Test ClaudeChain workflow (manual dispatch):
    - Trigger on `main` without base_branch input → verify uses `main`
    - Trigger with explicit base_branch → verify uses provided value
    - Trigger with invalid base_branch → verify fails with clear error
@@ -1143,7 +1143,7 @@ Added comprehensive validation tests to ensure generic workflows work correctly 
    - Verifies `BASE_BRANCH` environment variable derives from `github.ref_name`
    - Confirms push to any branch correctly sets base branch
 
-2. **ClaudeStep workflow base branch inference** (test_auto_start_workflow.py:372-452):
+2. **ClaudeChain workflow base branch inference** (test_auto_start_workflow.py:372-452):
    - Verifies workflow_dispatch infers base from `checkout_ref` when `base_branch` not provided
    - Verifies PR merge uses `github.base_ref` for base branch
    - Verifies validation step fails fast with clear error if base branch cannot be determined
@@ -1163,16 +1163,16 @@ Added 10 new integration tests in two test classes:
 
 - `TestGenericWorkflowBaseBranchInference` (6 tests):
   - `test_auto_start_uses_github_ref_name_for_base_branch`
-  - `test_claudestep_workflow_infers_base_from_checkout_ref`
-  - `test_claudestep_workflow_uses_github_base_ref_for_pr_merge`
-  - `test_claudestep_workflow_has_base_branch_validation`
-  - `test_claudestep_workflow_base_branch_has_no_default`
+  - `test_claudechain_workflow_infers_base_from_checkout_ref`
+  - `test_claudechain_workflow_uses_github_base_ref_for_pr_merge`
+  - `test_claudechain_workflow_has_base_branch_validation`
+  - `test_claudechain_workflow_base_branch_has_no_default`
   - `test_auto_start_workflow_triggers_on_any_branch`
 
 - `TestGenericWorkflowDocumentation` (4 tests):
   - `test_auto_start_has_generic_workflow_documentation`
-  - `test_claudestep_has_generic_workflow_documentation`
-  - `test_claudestep_has_security_documentation`
+  - `test_claudechain_has_generic_workflow_documentation`
+  - `test_claudechain_has_security_documentation`
   - `test_auto_start_has_security_documentation`
 
 #### Build Verification
@@ -1182,8 +1182,8 @@ Added 10 new integration tests in two test classes:
 #### Success Criteria Met
 
 ✅ Auto-start workflow correctly uses `github.ref_name` for base branch
-✅ ClaudeStep workflow correctly infers base from `checkout_ref` when not provided
-✅ ClaudeStep workflow correctly uses `github.base_ref` for PR merge events
+✅ ClaudeChain workflow correctly infers base from `checkout_ref` when not provided
+✅ ClaudeChain workflow correctly uses `github.base_ref` for PR merge events
 ✅ Validation step fails fast with clear error if base branch undetermined
 ✅ `base_branch` input has no default (enables inference)
 ✅ `checkout_ref` input has default for backwards compatibility

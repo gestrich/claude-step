@@ -1,5 +1,5 @@
-name: 'ClaudeStep Statistics'
-description: 'Generate statistics and reports for ClaudeStep projects'
+name: 'ClaudeChain Statistics'
+description: 'Generate statistics and reports for ClaudeChain projects'
 author: 'gestrich'
 
 branding:
@@ -79,7 +79,7 @@ runs:
         # ACTION_PATH points to statistics/ subdir, need parent for src/
         ACTION_ROOT=$(dirname "$ACTION_PATH")
         export PYTHONPATH="$ACTION_ROOT/src:$PYTHONPATH"
-        python3 -m claudestep statistics
+        python3 -m claudechain statistics
 
     - name: Post to Slack
       if: steps.stats.outputs.has_statistics == 'true' && steps.stats.outputs.slack_webhook_url != ''
@@ -90,13 +90,13 @@ runs:
         webhook-type: incoming-webhook
         payload: |
           {
-            "text": "ClaudeStep Weekly Report",
+            "text": "ClaudeChain Weekly Report",
             "blocks": [
               {
                 "type": "header",
                 "text": {
                   "type": "plain_text",
-                  "text": "ClaudeStep Weekly Report"
+                  "text": "ClaudeChain Weekly Report"
                 }
               },
               {
@@ -114,7 +114,7 @@ runs:
                 "elements": [
                   {
                     "type": "mrkdwn",
-                    "text": "See details in <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|ClaudeStep Statistics>"
+                    "text": "See details in <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|ClaudeChain Statistics>"
                   }
                 ]
               }

@@ -1,6 +1,6 @@
 ## Background
 
-ClaudeStep needs to support per-project base branch configuration. Currently, base branch is inferred from GitHub event context (e.g., `github.ref_name`, `github.base_ref`), but there's no way for a project to specify its own target branch in `configuration.yml`.
+ClaudeChain needs to support per-project base branch configuration. Currently, base branch is inferred from GitHub event context (e.g., `github.ref_name`, `github.base_ref`), but there's no way for a project to specify its own target branch in `configuration.yml`.
 
 **Goal**: Add optional `baseBranch` field to project configuration files, allowing projects to override the default base branch.
 
@@ -26,7 +26,7 @@ baseBranch: develop  # Optional: PRs will target 'develop' instead of workflow d
 
 Add `baseBranch` field support to the `ProjectConfiguration` domain model. Per architecture principles, domain models encapsulate parsing logic and provide type-safe APIs.
 
-**Changes to `src/claudestep/domain/project_configuration.py`:**
+**Changes to `src/claudechain/domain/project_configuration.py`:**
 
 1. Add `base_branch` field to dataclass:
    ```python
@@ -73,7 +73,7 @@ The `prepare` command currently reads `BASE_BRANCH` directly from environment. U
 
 **Architecture principle**: CLI layer reads env vars, passes to services. Services use domain models for resolution.
 
-**Changes to `src/claudestep/cli/commands/prepare.py`:**
+**Changes to `src/claudechain/cli/commands/prepare.py`:**
 
 Current flow (line ~83):
 ```python
@@ -122,7 +122,7 @@ All 599 unit tests and 133 integration tests pass.
 
 Fix the bug where completed projects (only closed PRs) don't auto-trigger when new tasks are added.
 
-**Changes to `src/claudestep/services/composite/auto_start_service.py`:**
+**Changes to `src/claudechain/services/composite/auto_start_service.py`:**
 
 1. In `determine_new_projects()` (~line 120):
    - Change `state="all"` to `state="open"`

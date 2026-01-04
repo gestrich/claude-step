@@ -2,9 +2,9 @@
 
 ## Background
 
-ClaudeStep currently requires manual triggering to start the first task when a new spec.md file is merged to the main branch. The typical workflow is:
+ClaudeChain currently requires manual triggering to start the first task when a new spec.md file is merged to the main branch. The typical workflow is:
 
-1. User creates `claude-step/<project>/spec.md` and `configuration.yml`
+1. User creates `claude-chain/<project>/spec.md` and `configuration.yml`
 2. User merges spec to main branch
 3. **Manual step required**: User must somehow trigger the first task (e.g., by adding a label, manually running workflow)
 4. Subsequent tasks auto-trigger when previous PRs merge
@@ -20,13 +20,13 @@ ClaudeStep currently requires manual triggering to start the first task when a n
 - When spec.md is updated (not first time) → don't auto-trigger (rely on normal PR merge triggers)
 - Distinguish "new project" from "updated project"
 
-**Key constraint**: Spec.md must exist on main branch before any ClaudeStep workflows run (this is the current architecture - spec.md is source of truth on base branch).
+**Key constraint**: Spec.md must exist on main branch before any ClaudeChain workflows run (this is the current architecture - spec.md is source of truth on base branch).
 
 **Design decisions**:
 - Use GitHub Actions workflow triggered by pushes to main that modify spec.md files
-- Detect if project is "new" (no ClaudeStep PRs exist yet) vs "existing" (has PRs)
+- Detect if project is "new" (no ClaudeChain PRs exist yet) vs "existing" (has PRs)
 - Only auto-trigger for new projects
-- Reuse existing ClaudeStep action, just invoke it automatically
+- Reuse existing ClaudeChain action, just invoke it automatically
 
 **Benefits**:
 - Seamless onboarding - merge spec, first task starts immediately
@@ -38,7 +38,7 @@ ClaudeStep currently requires manual triggering to start the first task when a n
 
 1. Automatically detect when new spec.md files are added/modified on main branch
 2. Determine if a project is "new" (no existing PRs) or "existing" (has PRs already)
-3. Auto-trigger the main ClaudeStep workflow for new projects only
+3. Auto-trigger the main ClaudeChain workflow for new projects only
 4. Avoid duplicate runs or conflicts with existing PR merge triggers
 5. Provide clear logging so users understand what triggered
 
@@ -49,23 +49,23 @@ ClaudeStep currently requires manual triggering to start the first task when a n
 **Objective**: Create a new GitHub Actions workflow that triggers when spec.md files are pushed to the main branch.
 
 **Tasks**:
-- Create new workflow file: `.github/workflows/claudestep-auto-start.yml`
+- Create new workflow file: `.github/workflows/claudechain-auto-start.yml`
 - Configure trigger:
   - Event: `push` to main branch
-  - Path filter: `claude-step/*/spec.md`
+  - Path filter: `claude-chain/*/spec.md`
 - Workflow should run on any push that includes spec.md changes
 - Set up basic job structure with checkout step
 
 **Workflow skeleton**:
 ```yaml
-name: ClaudeStep Auto-Start
+name: ClaudeChain Auto-Start
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'claude-step/*/spec.md'
+      - 'claude-chain/*/spec.md'
 
 jobs:
   auto-start:
@@ -78,7 +78,7 @@ jobs:
 ```
 
 **Files to create**:
-- `.github/workflows/claudestep-auto-start.yml` (new file)
+- `.github/workflows/claudechain-auto-start.yml` (new file)
 
 **Expected outcomes**:
 - Workflow triggers on any push to main that touches spec.md
@@ -86,8 +86,8 @@ jobs:
 - Basic structure in place for detection logic
 
 **Status**: ✅ Completed
-- Created `.github/workflows/claudestep-auto-start.yml` with the exact structure specified
-- Workflow configured to trigger on pushes to main branch when `claude-step/*/spec.md` files change
+- Created `.github/workflows/claudechain-auto-start.yml` with the exact structure specified
+- Workflow configured to trigger on pushes to main branch when `claude-chain/*/spec.md` files change
 - Checkout step configured with `fetch-depth: 2` to enable detection of changes between commits
 - Basic foundation ready for subsequent phases to add detection and triggering logic
 
@@ -95,12 +95,12 @@ jobs:
 
 - [x] Phase 2: Detect which projects had spec changes
 
-**Objective**: Identify which ClaudeStep project(s) had their spec.md modified in the push.
+**Objective**: Identify which ClaudeChain project(s) had their spec.md modified in the push.
 
 **Tasks**:
 - Use `git diff` to find changed spec.md files between HEAD and HEAD^
 - Extract project names from paths:
-  - Path: `claude-step/my-project/spec.md` → Project: `my-project`
+  - Path: `claude-chain/my-project/spec.md` → Project: `my-project`
 - Handle multiple projects changing in single push (iterate over all)
 - Store project names for next steps
 
@@ -110,7 +110,7 @@ jobs:
   id: detect
   run: |
     # Find spec.md files that changed in this push
-    CHANGED_SPECS=$(git diff --name-only HEAD^ HEAD | grep 'claude-step/.*/spec.md' || true)
+    CHANGED_SPECS=$(git diff --name-only HEAD^ HEAD | grep 'claude-chain/.*/spec.md' || true)
 
     if [ -z "$CHANGED_SPECS" ]; then
       echo "No spec.md files changed"
@@ -121,8 +121,8 @@ jobs:
     # Extract project names
     PROJECTS=""
     for spec_path in $CHANGED_SPECS; do
-      # Extract project name from path: claude-step/<project>/spec.md
-      project=$(echo "$spec_path" | sed 's|claude-step/\([^/]*\)/spec.md|\1|')
+      # Extract project name from path: claude-chain/<project>/spec.md
+      project=$(echo "$spec_path" | sed 's|claude-chain/\([^/]*\)/spec.md|\1|')
       PROJECTS="$PROJECTS $project"
     done
 
@@ -136,7 +136,7 @@ jobs:
 - Outputs project names for use in later steps
 
 **Status**: ✅ Completed
-- Added detection step to `.github/workflows/claudestep-auto-start.yml`
+- Added detection step to `.github/workflows/claudechain-auto-start.yml`
 - Implements git diff to find changed spec.md files between HEAD^ and HEAD
 - Extracts project names using sed pattern matching
 - Handles empty results gracefully by outputting empty projects list
@@ -150,8 +150,8 @@ jobs:
 **Objective**: For each detected project, determine if it's a new project (no PRs yet) or existing project (has PRs).
 
 **Tasks**:
-- Use GitHub CLI (`gh pr list`) to query for ClaudeStep PRs for this project
-- Filter by label: `claudestep` (or project-specific label if exists)
+- Use GitHub CLI (`gh pr list`) to query for ClaudeChain PRs for this project
+- Filter by label: `claudechain` (or project-specific label if exists)
 - Parse branch names to identify project (reuse logic from hash-based task identification)
 - If zero PRs found → new project (should auto-trigger)
 - If any PRs found → existing project (skip auto-trigger)
@@ -169,13 +169,13 @@ jobs:
     for project in $PROJECTS; do
       echo "Checking if project '$project' is new..."
 
-      # Query for ClaudeStep PRs for this project
+      # Query for ClaudeChain PRs for this project
       # Note: This requires PRs to have project in branch name or label
       PR_COUNT=$(gh pr list \
-        --label claudestep \
+        --label claudechain \
         --state all \
         --json headRefName \
-        --jq "[.[] | select(.headRefName | startswith(\"claude-step-$project-\"))] | length")
+        --jq "[.[] | select(.headRefName | startswith(\"claude-chain-$project-\"))] | length")
 
       if [ "$PR_COUNT" -eq 0 ]; then
         echo "  → New project (no PRs found)"
@@ -195,9 +195,9 @@ jobs:
 - Outputs list of new projects only
 
 **Status**: ✅ Completed
-- Added "Check if projects are new" step to `.github/workflows/claudestep-auto-start.yml`
-- Uses GitHub CLI (`gh pr list`) to query for existing ClaudeStep PRs for each project
-- Filters PRs by the `claudestep` label and checks branch names with pattern `claude-step-$project-*`
+- Added "Check if projects are new" step to `.github/workflows/claudechain-auto-start.yml`
+- Uses GitHub CLI (`gh pr list`) to query for existing ClaudeChain PRs for each project
+- Filters PRs by the `claudechain` label and checks branch names with pattern `claude-chain-$project-*`
 - Correctly distinguishes new projects (0 PRs) from existing projects (1+ PRs including closed)
 - Outputs space-separated list of new projects in `new_projects` output for use in subsequent steps
 - YAML syntax validated successfully
@@ -205,27 +205,27 @@ jobs:
 
 ---
 
-- [x] Phase 4: Auto-trigger ClaudeStep for new projects
+- [x] Phase 4: Auto-trigger ClaudeChain for new projects
 
-**Objective**: For each new project, invoke the main ClaudeStep workflow to start the first task.
+**Objective**: For each new project, invoke the main ClaudeChain workflow to start the first task.
 
 **Tasks**:
-- Use matrix strategy to trigger ClaudeStep for each new project
+- Use matrix strategy to trigger ClaudeChain for each new project
 - Pass required inputs:
   - `project_name`: The detected project name
   - `anthropic_api_key`: From secrets
   - Other inputs as needed (base_branch, etc.)
-- Reuse the main ClaudeStep action: `uses: gestrich/claude-step@v1` (or `uses: ./` for local testing)
+- Reuse the main ClaudeChain action: `uses: gestrich/claude-chain@v1` (or `uses: ./` for local testing)
 - Ensure action has necessary permissions (PRs, contents, etc.)
 
 **Workflow step**:
 ```yaml
-- name: Trigger ClaudeStep for new projects
+- name: Trigger ClaudeChain for new projects
   if: steps.check_new.outputs.new_projects != ''
   strategy:
     matrix:
       project: ${{ fromJSON(format('[{0}]', steps.check_new.outputs.new_projects)) }}
-  uses: ./  # Or gestrich/claude-step@v1 in production
+  uses: ./  # Or gestrich/claude-chain@v1 in production
   with:
     project_name: ${{ matrix.project }}
     anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -237,29 +237,29 @@ jobs:
 
 **Alternative approach using workflow_dispatch**:
 ```yaml
-- name: Trigger ClaudeStep for new projects
+- name: Trigger ClaudeChain for new projects
   if: steps.check_new.outputs.new_projects != ''
   env:
     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   run: |
     for project in ${{ steps.check_new.outputs.new_projects }}; do
-      echo "Triggering ClaudeStep for project: $project"
-      gh workflow run claudestep.yml \
+      echo "Triggering ClaudeChain for project: $project"
+      gh workflow run claudechain.yml \
         -f project_name="$project" \
         -f base_branch="main"
     done
 ```
 
 **Expected outcomes**:
-- ClaudeStep workflow starts for each new project
+- ClaudeChain workflow starts for each new project
 - First task is prepared and PR is created
 - No duplicate runs or conflicts with other triggers
 
 **Status**: ✅ Completed
-- Added auto-trigger step to `.github/workflows/claudestep-auto-start.yml`
+- Added auto-trigger step to `.github/workflows/claudechain-auto-start.yml`
 - Implemented using `workflow_dispatch` approach with `gh workflow run` command
 - Iterates over all new projects detected in `steps.check_new.outputs.new_projects`
-- Triggers `claudestep.yml` workflow for each new project with required inputs:
+- Triggers `claudechain.yml` workflow for each new project with required inputs:
   - `project_name`: The detected project name
   - `base_branch`: Set to "main"
   - `checkout_ref`: Set to "main" for consistency
@@ -291,7 +291,7 @@ jobs:
 - name: Generate summary
   if: always()
   run: |
-    echo "# ClaudeStep Auto-Start Summary" >> $GITHUB_STEP_SUMMARY
+    echo "# ClaudeChain Auto-Start Summary" >> $GITHUB_STEP_SUMMARY
     echo "" >> $GITHUB_STEP_SUMMARY
 
     if [ -z "${{ steps.detect.outputs.projects }}" ]; then
@@ -321,7 +321,7 @@ jobs:
 - Helpful messages for all scenarios
 
 **Status**: ✅ Completed
-- Added "Generate summary" step to `.github/workflows/claudestep-auto-start.yml`
+- Added "Generate summary" step to `.github/workflows/claudechain-auto-start.yml`
 - Step runs `if: always()` to provide feedback regardless of whether auto-trigger occurred
 - Summary displays:
   - List of all projects with spec.md changes
@@ -344,8 +344,8 @@ jobs:
   - Log that project was removed
 - **Case 2: Multiple projects in one push**: Handle correctly (already covered by iteration)
 - **Case 3: Spec modified but project already has PRs**: Skip (already covered by new/existing check)
-- **Case 4: Invalid spec.md format**: Let ClaudeStep action handle validation (it already does)
-- **Case 5: Missing configuration.yml**: Let ClaudeStep action handle (it already validates)
+- **Case 4: Invalid spec.md format**: Let ClaudeChain action handle validation (it already does)
+- **Case 5: Missing configuration.yml**: Let ClaudeChain action handle (it already validates)
 - **Case 6: API rate limits**: Add retry logic or fail gracefully with clear error
 - **Case 7: Concurrent pushes**: Use concurrency group to prevent race conditions
 
@@ -353,15 +353,15 @@ jobs:
 ```yaml
 # At top level of workflow
 concurrency:
-  group: claudestep-auto-start-${{ github.ref }}
+  group: claudechain-auto-start-${{ github.ref }}
   cancel-in-progress: false  # Let both run, they'll detect existing PRs
 
 # In detect step, handle deletions:
 - name: Detect changed spec files
   run: |
     # Detect both added/modified and deleted specs
-    CHANGED_SPECS=$(git diff --name-only --diff-filter=AM HEAD^ HEAD | grep 'claude-step/.*/spec.md' || true)
-    DELETED_SPECS=$(git diff --name-only --diff-filter=D HEAD^ HEAD | grep 'claude-step/.*/spec.md' || true)
+    CHANGED_SPECS=$(git diff --name-only --diff-filter=AM HEAD^ HEAD | grep 'claude-chain/.*/spec.md' || true)
+    DELETED_SPECS=$(git diff --name-only --diff-filter=D HEAD^ HEAD | grep 'claude-chain/.*/spec.md' || true)
 
     if [ -n "$DELETED_SPECS" ]; then
       echo "Deleted specs (will be ignored): $DELETED_SPECS"
@@ -375,7 +375,7 @@ concurrency:
 
 **Status**: ✅ Completed
 - Added concurrency control at workflow level to prevent race conditions from concurrent pushes
-  - Uses `group: claudestep-auto-start-${{ github.ref }}` to group concurrent runs by branch
+  - Uses `group: claudechain-auto-start-${{ github.ref }}` to group concurrent runs by branch
   - Set `cancel-in-progress: false` to allow both runs to execute (they'll detect existing PRs and skip appropriately)
 - Enhanced spec detection to handle deletions:
   - Uses `--diff-filter=AM` to only process added/modified specs (not deleted)
@@ -390,8 +390,8 @@ concurrency:
   - **Case 1 (Spec deleted)**: Detected via `--diff-filter=D`, logged and skipped ✅
   - **Case 2 (Multiple projects)**: Already handled by iteration in earlier phases ✅
   - **Case 3 (Existing projects)**: Already handled by new/existing check in Phase 3 ✅
-  - **Case 4 (Invalid spec)**: Delegated to ClaudeStep action validation ✅
-  - **Case 5 (Missing config)**: Delegated to ClaudeStep action validation ✅
+  - **Case 4 (Invalid spec)**: Delegated to ClaudeChain action validation ✅
+  - **Case 5 (Missing config)**: Delegated to ClaudeChain action validation ✅
   - **Case 6 (API failures)**: Error handling added, projects skipped on failure ✅
   - **Case 7 (Concurrent pushes)**: Concurrency group prevents race conditions ✅
 - YAML syntax validated successfully
@@ -429,7 +429,7 @@ concurrency:
 
 1. Create your project structure:
    ```
-   claude-step/
+   claude-chain/
      my-project/
        spec.md
        configuration.yml
@@ -437,8 +437,8 @@ concurrency:
 
 2. Merge to main branch:
    ```bash
-   git add claude-step/my-project/
-   git commit -m "Add ClaudeStep project: my-project"
+   git add claude-chain/my-project/
+   git commit -m "Add ClaudeChain project: my-project"
    git push origin main
    ```
 
@@ -495,7 +495,7 @@ concurrency:
 
 **Tasks**:
 - Add optional input to auto-start workflow: `auto_start_enabled`
-- Check this input before triggering ClaudeStep
+- Check this input before triggering ClaudeChain
 - Default to `true` (auto-start enabled)
 - Document how to disable in repository settings
 
@@ -506,7 +506,7 @@ on:
     branches:
       - main
     paths:
-      - 'claude-step/*/spec.md'
+      - 'claude-chain/*/spec.md'
   workflow_dispatch:
     inputs:
       auto_start_enabled:
@@ -515,7 +515,7 @@ on:
         default: 'true'
 
 # In trigger step:
-- name: Trigger ClaudeStep for new projects
+- name: Trigger ClaudeChain for new projects
   if: |
     steps.check_new.outputs.new_projects != '' &&
     (github.event.inputs.auto_start_enabled != 'false')
@@ -523,7 +523,7 @@ on:
 
 **Alternative**: Use repository variable or configuration file
 ```yaml
-# Check for .github/claudestep-config.yml
+# Check for .github/claudechain-config.yml
 auto_start_enabled: false
 ```
 
@@ -535,7 +535,7 @@ auto_start_enabled: false
 **Status**: ✅ Completed
 - Implemented configuration option using GitHub repository variables approach
 - Added `Check if auto-start is enabled` step that:
-  - Reads the `CLAUDESTEP_AUTO_START_ENABLED` repository variable
+  - Reads the `CLAUDECHAIN_AUTO_START_ENABLED` repository variable
   - Defaults to enabled if variable is not set
   - Outputs enabled/disabled status for use in subsequent steps
 - Updated trigger step condition to check `steps.check_enabled.outputs.enabled == 'true'`
@@ -546,7 +546,7 @@ auto_start_enabled: false
 - YAML syntax validated successfully
 - **Technical notes**:
   - Chose repository variables over workflow_dispatch inputs for cleaner UX
-  - Users can disable by setting `CLAUDESTEP_AUTO_START_ENABLED=false` in Settings > Secrets and variables > Actions > Variables
+  - Users can disable by setting `CLAUDECHAIN_AUTO_START_ENABLED=false` in Settings > Secrets and variables > Actions > Variables
   - Default behavior (variable not set) is auto-start enabled, maintaining backward compatibility
   - Summary provides clear feedback about disabled state with instructions to re-enable
 
@@ -561,7 +561,7 @@ auto_start_enabled: false
   - Create new spec.md for project "test-project-1"
   - Merge to main
   - Verify auto-start workflow triggers
-  - Verify ClaudeStep workflow starts
+  - Verify ClaudeChain workflow starts
   - Verify PR is created for first task
 
 - **Test 2: Existing project with spec update**
@@ -576,7 +576,7 @@ auto_start_enabled: false
   - Commit both in single push
   - Merge to main
   - Verify auto-start triggers for both projects
-  - Verify two separate ClaudeStep runs initiated
+  - Verify two separate ClaudeChain runs initiated
 
 - **Test 4: Spec deletion**
   - Delete spec.md for a project
@@ -586,8 +586,8 @@ auto_start_enabled: false
 - **Test 5: Invalid spec.md**
   - Create spec.md with invalid format
   - Merge to main
-  - Verify auto-start triggers ClaudeStep
-  - Verify ClaudeStep action handles validation error appropriately
+  - Verify auto-start triggers ClaudeChain
+  - Verify ClaudeChain action handles validation error appropriately
 
 **Manual testing approach**:
 - Use a test repository or branch
@@ -616,7 +616,7 @@ auto_start_enabled: false
   - YAML parsing handles the 'on:' keyword (parsed as boolean True by PyYAML)
   - Workflow has all required steps: checkout, detect, check new, check enabled, trigger, summary
   - Concurrency control verified to prevent race conditions
-  - Path filters confirmed: `claude-step/*/spec.md`
+  - Path filters confirmed: `claude-chain/*/spec.md`
   - Diff filters confirmed: `--diff-filter=AM` for processing, `--diff-filter=D` for deletion detection
 - **Manual E2E testing**: Tests 1-5 above can be performed manually in a test repository for full E2E validation
 - **Build status**: All unit and integration tests pass (635 passed, 1 pre-existing failure unrelated to auto-start)
@@ -625,7 +625,7 @@ auto_start_enabled: false
 
 - [x] Phase 10: Validation
 
-**Objective**: Confirm the auto-start feature works end-to-end and integrates well with existing ClaudeStep workflows.
+**Objective**: Confirm the auto-start feature works end-to-end and integrates well with existing ClaudeChain workflows.
 
 **Testing approach**:
 
@@ -652,7 +652,7 @@ auto_start_enabled: false
 **Success criteria**:
 - ✅ Auto-start workflow triggers on spec.md merge to main
 - ✅ Correctly identifies new vs existing projects
-- ✅ Auto-triggers ClaudeStep only for new projects
+- ✅ Auto-triggers ClaudeChain only for new projects
 - ✅ First task PR is created automatically
 - ✅ Subsequent tasks continue to work with existing merge triggers
 - ✅ No duplicate runs or race conditions
@@ -662,17 +662,17 @@ auto_start_enabled: false
 
 **Rollback plan**:
 - Auto-start workflow is additive (doesn't modify existing workflows)
-- Can disable by deleting `.github/workflows/claudestep-auto-start.yml`
+- Can disable by deleting `.github/workflows/claudechain-auto-start.yml`
 - Existing manual triggers continue to work
-- No breaking changes to ClaudeStep action itself
+- No breaking changes to ClaudeChain action itself
 
 **Status**: ✅ Completed
 - **All success criteria validated**:
-  - Auto-start workflow file exists at `.github/workflows/claudestep-auto-start.yml`
+  - Auto-start workflow file exists at `.github/workflows/claudechain-auto-start.yml`
   - Workflow correctly configured with proper triggers (push to main, spec.md path filter)
   - Concurrency control prevents race conditions
   - New/existing project detection logic implemented with error handling
-  - Configuration option to disable auto-start via `CLAUDESTEP_AUTO_START_ENABLED` repository variable
+  - Configuration option to disable auto-start via `CLAUDECHAIN_AUTO_START_ENABLED` repository variable
   - All edge cases handled (deletions, API failures, multiple projects, invalid specs)
   - Documentation updated (README.md, architecture.md, getting-started.md)
 - **Integration tests**: All 12 auto-start workflow tests passing (100% success rate)
@@ -689,5 +689,5 @@ auto_start_enabled: false
 - **Technical notes**:
   - Feature is non-breaking and fully backward compatible
   - Auto-start is additive - doesn't modify existing workflows
-  - Can be disabled by setting `CLAUDESTEP_AUTO_START_ENABLED=false` or deleting workflow file
+  - Can be disabled by setting `CLAUDECHAIN_AUTO_START_ENABLED=false` or deleting workflow file
   - Ready for production use

@@ -3,10 +3,10 @@
 import pytest
 from unittest.mock import Mock, patch
 
-from claudestep.domain.project import Project
-from claudestep.domain.project_configuration import ProjectConfiguration
-from claudestep.domain.spec_content import SpecContent
-from claudestep.infrastructure.repositories.project_repository import ProjectRepository
+from claudechain.domain.project import Project
+from claudechain.domain.project_configuration import ProjectConfiguration
+from claudechain.domain.spec_content import SpecContent
+from claudechain.infrastructure.repositories.project_repository import ProjectRepository
 
 
 class TestProjectRepositoryInitialization:
@@ -24,7 +24,7 @@ class TestProjectRepositoryInitialization:
 class TestProjectRepositoryLoadConfiguration:
     """Test suite for ProjectRepository.load_configuration method"""
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_configuration_success(self, mock_get_file):
         """Should load and parse configuration successfully"""
         # Arrange
@@ -48,10 +48,10 @@ baseBranch: develop
         mock_get_file.assert_called_once_with(
             "owner/repo",
             "main",
-            "claude-step/my-project/configuration.yml"
+            "claude-chain/my-project/configuration.yml"
         )
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_configuration_returns_default_when_file_not_found(self, mock_get_file):
         """Should return default config when configuration file doesn't exist"""
         # Arrange
@@ -70,10 +70,10 @@ baseBranch: develop
         mock_get_file.assert_called_once_with(
             "owner/repo",
             "main",
-            "claude-step/my-project/configuration.yml"
+            "claude-chain/my-project/configuration.yml"
         )
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_configuration_with_custom_branch(self, mock_get_file):
         """Should load configuration from custom branch"""
         # Arrange
@@ -90,10 +90,10 @@ baseBranch: develop
         mock_get_file.assert_called_once_with(
             "owner/repo",
             "develop",
-            "claude-step/my-project/configuration.yml"
+            "claude-chain/my-project/configuration.yml"
         )
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_configuration_with_custom_project_base_path(self, mock_get_file):
         """Should use custom project base path"""
         # Arrange
@@ -113,7 +113,7 @@ baseBranch: develop
             "custom/path/my-project/configuration.yml"
         )
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_configuration_handles_empty_config(self, mock_get_file):
         """Should handle configuration without assignee"""
         # Arrange
@@ -133,7 +133,7 @@ baseBranch: develop
 class TestProjectRepositoryLoadConfigurationIfExists:
     """Test suite for ProjectRepository.load_configuration_if_exists method"""
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_configuration_if_exists_returns_config_when_found(self, mock_get_file):
         """Should return parsed config when file exists"""
         # Arrange
@@ -151,7 +151,7 @@ assignee: alice
         assert config is not None
         assert config.assignee == "alice"
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_configuration_if_exists_returns_none_when_not_found(self, mock_get_file):
         """Should return None when file doesn't exist"""
         # Arrange
@@ -169,7 +169,7 @@ assignee: alice
 class TestProjectRepositoryLoadSpec:
     """Test suite for ProjectRepository.load_spec method"""
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_spec_success(self, mock_get_file):
         """Should load and parse spec.md successfully"""
         # Arrange
@@ -193,10 +193,10 @@ class TestProjectRepositoryLoadSpec:
         mock_get_file.assert_called_once_with(
             "owner/repo",
             "main",
-            "claude-step/my-project/spec.md"
+            "claude-chain/my-project/spec.md"
         )
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_spec_returns_none_when_file_not_found(self, mock_get_file):
         """Should return None when spec file doesn't exist"""
         # Arrange
@@ -212,10 +212,10 @@ class TestProjectRepositoryLoadSpec:
         mock_get_file.assert_called_once_with(
             "owner/repo",
             "main",
-            "claude-step/my-project/spec.md"
+            "claude-chain/my-project/spec.md"
         )
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_spec_with_custom_branch(self, mock_get_file):
         """Should load spec from custom branch"""
         # Arrange
@@ -232,10 +232,10 @@ class TestProjectRepositoryLoadSpec:
         mock_get_file.assert_called_once_with(
             "owner/repo",
             "feature-branch",
-            "claude-step/my-project/spec.md"
+            "claude-chain/my-project/spec.md"
         )
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_spec_with_custom_project_base_path(self, mock_get_file):
         """Should use custom project base path"""
         # Arrange
@@ -255,7 +255,7 @@ class TestProjectRepositoryLoadSpec:
             "custom/path/my-project/spec.md"
         )
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_spec_with_empty_content(self, mock_get_file):
         """Should return None for empty spec content (treated as not found)"""
         # Arrange
@@ -271,7 +271,7 @@ class TestProjectRepositoryLoadSpec:
         # Empty string is treated as falsy, so returns None
         assert spec is None
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_spec_with_no_tasks(self, mock_get_file):
         """Should handle spec with no task items"""
         # Arrange
@@ -296,7 +296,7 @@ More text here."""
 class TestProjectRepositoryLoadProjectFull:
     """Test suite for ProjectRepository.load_project_full method"""
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_project_full_success(self, mock_get_file):
         """Should load complete project data successfully"""
         # Arrange
@@ -329,7 +329,7 @@ class TestProjectRepositoryLoadProjectFull:
         assert spec.total_tasks == 2
         assert spec.completed_tasks == 1
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_project_full_uses_default_config_when_config_missing(self, mock_get_file):
         """Should use default config when configuration file is missing"""
         # Arrange
@@ -355,7 +355,7 @@ class TestProjectRepositoryLoadProjectFull:
         assert config.base_branch is None
         assert spec.total_tasks == 2
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_project_full_returns_none_when_spec_missing(self, mock_get_file):
         """Should return None when spec file is missing"""
         # Arrange
@@ -375,7 +375,7 @@ class TestProjectRepositoryLoadProjectFull:
         # Assert
         assert result is None
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_project_full_with_custom_branch(self, mock_get_file):
         """Should load from custom branch"""
         # Arrange
@@ -400,7 +400,7 @@ class TestProjectRepositoryLoadProjectFull:
         for call in mock_get_file.call_args_list:
             assert call[0][1] == "develop"  # Second argument is branch
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_load_project_full_creates_project_with_correct_name(self, mock_get_file):
         """Should create Project object with correct name"""
         # Arrange
@@ -422,13 +422,13 @@ class TestProjectRepositoryLoadProjectFull:
         assert result is not None
         project, _, _ = result
         assert project.name == "custom-project-name"
-        assert project.base_path == "claude-step/custom-project-name"
+        assert project.base_path == "claude-chain/custom-project-name"
 
 
 class TestProjectRepositoryIntegration:
     """Integration tests for ProjectRepository with realistic scenarios"""
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_full_workflow_with_realistic_data(self, mock_get_file):
         """Should handle complete workflow with realistic project data"""
         # Arrange
@@ -478,7 +478,7 @@ Ensure backward compatibility with existing sessions.
 
         # Project assertions
         assert project.name == "auth-refactor"
-        assert project.config_path == "claude-step/auth-refactor/configuration.yml"
+        assert project.config_path == "claude-chain/auth-refactor/configuration.yml"
 
         # Config assertions
         assert config.assignee == "dev1"
@@ -498,7 +498,7 @@ Ensure backward compatibility with existing sessions.
         pending_indices = spec.get_pending_task_indices()
         assert pending_indices == [3, 4, 5, 6, 7]
 
-    @patch('claudestep.infrastructure.github.operations.get_file_from_branch')
+    @patch('claudechain.infrastructure.github.operations.get_file_from_branch')
     def test_repository_instance_can_load_multiple_projects(self, mock_get_file):
         """Should be able to load multiple different projects with same repository instance"""
         # Arrange

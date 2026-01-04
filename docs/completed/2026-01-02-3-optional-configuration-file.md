@@ -2,7 +2,7 @@
 
 ## Background
 
-Currently, ClaudeStep requires a `configuration.yml` file for every project. This file serves two purposes:
+Currently, ClaudeChain requires a `configuration.yml` file for every project. This file serves two purposes:
 1. **Project discovery** - Projects are identified by the presence of `configuration.yml`
 2. **Reviewer configuration** - Defines who reviews PRs and their capacity limits
 
@@ -14,7 +14,7 @@ This requirement creates friction for simple use cases where users just want to 
    - No reviewer assigned (PRs created without assignee)
    - Global per-project limit of 1 open PR at a time
 
-This simplifies onboarding: users can create just a `spec.md` file and start using ClaudeStep immediately.
+This simplifies onboarding: users can create just a `spec.md` file and start using ClaudeChain immediately.
 
 ## Phases
 
@@ -23,11 +23,11 @@ This simplifies onboarding: users can create just a `spec.md` file and start usi
 **Goal**: Projects are discovered by the presence of `spec.md`, not `configuration.yml`.
 
 **Files to modify**:
-- `src/claudestep/domain/project.py` - Update `Project.find_all()` to look for `spec.md`
-- `src/claudestep/cli/commands/discover.py` - Update discovery logic if it has separate implementation
+- `src/claudechain/domain/project.py` - Update `Project.find_all()` to look for `spec.md`
+- `src/claudechain/cli/commands/discover.py` - Update discovery logic if it has separate implementation
 
 **Changes**:
-- Scan `claude-step/*/` directories for `spec.md` instead of `configuration.yml`
+- Scan `claude-chain/*/` directories for `spec.md` instead of `configuration.yml`
 - A project exists if it has a `spec.md` file (config becomes optional)
 - Update any path properties that assume config existence
 
@@ -41,7 +41,7 @@ This simplifies onboarding: users can create just a `spec.md` file and start usi
 **Goal**: Define a default `ProjectConfiguration` that's used when no config file exists.
 
 **Files to modify**:
-- `src/claudestep/domain/project_configuration.py` - Add `ProjectConfiguration.default()` class method
+- `src/claudechain/domain/project_configuration.py` - Add `ProjectConfiguration.default()` class method
 
 **Default values**:
 ```python
@@ -66,7 +66,7 @@ def default(cls, project: Project) -> "ProjectConfiguration":
 **Goal**: `load_configuration()` returns default config instead of `None` when file doesn't exist.
 
 **Files to modify**:
-- `src/claudestep/infrastructure/repositories/project_repository.py`
+- `src/claudechain/infrastructure/repositories/project_repository.py`
 
 **Changes**:
 - When `get_file_from_branch()` returns `None` for config, return `ProjectConfiguration.default(project)`
@@ -82,8 +82,8 @@ def default(cls, project: Project) -> "ProjectConfiguration":
 **Goal**: When no reviewers configured, enforce max 1 open PR per project globally.
 
 **Files to modify**:
-- `src/claudestep/services/core/reviewer_service.py` - Add logic for no-reviewer case
-- `src/claudestep/services/core/pr_service.py` - May need method to count open PRs for project
+- `src/claudechain/services/core/reviewer_service.py` - Add logic for no-reviewer case
+- `src/claudechain/services/core/pr_service.py` - May need method to count open PRs for project
 
 **Changes**:
 - In `find_available_reviewer()`:
@@ -115,7 +115,7 @@ def find_available_reviewer(self, config, project, label):
 **Goal**: PRs can be created without an assignee when no reviewer is configured.
 
 **Files to modify**:
-- `src/claudestep/cli/commands/prepare.py`
+- `src/claudechain/cli/commands/prepare.py`
 
 **Changes**:
 - Remove/update the check that fails when `config.reviewers` is empty (lines 126-127)
@@ -142,8 +142,8 @@ if not config.reviewers:
 **Goal**: PRs are created without `--assignee` flag when reviewer is empty.
 
 **Files to modify**:
-- `src/claudestep/cli/commands/finalize.py`
-- `src/claudestep/infrastructure/github/operations.py` - If PR creation is there
+- `src/claudechain/cli/commands/finalize.py`
+- `src/claudechain/infrastructure/github/operations.py` - If PR creation is there
 
 **Changes**:
 - When `reviewer` is empty/None, omit `--assignee` from `gh pr create` command
@@ -160,8 +160,8 @@ if not config.reviewers:
 **Goal**: Commands that use configuration handle the default case gracefully.
 
 **Files to modify**:
-- `src/claudestep/services/composite/statistics_service.py`
-- `src/claudestep/cli/commands/discover_ready.py`
+- `src/claudechain/services/composite/statistics_service.py`
+- `src/claudechain/cli/commands/discover_ready.py`
 - Any other commands that load configuration
 
 **Changes**:

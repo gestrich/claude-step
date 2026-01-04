@@ -2,13 +2,13 @@
 
 ## Background
 
-ClaudeStep currently uses positional indices from spec.md to identify tasks (e.g., task 1, task 2, task 3). These indices are embedded in branch names (`claude-step-<project>-3`) and used to map PRs to tasks. This creates a fragile system where inserting, deleting, or reordering tasks in spec.md breaks the mapping between existing PRs and their intended tasks.
+ClaudeChain currently uses positional indices from spec.md to identify tasks (e.g., task 1, task 2, task 3). These indices are embedded in branch names (`claude-chain-<project>-3`) and used to map PRs to tasks. This creates a fragile system where inserting, deleting, or reordering tasks in spec.md breaks the mapping between existing PRs and their intended tasks.
 
 **Example of the problem:**
 ```markdown
 <!-- Original spec.md -->
 - [ ] Task at position 1
-- [ ] Task at position 2  ← PR created: claude-step-myproject-2
+- [ ] Task at position 2  ← PR created: claude-chain-myproject-2
 - [ ] Task at position 3
 
 <!-- Someone inserts a new task -->
@@ -18,7 +18,7 @@ ClaudeStep currently uses positional indices from spec.md to identify tasks (e.g
 - [ ] Task at position 4  ← Was position 3, now shifted
 ```
 
-Now the PR `claude-step-myproject-2` points to the wrong task!
+Now the PR `claude-chain-myproject-2` points to the wrong task!
 
 **Solution: Content-based hashing**
 
@@ -28,7 +28,7 @@ Replace positional indices with stable task identifiers derived from the task de
 
 **Design decisions:**
 - Hash function: SHA-256 truncated to 8 characters for readability
-- Branch naming: `claude-step-<project>-<task-hash>` (e.g., `claude-step-auth-a3f2b891`)
+- Branch naming: `claude-chain-<project>-<task-hash>` (e.g., `claude-chain-auth-a3f2b891`)
 - No modification of spec.md required - hashes are computed on-the-fly
 - Spec.md on main branch remains the single source of truth
 
@@ -61,15 +61,15 @@ Replace positional indices with stable task identifiers derived from the task de
 **Status**: ✅ Completed
 
 **Implementation Notes**:
-- Implemented `generate_task_hash()` in `src/claudestep/services/core/task_service.py`
+- Implemented `generate_task_hash()` in `src/claudechain/services/core/task_service.py`
   - Uses SHA-256 hash of task description
   - Truncates to 8 characters for readability
   - Handles whitespace normalization: strips leading/trailing whitespace and collapses internal whitespace
   - Example: `TaskService.generate_task_hash("Add user authentication")` → `"39b1209d"`
-- Added `format_branch_name_with_hash()` to `src/claudestep/services/core/pr_service.py`
-  - New branch naming format: `claude-step-<project>-<task-hash>`
-  - Example: `claude-step-auth-refactor-a3f2b891`
-- Added `parse_branch_name_extended()` to `src/claudestep/services/core/pr_service.py`
+- Added `format_branch_name_with_hash()` to `src/claudechain/services/core/pr_service.py`
+  - New branch naming format: `claude-chain-<project>-<task-hash>`
+  - Example: `claude-chain-auth-refactor-a3f2b891`
+- Added `parse_branch_name_extended()` to `src/claudechain/services/core/pr_service.py`
   - Supports both old format (`-<index>`) and new format (`-<hash>`) during migration
   - Auto-detects format: all digits → index, 8 hex chars → hash
   - Returns tuple: `(project_name, task_identifier, format_version)`
@@ -87,16 +87,16 @@ Replace positional indices with stable task identifiers derived from the task de
   - Hash format: identifier is exactly 8 hexadecimal characters (`^[0-9a-f]{8}$`)
 
 **Files Modified**:
-- `src/claudestep/services/core/task_service.py` - Added `generate_task_hash()` method
-- `src/claudestep/services/core/pr_service.py` - Added `format_branch_name_with_hash()` and `parse_branch_name_extended()` methods
+- `src/claudechain/services/core/task_service.py` - Added `generate_task_hash()` method
+- `src/claudechain/services/core/pr_service.py` - Added `format_branch_name_with_hash()` and `parse_branch_name_extended()` methods
 
 **Test Results**:
 - All 517 unit tests pass
 - Build succeeds
 - Functions verified working:
   - `TaskService.generate_task_hash("Add user authentication")` → `"39b1209d"`
-  - `PRService.format_branch_name_with_hash("my-project", "a3f2b891")` → `"claude-step-my-project-a3f2b891"`
-  - `PRService.parse_branch_name_extended("claude-step-my-project-a3f2b891")` → `("my-project", "a3f2b891", "hash")`
+  - `PRService.format_branch_name_with_hash("my-project", "a3f2b891")` → `"claude-chain-my-project-a3f2b891"`
+  - `PRService.parse_branch_name_extended("claude-chain-my-project-a3f2b891")` → `("my-project", "a3f2b891", "hash")`
 
 **Expected outcomes**: ✅ All achieved
 - Hash function produces consistent, stable identifiers
@@ -112,8 +112,8 @@ Replace positional indices with stable task identifiers derived from the task de
 **Status**: ✅ Completed
 
 **Implementation Notes**:
-- Added `task_hash` field to `SpecTask` domain model in `src/claudestep/domain/spec_content.py`
-- Implemented `generate_task_hash()` function in `src/claudestep/domain/spec_content.py`
+- Added `task_hash` field to `SpecTask` domain model in `src/claudechain/domain/spec_content.py`
+- Implemented `generate_task_hash()` function in `src/claudechain/domain/spec_content.py`
   - Moved hash generation logic to domain layer to avoid circular dependencies
   - Uses SHA-256 hash of normalized task description
   - Truncates to 8 characters for readability
@@ -126,7 +126,7 @@ Replace positional indices with stable task identifiers derived from the task de
   - Service layer now delegates to domain layer for hash generation
 - Updated `TaskService.find_next_available_task()` to return task hash
   - New return signature: `(task_index, task_description, task_hash)`
-  - Updated call sites in `src/claudestep/cli/commands/prepare.py` to handle new signature
+  - Updated call sites in `src/claudechain/cli/commands/prepare.py` to handle new signature
   - `discover_ready.py` only checks for None, so no changes needed there
 - Updated tests in `tests/unit/domain/test_spec_content.py`
   - Added `task_hash` parameter to manual `SpecTask` instantiations
@@ -141,9 +141,9 @@ Replace positional indices with stable task identifiers derived from the task de
 - All existing tests pass with new field
 
 **Files Modified**:
-- `src/claudestep/domain/spec_content.py` - Added hash field and generation function
-- `src/claudestep/services/core/task_service.py` - Updated to delegate hash generation and return hash from find_next_available_task
-- `src/claudestep/cli/commands/prepare.py` - Updated to handle new return signature
+- `src/claudechain/domain/spec_content.py` - Added hash field and generation function
+- `src/claudechain/services/core/task_service.py` - Updated to delegate hash generation and return hash from find_next_available_task
+- `src/claudechain/cli/commands/prepare.py` - Updated to handle new return signature
 - `tests/unit/domain/test_spec_content.py` - Updated tests to include task_hash field
 
 **Test Results**:
@@ -169,13 +169,13 @@ Replace positional indices with stable task identifiers derived from the task de
 - Updated `PRService.format_branch_name()` to accept task hash instead of index
   - New signature: `format_branch_name(project: str, task_hash: str) -> str`
   - Now delegates to `format_branch_name_with_hash()` for consistency
-  - Generates: `claude-step-{project}-{task_hash}`
+  - Generates: `claude-chain-{project}-{task_hash}`
 - Updated `PRService.parse_branch_name()` to extract hash and detect format
   - New signature returns: `(project: str, task_identifier: Union[int, str], format_version: Literal["index", "hash"])`
   - Now delegates to `parse_branch_name_extended()` for unified parsing
   - Supports both formats during transition:
-    - Old: `claude-step-project-3` → `("project", 3, "index")`
-    - New: `claude-step-project-a3f2b891` → `("project", "a3f2b891", "hash")`
+    - Old: `claude-chain-project-3` → `("project", 3, "index")`
+    - New: `claude-chain-project-a3f2b891` → `("project", "a3f2b891", "hash")`
   - Format detection: all digits → index, 8 hex chars → hash
 - Updated all call sites to handle new return format:
   - `PRService.get_unique_projects()` - Updated to unpack 3-tuple
@@ -200,10 +200,10 @@ Replace positional indices with stable task identifiers derived from the task de
 - Domain model properties (task_index, task_hash) provide type-safe access to identifiers
 
 **Files Modified**:
-- `src/claudestep/services/core/pr_service.py` - Updated format_branch_name() and parse_branch_name()
-- `src/claudestep/cli/commands/prepare.py` - Updated to use task_hash for branch creation
-- `src/claudestep/services/core/project_service.py` - Updated to handle 3-tuple return
-- `src/claudestep/domain/github_models.py` - Updated task_index property and added task_hash property
+- `src/claudechain/services/core/pr_service.py` - Updated format_branch_name() and parse_branch_name()
+- `src/claudechain/cli/commands/prepare.py` - Updated to use task_hash for branch creation
+- `src/claudechain/services/core/project_service.py` - Updated to handle 3-tuple return
+- `src/claudechain/domain/github_models.py` - Updated task_index property and added task_hash property
 - `tests/unit/services/core/test_pr_service.py` - Updated all branch naming tests
 
 **Test Results**:
@@ -229,11 +229,11 @@ Replace positional indices with stable task identifiers derived from the task de
 **Status**: ✅ Completed
 
 **Implementation Notes**:
-- Updated `SpecContent.get_next_available_task()` in `src/claudestep/domain/spec_content.py`
+- Updated `SpecContent.get_next_available_task()` in `src/claudechain/domain/spec_content.py`
   - Added `skip_hashes` parameter alongside existing `skip_indices` parameter
   - Supports dual-mode filtering: by index (legacy) and by hash (new format)
   - Tasks are skipped if they match either skip_indices OR skip_hashes
-- Updated `TaskService.find_next_available_task()` in `src/claudestep/services/core/task_service.py`
+- Updated `TaskService.find_next_available_task()` in `src/claudechain/services/core/task_service.py`
   - Added `skip_hashes` parameter to method signature
   - Passes both skip_indices and skip_hashes to domain model
   - Enhanced logging to show which tasks are being skipped and why (index-based vs hash-based)
@@ -245,12 +245,12 @@ Replace positional indices with stable task identifiers derived from the task de
   - Detects PRs whose task hash/index no longer matches current spec.md
   - Returns list of orphaned GitHubPullRequest objects
   - Handles both hash-based PRs (checks against valid_hashes set) and index-based PRs (checks against valid_indices set)
-- Updated `src/claudestep/cli/commands/prepare.py`
+- Updated `src/claudechain/cli/commands/prepare.py`
   - Calls `detect_orphaned_prs()` and displays warnings to user
   - Shows clear guidance on how to resolve orphaned PRs (close them, system will create new ones)
   - Uses `get_in_progress_tasks()` instead of `get_in_progress_task_indices()`
   - Displays both index-based and hash-based in-progress tasks separately
-- Updated `src/claudestep/cli/commands/discover_ready.py`
+- Updated `src/claudechain/cli/commands/discover_ready.py`
   - Uses `get_in_progress_tasks()` for dual-mode support
   - Passes both indices and hashes to `find_next_available_task()`
 - Added comprehensive tests in `tests/unit/domain/test_spec_content.py`
@@ -267,10 +267,10 @@ Replace positional indices with stable task identifiers derived from the task de
 - Skip logic uses set membership for O(1) lookup performance
 
 **Files Modified**:
-- `src/claudestep/domain/spec_content.py` - Updated `get_next_available_task()` signature
-- `src/claudestep/services/core/task_service.py` - Added `get_in_progress_tasks()` and `detect_orphaned_prs()` methods
-- `src/claudestep/cli/commands/prepare.py` - Added orphaned PR detection and warnings
-- `src/claudestep/cli/commands/discover_ready.py` - Updated to use dual-mode task finding
+- `src/claudechain/domain/spec_content.py` - Updated `get_next_available_task()` signature
+- `src/claudechain/services/core/task_service.py` - Added `get_in_progress_tasks()` and `detect_orphaned_prs()` methods
+- `src/claudechain/cli/commands/prepare.py` - Added orphaned PR detection and warnings
+- `src/claudechain/cli/commands/discover_ready.py` - Updated to use dual-mode task finding
 - `tests/unit/domain/test_spec_content.py` - Added 3 new tests for hash-based skipping
 
 **Test Results**:
@@ -293,7 +293,7 @@ Replace positional indices with stable task identifiers derived from the task de
 **Status**: ✅ Completed
 
 **Implementation Notes**:
-- Updated `StatisticsService.collect_team_member_stats()` in `src/claudestep/services/composite/statistics_service.py`
+- Updated `StatisticsService.collect_team_member_stats()` in `src/claudechain/services/composite/statistics_service.py`
   - Modified PR matching logic to handle both task_index (legacy) and task_hash (new) formats
   - Added dual-mode validation: PRs must have either task_index OR task_hash to be counted
   - Updated PR title formatting to use hash for hash-based PRs: `Task {hash[:8]}: {description}`
@@ -320,7 +320,7 @@ Replace positional indices with stable task identifiers derived from the task de
 - Pending task calculation: `total - completed - in_progress` works for both formats
 
 **Files Modified**:
-- `src/claudestep/services/composite/statistics_service.py` - Updated PR matching to support both hash and index
+- `src/claudechain/services/composite/statistics_service.py` - Updated PR matching to support both hash and index
 
 **Test Results**:
 - All 522 unit tests pass
@@ -344,7 +344,7 @@ Replace positional indices with stable task identifiers derived from the task de
 
 **Implementation Notes**:
 - Orphaned PR detection already implemented in Phase 4:
-  - `TaskService.detect_orphaned_prs()` in `src/claudestep/services/core/task_service.py`
+  - `TaskService.detect_orphaned_prs()` in `src/claudechain/services/core/task_service.py`
   - Detects PRs whose task hash/index no longer matches current spec.md
   - Handles both hash-based PRs and index-based PRs (legacy)
 - Enhanced user-facing warnings in `prepare.py`:
@@ -357,7 +357,7 @@ Replace positional indices with stable task identifiers derived from the task de
 - System continues working even with orphaned PRs present
   - Orphaned PRs are detected and reported but don't block workflow
   - Users can close orphaned PRs at their convenience
-  - ClaudeStep automatically creates new PRs for current tasks
+  - ClaudeChain automatically creates new PRs for current tasks
 
 **Technical Details**:
 - Detection logic compares PR identifiers against current spec.md:
@@ -369,7 +369,7 @@ Replace positional indices with stable task identifiers derived from the task de
 - Warning appears in both console output and GitHub Actions step summary
 
 **Files Modified**:
-- `src/claudestep/cli/commands/prepare.py` - Enhanced warnings and added GitHub Actions step summary output
+- `src/claudechain/cli/commands/prepare.py` - Enhanced warnings and added GitHub Actions step summary output
 
 **Test Results**:
 - All 627 unit and integration tests pass
@@ -381,13 +381,13 @@ Replace positional indices with stable task identifiers derived from the task de
 Console:
 ```
 ⚠️  Warning: Found 2 orphaned PR(s):
-  - PR #123 (claude-step-auth-a3f2b891) - task hash a3f2b891 no longer matches any task
-  - PR #125 (claude-step-auth-f7c4d3e2) - task hash f7c4d3e2 no longer matches any task
+  - PR #123 (claude-chain-auth-a3f2b891) - task hash a3f2b891 no longer matches any task
+  - PR #125 (claude-chain-auth-f7c4d3e2) - task hash f7c4d3e2 no longer matches any task
 
 To resolve:
   1. Review these PRs and verify if they should be closed
   2. Close any PRs for modified/removed tasks
-  3. ClaudeStep will automatically create new PRs for current tasks
+  3. ClaudeChain will automatically create new PRs for current tasks
 ```
 
 GitHub Actions Step Summary:
@@ -396,13 +396,13 @@ GitHub Actions Step Summary:
 
 Found 2 PR(s) for tasks that have been modified or removed:
 
-- [PR #123](https://github.com/owner/repo/pull/123) (`claude-step-auth-a3f2b891`) - task hash `a3f2b891` no longer matches any task
-- [PR #125](https://github.com/owner/repo/pull/125) (`claude-step-auth-f7c4d3e2`) - task hash `f7c4d3e2` no longer matches any task
+- [PR #123](https://github.com/owner/repo/pull/123) (`claude-chain-auth-a3f2b891`) - task hash `a3f2b891` no longer matches any task
+- [PR #125](https://github.com/owner/repo/pull/125) (`claude-chain-auth-f7c4d3e2`) - task hash `f7c4d3e2` no longer matches any task
 
 **To resolve:**
 1. Review these PRs and verify if they should be closed
 2. Close any PRs for modified/removed tasks
-3. ClaudeStep will automatically create new PRs for current tasks
+3. ClaudeChain will automatically create new PRs for current tasks
 ```
 
 **Expected outcomes**: ✅ All achieved
@@ -481,8 +481,8 @@ Found 2 PR(s) for tasks that have been modified or removed:
   - Console warnings logged when index-based PRs are detected
   - GitHub Actions step summary includes deprecation notice with 6-month timeline
   - Clear guidance provided to users on migration steps
-- Created migration helper command: `python -m claudestep migrate-to-hashes`
-  - New CLI command in `src/claudestep/cli/commands/migrate_to_hashes.py`
+- Created migration helper command: `python -m claudechain migrate-to-hashes`
+  - New CLI command in `src/claudechain/cli/commands/migrate_to_hashes.py`
   - Detects and categorizes open PRs by format (index-based vs hash-based)
   - Provides detailed migration guidance with PR links
   - Generates GitHub Actions step summary with actionable next steps
@@ -506,10 +506,10 @@ Found 2 PR(s) for tasks that have been modified or removed:
 - Users have 6 months to migrate before index-based support is removed
 
 **Files Modified**:
-- `src/claudestep/cli/commands/prepare.py` - Added deprecation warnings with GitHub Actions summary
-- `src/claudestep/cli/commands/migrate_to_hashes.py` - New migration helper command (157 lines)
-- `src/claudestep/cli/parser.py` - Added `migrate-to-hashes` subcommand
-- `src/claudestep/__main__.py` - Wired up migration command to CLI router
+- `src/claudechain/cli/commands/prepare.py` - Added deprecation warnings with GitHub Actions summary
+- `src/claudechain/cli/commands/migrate_to_hashes.py` - New migration helper command (157 lines)
+- `src/claudechain/cli/parser.py` - Added `migrate-to-hashes` subcommand
+- `src/claudechain/__main__.py` - Wired up migration command to CLI router
 - `docs/architecture/architecture.md` - Added deprecation timeline section
 
 **Test Results**:
@@ -524,13 +524,13 @@ Console warning when index-based PRs detected:
 ```
 Found in-progress tasks (index-based): [1, 3]
 ⚠️  WARNING: Index-based branch format is DEPRECATED and will be removed in a future version.
-   Please close these PRs and let ClaudeStep create new hash-based PRs.
+   Please close these PRs and let ClaudeChain create new hash-based PRs.
    See docs/user-guides/modifying-tasks.md for migration guidance.
 ```
 
 Migration command output:
 ```bash
-$ python -m claudestep migrate-to-hashes --project my-refactor
+$ python -m claudechain migrate-to-hashes --project my-refactor
 
 === Migration Status ===
 Total open PRs: 5
@@ -540,7 +540,7 @@ Total open PRs: 5
 ⚠️  Found index-based PRs that need migration:
 
   PR #123: Task 1: Add authentication
-    Branch: claude-step-my-refactor-1
+    Branch: claude-chain-my-refactor-1
     URL: https://github.com/owner/repo/pull/123
     Task index: 1
 ```
@@ -634,7 +634,7 @@ Total open PRs: 5
 
 3. **Coverage check**: ⚠️ 65.41% coverage (below 70% threshold)
    ```bash
-   PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=term-missing --cov-fail-under=70
+   PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudechain --cov-report=term-missing --cov-fail-under=70
    ```
    - Coverage gap is expected and acceptable
    - Core implementation logic is thoroughly tested
@@ -658,7 +658,7 @@ Total open PRs: 5
 - ✅ All unit tests pass (544/544)
 - ✅ All integration tests pass (105/105)
 - ⚠️ Test coverage 65.41% (target: ≥70%, gap is in CLI entry points requiring GitHub Actions environment)
-- ✅ Branch names use hash format: `claude-step-<project>-<hash>` (verified in Phase 3 tests)
+- ✅ Branch names use hash format: `claude-chain-<project>-<hash>` (verified in Phase 3 tests)
 - ✅ Tasks can be reordered without breaking PR matching (verified in Phase 4 tests)
 - ✅ Orphaned PRs are detected and reported (verified in Phase 6 implementation)
 - ✅ Statistics correctly count tasks by hash (verified in Phase 5 tests)

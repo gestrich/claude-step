@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from claudestep.services.composite.artifact_service import (
+from claudechain.services.composite.artifact_service import (
     ProjectArtifact,
     TaskMetadata,
     find_in_progress_tasks,
@@ -19,8 +19,8 @@ from claudestep.services.composite.artifact_service import (
     get_assignee_assignments,
     parse_task_index_from_name,
 )
-from claudestep.domain.models import AITask
-from claudestep.domain.exceptions import GitHubAPIError
+from claudechain.domain.models import AITask
+from claudechain.domain.exceptions import GitHubAPIError
 
 
 class TestTaskMetadata:
@@ -33,7 +33,7 @@ class TestTaskMetadata:
             "task_index": 5,
             "task_description": "Add authentication",
             "project": "my-project",
-            "branch_name": "claude-step-my-project-5",
+            "branch_name": "claude-chain-my-project-5",
             "assignee": "alice",
             "created_at": "2025-01-15T10:30:00Z",
             "workflow_run_id": 12345,
@@ -50,7 +50,7 @@ class TestTaskMetadata:
         assert metadata.task_index == 5
         assert metadata.task_description == "Add authentication"
         assert metadata.project == "my-project"
-        assert metadata.branch_name == "claude-step-my-project-5"
+        assert metadata.branch_name == "claude-chain-my-project-5"
         assert metadata.assignee == "alice"
         assert metadata.workflow_run_id == 12345
         assert metadata.pr_number == 42
@@ -111,7 +111,7 @@ class TestTaskMetadata:
             "task_index": 1,
             "task_description": "Add feature",
             "project": "my-project",
-            "branch_name": "claude-step-my-project-abc12345",
+            "branch_name": "claude-chain-my-project-abc12345",
             "assignee": "alice",
             "created_at": "2025-12-27T15:30:00Z",
             "workflow_run_id": 123,
@@ -214,7 +214,7 @@ class TestTaskMetadata:
             task_index=5,
             task_description="Implement authentication",
             project="auth-project",
-            branch_name="claude-step-auth-project-a1b2c3d4",
+            branch_name="claude-chain-auth-project-a1b2c3d4",
             assignee="bob",
             created_at=now,
             workflow_run_id=99999,
@@ -346,15 +346,15 @@ class TestParseTaskIndexFromName:
 class TestFindProjectArtifacts:
     """Test suite for find_project_artifacts function"""
 
-    @patch("claudestep.services.composite.artifact_service.gh_api_call")
-    @patch("claudestep.services.core.pr_service.PRService")
+    @patch("claudechain.services.composite.artifact_service.gh_api_call")
+    @patch("claudechain.services.core.pr_service.PRService")
     def test_find_project_artifacts_with_open_prs(
         self, mock_pr_service_class, mock_gh_api_call
     ):
         """Should find artifacts for open PRs by querying workflow runs"""
         # Arrange
         mock_pr_service = mock_pr_service_class.return_value
-        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-step-test-1"}]
+        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-chain-test-1"}]
 
         # Mock workflow runs response
         mock_gh_api_call.side_effect = [
@@ -389,15 +389,15 @@ class TestFindProjectArtifacts:
         assert result[0].workflow_run_id == 100
         assert result[0].metadata is None
 
-    @patch("claudestep.services.composite.artifact_service.gh_api_call")
-    @patch("claudestep.services.core.pr_service.PRService")
+    @patch("claudechain.services.composite.artifact_service.gh_api_call")
+    @patch("claudechain.services.core.pr_service.PRService")
     def test_find_project_artifacts_filters_by_project_name(
         self, mock_pr_service_class, mock_gh_api_call
     ):
         """Should only return artifacts matching the project name"""
         # Arrange
         mock_pr_service = mock_pr_service_class.return_value
-        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-step-test-1"}]
+        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-chain-test-1"}]
 
         mock_gh_api_call.side_effect = [
             {"workflow_runs": [{"id": 100, "conclusion": "success"}]},
@@ -420,16 +420,16 @@ class TestFindProjectArtifacts:
         assert result[0].artifact_name == "task-metadata-test-1.json"
         assert result[1].artifact_name == "task-metadata-test-2.json"
 
-    @patch("claudestep.services.composite.artifact_service.download_artifact_json")
-    @patch("claudestep.services.composite.artifact_service.gh_api_call")
-    @patch("claudestep.services.core.pr_service.PRService")
+    @patch("claudechain.services.composite.artifact_service.download_artifact_json")
+    @patch("claudechain.services.composite.artifact_service.gh_api_call")
+    @patch("claudechain.services.core.pr_service.PRService")
     def test_find_project_artifacts_downloads_metadata_when_requested(
         self, mock_pr_service_class, mock_gh_api_call, mock_download
     ):
         """Should download and parse metadata when download_metadata=True"""
         # Arrange
         mock_pr_service = mock_pr_service_class.return_value
-        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-step-test-1"}]
+        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-chain-test-1"}]
         mock_gh_api_call.side_effect = [
             {"workflow_runs": [{"id": 100, "conclusion": "success"}]},
             {"artifacts": [{"id": 1, "name": "task-metadata-test-1.json"}]},
@@ -438,7 +438,7 @@ class TestFindProjectArtifacts:
             "task_index": 1,
             "task_description": "Test task",
             "project": "test",
-            "branch_name": "claude-step-test-1",
+            "branch_name": "claude-chain-test-1",
             "assignee": "alice",
             "created_at": "2025-12-27T15:30:00Z",
             "workflow_run_id": 100,
@@ -460,15 +460,15 @@ class TestFindProjectArtifacts:
         assert result[0].metadata.assignee == "alice"
         mock_download.assert_called_once_with("owner/repo", 1)
 
-    @patch("claudestep.services.composite.artifact_service.gh_api_call")
-    @patch("claudestep.services.core.pr_service.PRService")
+    @patch("claudechain.services.composite.artifact_service.gh_api_call")
+    @patch("claudechain.services.core.pr_service.PRService")
     def test_find_project_artifacts_skips_failed_runs(
         self, mock_pr_service_class, mock_gh_api_call
     ):
         """Should only process workflow runs with success conclusion"""
         # Arrange
         mock_pr_service = mock_pr_service_class.return_value
-        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-step-test-1"}]
+        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-chain-test-1"}]
         mock_gh_api_call.return_value = {
             "workflow_runs": [
                 {"id": 100, "conclusion": "failure"},
@@ -488,12 +488,12 @@ class TestFindProjectArtifacts:
         assert mock_gh_api_call.call_count == 2
 
     @patch(
-        "claudestep.services.composite.artifact_service._get_artifacts_for_run"
+        "claudechain.services.composite.artifact_service._get_artifacts_for_run"
     )
     @patch(
-        "claudestep.services.composite.artifact_service.gh_api_call"
+        "claudechain.services.composite.artifact_service.gh_api_call"
     )
-    @patch("claudestep.services.core.pr_service.PRService")
+    @patch("claudechain.services.core.pr_service.PRService")
     def test_find_project_artifacts_deduplicates_artifacts(
         self, mock_pr_service_class, mock_gh_api_call, mock_get_artifacts
     ):
@@ -501,8 +501,8 @@ class TestFindProjectArtifacts:
         # Arrange
         mock_pr_service = mock_pr_service_class.return_value
         mock_pr_service.get_project_prs.return_value = [
-            {"headRefName": "claude-step-test-1"},
-            {"headRefName": "claude-step-test-2"},
+            {"headRefName": "claude-chain-test-1"},
+            {"headRefName": "claude-chain-test-2"},
         ]
         # Return two workflow runs with same artifacts (to test deduplication)
         mock_gh_api_call.return_value = {
@@ -526,16 +526,16 @@ class TestFindProjectArtifacts:
         assert mock_gh_api_call.call_count == 1  # Called once for workflow runs
         assert mock_get_artifacts.call_count == 2  # Called for each successful run
 
-    @patch("claudestep.services.composite.artifact_service.download_artifact_json")
-    @patch("claudestep.services.composite.artifact_service.gh_api_call")
-    @patch("claudestep.services.core.pr_service.PRService")
+    @patch("claudechain.services.composite.artifact_service.download_artifact_json")
+    @patch("claudechain.services.composite.artifact_service.gh_api_call")
+    @patch("claudechain.services.core.pr_service.PRService")
     def test_find_project_artifacts_handles_metadata_parsing_errors(
         self, mock_pr_service_class, mock_gh_api_call, mock_download, capsys
     ):
         """Should continue processing when metadata parsing fails"""
         # Arrange
         mock_pr_service = mock_pr_service_class.return_value
-        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-step-test-1"}]
+        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-chain-test-1"}]
         mock_gh_api_call.side_effect = [
             {"workflow_runs": [{"id": 100, "conclusion": "success"}]},
             {"artifacts": [{"id": 1, "name": "task-metadata-test-1.json"}]},
@@ -556,15 +556,15 @@ class TestFindProjectArtifacts:
         captured = capsys.readouterr()
         assert "Warning: Failed to parse metadata" in captured.out
 
-    @patch("claudestep.services.composite.artifact_service.gh_api_call")
-    @patch("claudestep.services.core.pr_service.PRService")
+    @patch("claudechain.services.composite.artifact_service.gh_api_call")
+    @patch("claudechain.services.core.pr_service.PRService")
     def test_find_project_artifacts_handles_api_errors(
         self, mock_pr_service_class, mock_gh_api_call, capsys
     ):
         """Should handle GitHub API errors gracefully"""
         # Arrange
         mock_pr_service = mock_pr_service_class.return_value
-        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-step-test-1"}]
+        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-chain-test-1"}]
         mock_gh_api_call.side_effect = GitHubAPIError("API rate limit exceeded")
 
         # Act
@@ -581,7 +581,7 @@ class TestFindProjectArtifacts:
 class TestGetArtifactMetadata:
     """Test suite for get_artifact_metadata function"""
 
-    @patch("claudestep.services.composite.artifact_service.download_artifact_json")
+    @patch("claudechain.services.composite.artifact_service.download_artifact_json")
     def test_get_artifact_metadata_returns_parsed_metadata(self, mock_download):
         """Should download artifact and parse metadata"""
         # Arrange
@@ -589,7 +589,7 @@ class TestGetArtifactMetadata:
             "task_index": 5,
             "task_description": "Test task",
             "project": "test",
-            "branch_name": "claude-step-test-5",
+            "branch_name": "claude-chain-test-5",
             "assignee": "bob",
             "created_at": "2025-12-27T10:00:00Z",
             "workflow_run_id": 200,
@@ -605,7 +605,7 @@ class TestGetArtifactMetadata:
         assert result.assignee == "bob"
         mock_download.assert_called_once_with("owner/repo", 42)
 
-    @patch("claudestep.services.composite.artifact_service.download_artifact_json")
+    @patch("claudechain.services.composite.artifact_service.download_artifact_json")
     def test_get_artifact_metadata_returns_none_when_download_fails(
         self, mock_download
     ):
@@ -619,7 +619,7 @@ class TestGetArtifactMetadata:
         # Assert
         assert result is None
 
-    @patch("claudestep.services.composite.artifact_service.download_artifact_json")
+    @patch("claudechain.services.composite.artifact_service.download_artifact_json")
     def test_get_artifact_metadata_returns_none_when_parsing_fails(
         self, mock_download, capsys
     ):
@@ -639,7 +639,7 @@ class TestGetArtifactMetadata:
 class TestFindInProgressTasks:
     """Test suite for find_in_progress_tasks convenience function"""
 
-    @patch("claudestep.services.composite.artifact_service.find_project_artifacts")
+    @patch("claudechain.services.composite.artifact_service.find_project_artifacts")
     def test_find_in_progress_tasks_returns_task_indices(self, mock_find_artifacts):
         """Should return set of task indices from open PR artifacts"""
         # Arrange
@@ -669,12 +669,12 @@ class TestFindInProgressTasks:
         mock_find_artifacts.assert_called_once_with(
             repo="owner/repo",
             project="test",
-            label="claudestep",
+            label="claudechain",
             pr_state="open",
             download_metadata=False,
         )
 
-    @patch("claudestep.services.composite.artifact_service.find_project_artifacts")
+    @patch("claudechain.services.composite.artifact_service.find_project_artifacts")
     def test_find_in_progress_tasks_filters_none_indices(self, mock_find_artifacts):
         """Should exclude artifacts with unparseable task indices"""
         # Arrange
@@ -697,7 +697,7 @@ class TestFindInProgressTasks:
         # Assert
         assert result == {1}  # Only valid index
 
-    @patch("claudestep.services.composite.artifact_service.find_project_artifacts")
+    @patch("claudechain.services.composite.artifact_service.find_project_artifacts")
     def test_find_in_progress_tasks_returns_empty_set_when_no_artifacts(
         self, mock_find_artifacts
     ):
@@ -715,7 +715,7 @@ class TestFindInProgressTasks:
 class TestGetAssigneeAssignments:
     """Test suite for get_assignee_assignments convenience function"""
 
-    @patch("claudestep.services.composite.artifact_service.find_project_artifacts")
+    @patch("claudechain.services.composite.artifact_service.find_project_artifacts")
     def test_get_assignee_assignments_returns_pr_to_assignee_mapping(
         self, mock_find_artifacts
     ):
@@ -730,7 +730,7 @@ class TestGetAssigneeAssignments:
                     task_index=1,
                     task_description="Task 1",
                     project="test",
-                    branch_name="claude-step-test-1",
+                    branch_name="claude-chain-test-1",
                     assignee="alice",
                     created_at=datetime.now(timezone.utc),
                     workflow_run_id=100,
@@ -745,7 +745,7 @@ class TestGetAssigneeAssignments:
                     task_index=2,
                     task_description="Task 2",
                     project="test",
-                    branch_name="claude-step-test-2",
+                    branch_name="claude-chain-test-2",
                     assignee="bob",
                     created_at=datetime.now(timezone.utc),
                     workflow_run_id=101,
@@ -762,12 +762,12 @@ class TestGetAssigneeAssignments:
         mock_find_artifacts.assert_called_once_with(
             repo="owner/repo",
             project="test",
-            label="claudestep",
+            label="claudechain",
             pr_state="open",
             download_metadata=True,
         )
 
-    @patch("claudestep.services.composite.artifact_service.find_project_artifacts")
+    @patch("claudechain.services.composite.artifact_service.find_project_artifacts")
     def test_get_assignee_assignments_filters_artifacts_without_metadata(
         self, mock_find_artifacts
     ):
@@ -782,7 +782,7 @@ class TestGetAssigneeAssignments:
                     task_index=1,
                     task_description="Task 1",
                     project="test",
-                    branch_name="claude-step-test-1",
+                    branch_name="claude-chain-test-1",
                     assignee="alice",
                     created_at=datetime.now(timezone.utc),
                     workflow_run_id=100,
@@ -803,7 +803,7 @@ class TestGetAssigneeAssignments:
         # Assert
         assert result == {10: "alice"}  # Only artifact with metadata
 
-    @patch("claudestep.services.composite.artifact_service.find_project_artifacts")
+    @patch("claudechain.services.composite.artifact_service.find_project_artifacts")
     def test_get_assignee_assignments_returns_empty_dict_when_no_artifacts(
         self, mock_find_artifacts
     ):

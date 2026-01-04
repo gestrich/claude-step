@@ -20,7 +20,7 @@ The key insight is that `StatisticsReport` should be the **single source of trut
 
 Add new domain models and extend `ProjectStats` to hold detailed task-PR relationships:
 
-**New models to add to `src/claudestep/domain/models.py`:**
+**New models to add to `src/claudechain/domain/models.py`:**
 - `TaskStatus` - Enum for task states: PENDING, IN_PROGRESS, COMPLETED
 - `TaskWithPR` - A task from spec.md linked to its associated PR (if any):
   - `task_hash: str` - Hash from spec task
@@ -32,7 +32,7 @@ Add new domain models and extend `ProjectStats` to hold detailed task-PR relatio
 - Add `tasks: List[TaskWithPR]` - All tasks with their PR associations
 - Add `orphaned_prs: List[GitHubPullRequest]` - PRs with no matching spec task
 
-The `task_hash` from `SpecTask` is already computed - we need to match it against PR branch names which contain the hash (e.g., `claude-step-project-name-a1b2c3d4`).
+The `task_hash` from `SpecTask` is already computed - we need to match it against PR branch names which contain the hash (e.g., `claude-chain-project-name-a1b2c3d4`).
 
 - [x] Phase 2: Update Statistics Service to Collect Task-PR Mappings
 
@@ -40,14 +40,14 @@ Modify `StatisticsService.collect_project_stats()` to:
 
 1. Parse spec.md to get all tasks with their hashes
 2. Fetch all PRs (open and merged) for the project
-3. For each PR, extract the task hash from the branch name pattern `claude-step-{project}-{hash}`
+3. For each PR, extract the task hash from the branch name pattern `claude-chain-{project}-{hash}`
 4. Match PRs to tasks by hash:
    - If task exists in spec and has matching PR: create `TaskWithPR` with status based on PR state
    - If task exists in spec with no PR: create `TaskWithPR` with PENDING status
    - If PR has no matching task in spec: add to `orphaned_prs`
 
 **Key files to modify:**
-- `src/claudestep/services/composite/statistics_service.py`
+- `src/claudechain/services/composite/statistics_service.py`
 - May need to add method to `PRService` to fetch merged PRs for a project (currently only fetches open PRs)
 
 - [x] Phase 3: Add Merged PRs Fetching to PRService
@@ -56,14 +56,14 @@ Currently `PRService.get_open_prs_for_project()` only returns open PRs. We need 
 - Count how many tasks are completed
 - Identify orphaned merged PRs
 
-Add new method to `src/claudestep/services/core/pr_service.py`:
+Add new method to `src/claudechain/services/core/pr_service.py`:
 - `get_merged_prs_for_project(project_name: str, label: str, days_back: int) -> List[GitHubPullRequest]`
 
-This will use the GitHub API to fetch recently merged PRs with the claudestep label for the project.
+This will use the GitHub API to fetch recently merged PRs with the claudechain label for the project.
 
 - [x] Phase 4: Update Report Formatting for Detailed Task View
 
-Added `format_project_details(for_slack: bool = False) -> str` method to `StatisticsReport` in `src/claudestep/domain/models.py`.
+Added `format_project_details(for_slack: bool = False) -> str` method to `StatisticsReport` in `src/claudechain/domain/models.py`.
 
 Output format:
 ```

@@ -1,6 +1,6 @@
 ## Background
 
-The E2E test helper (`tests/e2e/helpers/github_helper.py`) currently implements GitHub API access through direct `gh` CLI subprocess calls. This duplicates functionality that already exists in the infrastructure layer (`src/claudestep/infrastructure/github/operations.py`), creating maintenance burden and violating the DRY principle.
+The E2E test helper (`tests/e2e/helpers/github_helper.py`) currently implements GitHub API access through direct `gh` CLI subprocess calls. This duplicates functionality that already exists in the infrastructure layer (`src/claudechain/infrastructure/github/operations.py`), creating maintenance burden and violating the DRY principle.
 
 The infrastructure layer already provides:
 - `run_gh_command()` - Generic GitHub CLI wrapper with error handling
@@ -29,18 +29,18 @@ This refactoring will consolidate GitHub operations into the infrastructure laye
 
 **What to add:**
 
-Add the following generic GitHub operations to `src/claudestep/infrastructure/github/operations.py`:
+Add the following generic GitHub operations to `src/claudechain/infrastructure/github/operations.py`:
 
 1. **Workflow operations**:
    - `list_workflow_runs(repo: str, workflow_name: str, branch: str, limit: int) -> List[WorkflowRun]`
    - `trigger_workflow(repo: str, workflow_name: str, inputs: Dict[str, str], ref: str) -> None`
-   - Create `WorkflowRun` domain model in `src/claudestep/domain/github_models.py`
+   - Create `WorkflowRun` domain model in `src/claudechain/domain/github_models.py`
 
 2. **Pull request operations** (extend existing):
    - `get_pull_request_by_branch(repo: str, branch: str) -> Optional[GitHubPullRequest]`
    - `get_pull_request_comments(repo: str, pr_number: int) -> List[PRComment]`
    - `close_pull_request(repo: str, pr_number: int) -> None`
-   - Create `PRComment` domain model in `src/claudestep/domain/github_models.py`
+   - Create `PRComment` domain model in `src/claudechain/domain/github_models.py`
 
 3. **Branch operations**:
    - `delete_branch(repo: str, branch: str) -> None`
@@ -55,8 +55,8 @@ Add the following generic GitHub operations to `src/claudestep/infrastructure/gi
 - Add comprehensive docstrings with usage examples
 
 **Files to modify:**
-- `src/claudestep/domain/github_models.py` - Add `WorkflowRun` and `PRComment` models
-- `src/claudestep/infrastructure/github/operations.py` - Add new operations
+- `src/claudechain/domain/github_models.py` - Add `WorkflowRun` and `PRComment` models
+- `src/claudechain/infrastructure/github/operations.py` - Add new operations
 
 - [x] Phase 2: Refactor GitHubHelper to use infrastructure layer
 

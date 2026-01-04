@@ -2,8 +2,8 @@
 
 import pytest
 
-from claudestep.domain.project import Project
-from claudestep.domain.spec_content import SpecTask, SpecContent, generate_task_hash
+from claudechain.domain.project import Project
+from claudechain.domain.spec_content import SpecTask, SpecContent, generate_task_hash
 
 
 class TestSpecTaskFromMarkdownLine:

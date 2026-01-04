@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from claudestep.cli.commands.discover import find_all_projects, main
+from claudechain.cli.commands.discover import find_all_projects, main
 
 
 class TestFindAllProjects:
@@ -16,7 +16,7 @@ class TestFindAllProjects:
     def test_find_projects_returns_projects_with_spec(self, tmp_path):
         """Should return projects that have spec.md files"""
         # Arrange
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         # Create valid projects with spec.md
@@ -39,7 +39,7 @@ class TestFindAllProjects:
     def test_find_projects_excludes_dirs_without_spec(self, tmp_path):
         """Should exclude directories that don't have spec.md"""
         # Arrange
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         # Valid project with spec.md
@@ -62,7 +62,7 @@ class TestFindAllProjects:
     def test_find_projects_excludes_files_in_base_dir(self, tmp_path):
         """Should exclude files in base directory, only process directories"""
         # Arrange
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         # Create a file (not a directory)
@@ -83,7 +83,7 @@ class TestFindAllProjects:
     def test_find_projects_returns_sorted_list(self, tmp_path):
         """Should return projects in alphabetical order"""
         # Arrange
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         # Create projects in reverse alphabetical order
@@ -114,7 +114,7 @@ class TestFindAllProjects:
     def test_find_projects_returns_empty_when_no_projects(self, tmp_path):
         """Should return empty list when base directory has no projects"""
         # Arrange
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         # Act
@@ -124,10 +124,10 @@ class TestFindAllProjects:
         assert result == []
 
     def test_find_projects_uses_default_base_dir(self, tmp_path, monkeypatch):
-        """Should use 'claude-step' as default base directory"""
+        """Should use 'claude-chain' as default base directory"""
         # Arrange
         monkeypatch.chdir(tmp_path)
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         project = base_dir / "test-project"
@@ -141,7 +141,7 @@ class TestFindAllProjects:
         assert "test-project" in result
 
     def test_find_projects_uses_env_var_for_base_dir(self, tmp_path, monkeypatch):
-        """Should use CLAUDESTEP_PROJECT_DIR environment variable when set"""
+        """Should use CLAUDECHAIN_PROJECT_DIR environment variable when set"""
         # Arrange
         custom_dir = tmp_path / "custom-projects"
         custom_dir.mkdir()
@@ -150,7 +150,7 @@ class TestFindAllProjects:
         project.mkdir()
         (project / "spec.md").write_text("- [ ] Task 1")
 
-        monkeypatch.setenv("CLAUDESTEP_PROJECT_DIR", str(custom_dir))
+        monkeypatch.setenv("CLAUDECHAIN_PROJECT_DIR", str(custom_dir))
 
         # Act (no base_dir argument)
         result = find_all_projects()
@@ -171,7 +171,7 @@ class TestFindAllProjects:
         project.mkdir()
         (project / "spec.md").write_text("- [ ] Task 1")
 
-        monkeypatch.setenv("CLAUDESTEP_PROJECT_DIR", str(env_dir))
+        monkeypatch.setenv("CLAUDECHAIN_PROJECT_DIR", str(env_dir))
 
         # Act (explicit base_dir argument)
         result = find_all_projects(str(arg_dir))
@@ -182,7 +182,7 @@ class TestFindAllProjects:
     def test_find_projects_handles_nested_files(self, tmp_path):
         """Should only check for spec.md in immediate subdirectories"""
         # Arrange
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         # Valid project at top level
@@ -205,7 +205,7 @@ class TestFindAllProjects:
     def test_find_projects_prints_found_projects(self, tmp_path, capsys):
         """Should print each project as it's found"""
         # Arrange
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         project = base_dir / "test-project"
@@ -227,7 +227,7 @@ class TestMain:
         """Should discover projects and write JSON output to GitHub Actions"""
         # Arrange
         monkeypatch.chdir(tmp_path)
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         project1 = base_dir / "alpha"
@@ -239,7 +239,7 @@ class TestMain:
         (project2 / "spec.md").write_text("- [ ] Task 1")
 
         # Mock GitHubActionsHelper
-        with patch("claudestep.cli.commands.discover.GitHubActionsHelper") as mock_gh_class:
+        with patch("claudechain.cli.commands.discover.GitHubActionsHelper") as mock_gh_class:
             mock_gh = Mock()
             mock_gh_class.return_value = mock_gh
 
@@ -260,11 +260,11 @@ class TestMain:
         """Should handle case when no projects are found"""
         # Arrange
         monkeypatch.chdir(tmp_path)
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         # Mock GitHubActionsHelper
-        with patch("claudestep.cli.commands.discover.GitHubActionsHelper") as mock_gh_class:
+        with patch("claudechain.cli.commands.discover.GitHubActionsHelper") as mock_gh_class:
             mock_gh = Mock()
             mock_gh_class.return_value = mock_gh
 
@@ -283,7 +283,7 @@ class TestMain:
         """Should output valid JSON array format"""
         # Arrange
         monkeypatch.chdir(tmp_path)
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         project = base_dir / "test-project"
@@ -291,7 +291,7 @@ class TestMain:
         (project / "spec.md").write_text("- [ ] Task 1")
 
         # Mock GitHubActionsHelper
-        with patch("claudestep.cli.commands.discover.GitHubActionsHelper") as mock_gh_class:
+        with patch("claudechain.cli.commands.discover.GitHubActionsHelper") as mock_gh_class:
             mock_gh = Mock()
             mock_gh_class.return_value = mock_gh
 
@@ -311,7 +311,7 @@ class TestMain:
         """Should print list of discovered projects"""
         # Arrange
         monkeypatch.chdir(tmp_path)
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         for name in ["project-a", "project-b"]:
@@ -320,7 +320,7 @@ class TestMain:
             (project / "spec.md").write_text("- [ ] Task 1")
 
         # Mock GitHubActionsHelper
-        with patch("claudestep.cli.commands.discover.GitHubActionsHelper") as mock_gh_class:
+        with patch("claudechain.cli.commands.discover.GitHubActionsHelper") as mock_gh_class:
             mock_gh = Mock()
             mock_gh_class.return_value = mock_gh
 
@@ -336,7 +336,7 @@ class TestMain:
         """Should output correct project count"""
         # Arrange
         monkeypatch.chdir(tmp_path)
-        base_dir = tmp_path / "claude-step"
+        base_dir = tmp_path / "claude-chain"
         base_dir.mkdir()
 
         for i in range(3):
@@ -345,7 +345,7 @@ class TestMain:
             (project / "spec.md").write_text("- [ ] Task 1")
 
         # Mock GitHubActionsHelper
-        with patch("claudestep.cli.commands.discover.GitHubActionsHelper") as mock_gh_class:
+        with patch("claudechain.cli.commands.discover.GitHubActionsHelper") as mock_gh_class:
             mock_gh = Mock()
             mock_gh_class.return_value = mock_gh
 

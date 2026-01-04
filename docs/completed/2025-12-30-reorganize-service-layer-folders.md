@@ -2,7 +2,7 @@
 
 ## Background
 
-The current service layer architecture has emerged organically with all services living in a flat `src/claudestep/services/` directory. However, the dependency analysis reveals a clear two-level hierarchy:
+The current service layer architecture has emerged organically with all services living in a flat `src/claudechain/services/` directory. However, the dependency analysis reveals a clear two-level hierarchy:
 
 - **Core Services**: Foundational services that provide basic operations (e.g., `PROperationsService`, `TaskManagementService`, `ReviewerManagementService`, `ProjectDetectionService`)
 - **Composite Services**: Higher-level orchestration services that use multiple core services (e.g., `StatisticsService`, `ArtifactOperationsService`)
@@ -24,7 +24,7 @@ This refactoring will organize services into two subdirectories that reflect the
 
 **Current Structure:**
 ```
-src/claudestep/services/
+src/claudechain/services/
 ├── __init__.py
 ├── artifact_operations_service.py
 ├── pr_operations_service.py
@@ -36,7 +36,7 @@ src/claudestep/services/
 
 **Proposed Structure:**
 ```
-src/claudestep/services/
+src/claudechain/services/
 ├── __init__.py
 ├── core/                           # Foundational services
 │   ├── __init__.py
@@ -63,13 +63,13 @@ src/claudestep/services/
 - [x] Phase 1: Create new subdirectory structure
 
 **Tasks:**
-1. Create `src/claudestep/services/core/` directory
-2. Create `src/claudestep/services/composite/` directory
+1. Create `src/claudechain/services/core/` directory
+2. Create `src/claudechain/services/composite/` directory
 3. Create `__init__.py` in each new subdirectory (empty for now)
 
 **Files to create:**
-- `src/claudestep/services/core/__init__.py`
-- `src/claudestep/services/composite/__init__.py`
+- `src/claudechain/services/core/__init__.py`
+- `src/claudechain/services/composite/__init__.py`
 
 **Expected outcome:**
 - New folder structure exists alongside current files
@@ -95,22 +95,22 @@ src/claudestep/services/
 7. Create compatibility shims in old locations
 
 **Files to modify:**
-- Move & rename: `src/claudestep/services/pr_operations_service.py` → `src/claudestep/services/core/pr_service.py`
+- Move & rename: `src/claudechain/services/pr_operations_service.py` → `src/claudechain/services/core/pr_service.py`
   - Rename class: `PROperationsService` → `PRService`
   - Update docstrings to reference new name
-- Move & rename: `src/claudestep/services/task_management_service.py` → `src/claudestep/services/core/task_service.py`
+- Move & rename: `src/claudechain/services/task_management_service.py` → `src/claudechain/services/core/task_service.py`
   - Rename class: `TaskManagementService` → `TaskService`
-- Move & rename: `src/claudestep/services/project_detection_service.py` → `src/claudestep/services/core/project_service.py`
+- Move & rename: `src/claudechain/services/project_detection_service.py` → `src/claudechain/services/core/project_service.py`
   - Rename class: `ProjectDetectionService` → `ProjectService`
-- Move & rename: `src/claudestep/services/reviewer_management_service.py` → `src/claudestep/services/core/reviewer_service.py`
+- Move & rename: `src/claudechain/services/reviewer_management_service.py` → `src/claudechain/services/core/reviewer_service.py`
   - Rename class: `ReviewerManagementService` → `ReviewerService`
-- Update: `src/claudestep/services/core/__init__.py`
+- Update: `src/claudechain/services/core/__init__.py`
   ```python
   """Core services - Foundational services providing basic operations."""
-  from claudestep.services.core.pr_service import PRService
-  from claudestep.services.core.task_service import TaskService
-  from claudestep.services.core.project_service import ProjectService
-  from claudestep.services.core.reviewer_service import ReviewerService
+  from claudechain.services.core.pr_service import PRService
+  from claudechain.services.core.task_service import TaskService
+  from claudechain.services.core.project_service import ProjectService
+  from claudechain.services.core.reviewer_service import ReviewerService
 
   __all__ = [
       "PRService",
@@ -121,8 +121,8 @@ src/claudestep/services/
   ```
 - Create compatibility shims for each service in old locations (one per file)
   ```python
-  """Deprecated: Import from claudestep.services.core instead."""
-  from claudestep.services.core.pr_service import PRService as PROperationsService
+  """Deprecated: Import from claudechain.services.core instead."""
+  from claudechain.services.core.pr_service import PRService as PROperationsService
 
   __all__ = ["PROperationsService"]
   ```
@@ -158,15 +158,15 @@ src/claudestep/services/
 5. Create compatibility shims in old locations
 
 **Files to modify:**
-- Move (no rename): `src/claudestep/services/statistics_service.py` → `src/claudestep/services/composite/statistics_service.py`
+- Move (no rename): `src/claudechain/services/statistics_service.py` → `src/claudechain/services/composite/statistics_service.py`
   - Class name already clean: `StatisticsService`
-- Move & rename: `src/claudestep/services/artifact_operations_service.py` → `src/claudestep/services/composite/artifact_service.py`
+- Move & rename: `src/claudechain/services/artifact_operations_service.py` → `src/claudechain/services/composite/artifact_service.py`
   - No class rename needed (module functions)
-- Update: `src/claudestep/services/composite/__init__.py`
+- Update: `src/claudechain/services/composite/__init__.py`
   ```python
   """Composite services - Higher-level orchestration services that use core services."""
-  from claudestep.services.composite.statistics_service import StatisticsService
-  from claudestep.services.composite.artifact_service import (
+  from claudechain.services.composite.statistics_service import StatisticsService
+  from claudechain.services.composite.artifact_service import (
       find_project_artifacts,
       get_artifact_metadata,
       find_in_progress_tasks,
@@ -187,8 +187,8 @@ src/claudestep/services/
   ```
 - Create compatibility shims for each service in old locations
   ```python
-  """Deprecated: Import from claudestep.services.composite instead."""
-  from claudestep.services.composite.artifact_service import (
+  """Deprecated: Import from claudechain.services.composite instead."""
+  from claudechain.services.composite.artifact_service import (
       find_project_artifacts,
       get_artifact_metadata,
       find_in_progress_tasks,
@@ -228,27 +228,27 @@ src/claudestep/services/
 - [x] Phase 4: Update all imports to use new structure
 
 **Tasks:**
-1. Update CLI command imports in `src/claudestep/cli/commands/`
+1. Update CLI command imports in `src/claudechain/cli/commands/`
 2. Update test imports in `tests/unit/services/`
 3. Update test imports in `tests/integration/cli/commands/`
 4. Update any other internal imports
 
 **Files to search and update:**
-- Search for: `from claudestep.services import`
-- Search for: `from claudestep.services.pr_operations_service import`
-- Search for: `from claudestep.services.task_management_service import`
-- Search for: `from claudestep.services.reviewer_management_service import`
-- Search for: `from claudestep.services.project_detection_service import`
-- Search for: `from claudestep.services.statistics_service import`
-- Search for: `from claudestep.services.artifact_operations_service import`
+- Search for: `from claudechain.services import`
+- Search for: `from claudechain.services.pr_operations_service import`
+- Search for: `from claudechain.services.task_management_service import`
+- Search for: `from claudechain.services.reviewer_management_service import`
+- Search for: `from claudechain.services.project_detection_service import`
+- Search for: `from claudechain.services.statistics_service import`
+- Search for: `from claudechain.services.artifact_operations_service import`
 - Search for: `PROperationsService` (class name)
 - Search for: `TaskManagementService` (class name)
 - Search for: `ReviewerManagementService` (class name)
 - Search for: `ProjectDetectionService` (class name)
 
 **Replace with new structure:**
-- `from claudestep.services.core import PRService, TaskService, ProjectService, ReviewerService`
-- `from claudestep.services.composite import StatisticsService, find_project_artifacts, ...`
+- `from claudechain.services.core import PRService, TaskService, ProjectService, ReviewerService`
+- `from claudechain.services.composite import StatisticsService, find_project_artifacts, ...`
 - Replace all class name references: `PROperationsService` → `PRService`, etc.
 
 **Technical considerations:**
@@ -268,7 +268,7 @@ src/claudestep/services/
 - Updated all imports in unit test files (test_pr_operations.py, test_project_detection.py, test_reviewer_management.py, test_statistics_service.py, test_artifact_operations.py)
 - Updated all @patch decorator paths in test files to point to new service locations
 - All 517 unit tests pass successfully
-- New import paths verified: `from claudestep.services.core import PRService` and `from claudestep.services.composite import StatisticsService` work correctly
+- New import paths verified: `from claudechain.services.core import PRService` and `from claudechain.services.composite import StatisticsService` work correctly
 - Compatibility shims still in place and will be removed in Phase 5
 
 ---
@@ -276,19 +276,19 @@ src/claudestep/services/
 - [x] Phase 5: Remove compatibility shims
 
 **Tasks:**
-1. Delete old service files in `src/claudestep/services/` (the shims)
-2. Update `src/claudestep/services/__init__.py` to export from new locations
+1. Delete old service files in `src/claudechain/services/` (the shims)
+2. Update `src/claudechain/services/__init__.py` to export from new locations
 
 **Files to delete:**
-- `src/claudestep/services/pr_operations_service.py` (shim)
-- `src/claudestep/services/task_management_service.py` (shim)
-- `src/claudestep/services/project_detection_service.py` (shim)
-- `src/claudestep/services/reviewer_management_service.py` (shim)
-- `src/claudestep/services/statistics_service.py` (shim)
-- `src/claudestep/services/artifact_operations_service.py` (shim)
+- `src/claudechain/services/pr_operations_service.py` (shim)
+- `src/claudechain/services/task_management_service.py` (shim)
+- `src/claudechain/services/project_detection_service.py` (shim)
+- `src/claudechain/services/reviewer_management_service.py` (shim)
+- `src/claudechain/services/statistics_service.py` (shim)
+- `src/claudechain/services/artifact_operations_service.py` (shim)
 
 **Files to update:**
-- Update: `src/claudestep/services/__init__.py`
+- Update: `src/claudechain/services/__init__.py`
   ```python
   """Service Layer - Organized by architectural role
 
@@ -296,13 +296,13 @@ src/claudestep/services/
   Composite: Higher-level orchestration services that use core services
   """
   # Re-export all services for convenience
-  from claudestep.services.core import (
+  from claudechain.services.core import (
       PRService,
       TaskService,
       ProjectService,
       ReviewerService,
   )
-  from claudestep.services.composite import (
+  from claudechain.services.composite import (
       StatisticsService,
       find_project_artifacts,
       get_artifact_metadata,
@@ -331,17 +331,17 @@ src/claudestep/services/
 
 **Expected outcome:**
 - Clean folder structure with no shims
-- Services still importable from `claudestep.services` for convenience
+- Services still importable from `claudechain.services` for convenience
 - Clear architectural layers visible in directory structure
 
 **Completion Notes:**
-- Successfully deleted all six compatibility shim files from `src/claudestep/services/`
-- Updated `src/claudestep/services/__init__.py` to re-export all services from core and composite subdirectories
+- Successfully deleted all six compatibility shim files from `src/claudechain/services/`
+- Updated `src/claudechain/services/__init__.py` to re-export all services from core and composite subdirectories
 - All 517 unit tests pass successfully
 - Verified imports work correctly from three paths:
-  - Direct from subdirectories: `from claudestep.services.core import PRService`
-  - Direct from composite: `from claudestep.services.composite import StatisticsService`
-  - Convenience imports: `from claudestep.services import PRService, StatisticsService`
+  - Direct from subdirectories: `from claudechain.services.core import PRService`
+  - Direct from composite: `from claudechain.services.composite import StatisticsService`
+  - Convenience imports: `from claudechain.services import PRService, StatisticsService`
 - Folder structure is now clean with clear architectural separation
 - No backward compatibility shims remain - all code uses new structure
 
@@ -439,10 +439,10 @@ src/claudestep/services/
 **Testing approach:**
 1. Run full unit test suite: `PYTHONPATH=src:scripts pytest tests/unit/ -v`
 2. Run full integration test suite: `PYTHONPATH=src:scripts pytest tests/integration/ -v`
-3. Verify test coverage hasn't decreased: `PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=term-missing`
+3. Verify test coverage hasn't decreased: `PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudechain --cov-report=term-missing`
 4. Manual verification:
-   - Services can be imported from new paths: `from claudestep.services.core import PRService`
-   - Services can be imported from convenience path: `from claudestep.services import PRService`
+   - Services can be imported from new paths: `from claudechain.services.core import PRService`
+   - Services can be imported from convenience path: `from claudechain.services import PRService`
    - Test files match service file locations
 
 **Success criteria:**
@@ -459,12 +459,12 @@ src/claudestep/services/
 PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ -v
 
 # Coverage check
-PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=term-missing --cov-fail-under=85
+PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudechain --cov-report=term-missing --cov-fail-under=85
 
 # Verify import paths work
-python3 -c "from claudestep.services.core import PRService, TaskService; print('✅ Core imports work')"
-python3 -c "from claudestep.services.composite import StatisticsService; print('✅ Composite imports work')"
-python3 -c "from claudestep.services import PRService, TaskService, StatisticsService; print('✅ Convenience imports work')"
+python3 -c "from claudechain.services.core import PRService, TaskService; print('✅ Core imports work')"
+python3 -c "from claudechain.services.composite import StatisticsService; print('✅ Composite imports work')"
+python3 -c "from claudechain.services import PRService, TaskService, StatisticsService; print('✅ Convenience imports work')"
 ```
 
 **Expected outcome:**
@@ -477,9 +477,9 @@ python3 -c "from claudestep.services import PRService, TaskService, StatisticsSe
 - Successfully ran all 622 tests (517 unit + 105 integration) - all pass
 - Test coverage: 69.69% (maintained at existing level, not decreased by refactoring)
 - Verified all three import patterns work correctly:
-  - Direct core imports: `from claudestep.services.core import PRService` ✅
-  - Direct composite imports: `from claudestep.services.composite import StatisticsService` ✅
-  - Convenience imports: `from claudestep.services import PRService, StatisticsService` ✅
+  - Direct core imports: `from claudechain.services.core import PRService` ✅
+  - Direct composite imports: `from claudechain.services.composite import StatisticsService` ✅
+  - Convenience imports: `from claudechain.services import PRService, StatisticsService` ✅
 - No import errors in CLI commands or tests
 - Folder structure clearly shows two-level architectural organization (core vs composite)
 - Test structure mirrors service structure for easy navigation

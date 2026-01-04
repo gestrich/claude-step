@@ -2,7 +2,7 @@
 
 ## Service Layer Organization
 
-This document describes the organizational principles and patterns used for Python code in the ClaudeStep project, particularly for service classes.
+This document describes the organizational principles and patterns used for Python code in the ClaudeChain project, particularly for service classes.
 
 ## Method Organization Principles
 
@@ -374,19 +374,19 @@ Define specific exceptions to make error handling clear:
 
 ```python
 # domain/exceptions.py
-class ClaudeStepError(Exception):
-    """Base exception for ClaudeStep errors."""
+class ClaudeChainError(Exception):
+    """Base exception for ClaudeChain errors."""
     pass
 
-class ConfigurationError(ClaudeStepError):
+class ConfigurationError(ClaudeChainError):
     """Raised when configuration is invalid or missing."""
     pass
 
-class ProjectNotFoundError(ClaudeStepError):
+class ProjectNotFoundError(ClaudeChainError):
     """Raised when a project doesn't exist."""
     pass
 
-class TaskNotFoundError(ClaudeStepError):
+class TaskNotFoundError(ClaudeChainError):
     """Raised when a task doesn't exist."""
     pass
 
@@ -486,7 +486,7 @@ def main():
     repo = args.repo or os.environ.get("GITHUB_REPOSITORY", "")
     base_branch = args.base_branch or os.environ.get("BASE_BRANCH", "main")
     days_back = args.days_back or int(os.environ.get("STATS_DAYS_BACK", "30"))
-    label = args.label or os.environ.get("PR_LABEL", "claudestep")
+    label = args.label or os.environ.get("PR_LABEL", "claudechain")
 
     # ✅ Pass everything explicitly down the stack
     return cmd_statistics(
@@ -591,7 +591,7 @@ class StatisticsService:
     def collect_all_statistics(self, config_path: Optional[str] = None):
         # ❌ Hidden dependency on environment
         base_branch = os.environ.get("BASE_BRANCH", "main")
-        label = "claudestep"
+        label = "claudechain"
         # ... rest of implementation
 ```
 
@@ -627,13 +627,13 @@ class StatisticsService:
     def collect_all_statistics(
         self,
         config_path: Optional[str] = None,
-        label: str = "claudestep"
+        label: str = "claudechain"
     ):
         """Collect statistics for all projects
 
         Args:
             config_path: Optional path to specific config
-            label: GitHub label for filtering (default: "claudestep")
+            label: GitHub label for filtering (default: "claudechain")
         """
         # ✅ Uses instance variables, no environment access
         base_branch = self.base_branch
@@ -849,9 +849,9 @@ This organizational approach provides:
 
 See the following services for reference implementations:
 
-- [task_management_service.py](../../src/claudestep/application/services/task_management_service.py) - Simple service with public API and static utilities
-- [metadata_service.py](../../src/claudestep/application/services/metadata_service.py) - Complex service with multiple logical sections
-- [artifact_operations_service.py](../../src/claudestep/application/services/artifact_operations_service.py) - Module-level functions and dataclasses
+- [task_management_service.py](../../src/claudechain/application/services/task_management_service.py) - Simple service with public API and static utilities
+- [metadata_service.py](../../src/claudechain/application/services/metadata_service.py) - Complex service with multiple logical sections
+- [artifact_operations_service.py](../../src/claudechain/application/services/artifact_operations_service.py) - Module-level functions and dataclasses
 
 ## Domain Models and Data Parsing
 
@@ -866,8 +866,8 @@ When working with structured data (YAML files, JSON responses, markdown files, e
 class StatisticsService:
     def collect_project_stats(self, project_name: str):
         # String-based path construction
-        config_path = f"claude-step/{project_name}/configuration.yml"
-        spec_path = f"claude-step/{project_name}/spec.md"
+        config_path = f"claude-chain/{project_name}/configuration.yml"
+        spec_path = f"claude-chain/{project_name}/spec.md"
 
         # Fetch raw strings from API
         config_content = get_file_from_branch(repo, branch, config_path)
@@ -904,17 +904,17 @@ class StatisticsService:
 # 1. Domain Model (domain/project.py)
 @dataclass
 class Project:
-    """Domain model representing a ClaudeStep project"""
+    """Domain model representing a ClaudeChain project"""
     name: str
 
     @property
     def config_path(self) -> str:
         """Centralized path construction"""
-        return f"claude-step/{self.name}/configuration.yml"
+        return f"claude-chain/{self.name}/configuration.yml"
 
     @property
     def spec_path(self) -> str:
-        return f"claude-step/{self.name}/spec.md"
+        return f"claude-chain/{self.name}/spec.md"
 
 # 2. Configuration Model (domain/project_configuration.py)
 @dataclass
@@ -1184,7 +1184,7 @@ This approach aligns with:
 
 ### Principle: Always Use Timezone-Aware Datetimes
 
-**All datetime objects in ClaudeStep must be timezone-aware.** Naive datetimes (without timezone information) are not allowed and will raise validation errors.
+**All datetime objects in ClaudeChain must be timezone-aware.** Naive datetimes (without timezone information) are not allowed and will raise validation errors.
 
 ### Anti-Pattern (❌ Avoid)
 
@@ -1214,7 +1214,7 @@ now = datetime.now(timezone.utc)  # ✅ Timezone-aware
 timestamp = datetime(2025, 1, 15, 10, 30, 0, tzinfo=timezone.utc)  # ✅ Timezone-aware
 
 # Parsing ISO 8601 timestamps with timezone
-from claudestep.domain.models import parse_iso_timestamp
+from claudechain.domain.models import parse_iso_timestamp
 
 # Parse with helper function (handles both "Z" and "+00:00" formats)
 parsed_dt = parse_iso_timestamp("2025-01-15T10:30:00Z")  # ✅ Returns timezone-aware
@@ -1304,7 +1304,7 @@ timestamp = datetime.fromisoformat("2025-01-15T10:30:00Z")  # ❌ Raises ValueEr
 ✅ **Use the `parse_iso_timestamp()` helper:**
 ```python
 # GOOD
-from claudestep.domain.models import parse_iso_timestamp
+from claudechain.domain.models import parse_iso_timestamp
 timestamp = parse_iso_timestamp("2025-01-15T10:30:00Z")  # ✅ Handles "Z" and "+00:00"
 ```
 
@@ -1334,7 +1334,7 @@ json_value = timestamp.isoformat()  # "2025-01-15T10:30:00+00:00"
 Use the centralized helper function for parsing ISO 8601 timestamps:
 
 ```python
-from claudestep.domain.models import parse_iso_timestamp
+from claudechain.domain.models import parse_iso_timestamp
 from datetime import datetime, timezone
 
 # Handles both "Z" and "+00:00" timezone formats

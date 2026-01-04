@@ -1,6 +1,6 @@
 # Testing Philosophy
 
-This document describes the testing architecture and philosophy for the ClaudeStep project. It explains **why** we test the way we do and provides guidance on how to approach testing new features.
+This document describes the testing architecture and philosophy for the ClaudeChain project. It explains **why** we test the way we do and provides guidance on how to approach testing new features.
 
 ## Table of Contents
 
@@ -16,7 +16,7 @@ This document describes the testing architecture and philosophy for the ClaudeSt
 
 ## Testing Philosophy
 
-ClaudeStep's testing strategy is built on three core beliefs:
+ClaudeChain's testing strategy is built on three core beliefs:
 
 1. **Test behavior, not implementation** - Tests should verify what the code does, not how it does it
 2. **Mock at boundaries, not internals** - Mock external systems (APIs, subprocess, filesystem), not internal logic
@@ -26,7 +26,7 @@ Our goal is **85% code coverage** with **493 tests** that provide confidence in 
 
 ### Why This Matters
 
-ClaudeStep is a GitHub Action that orchestrates complex workflows involving:
+ClaudeChain is a GitHub Action that orchestrates complex workflows involving:
 - Git operations (branching, commits, merges)
 - GitHub API interactions (PRs, comments, labels)
 - File I/O (reading specs, writing artifacts)
@@ -172,7 +172,7 @@ tests/
 
 ### Layer-Based Testing Strategy
 
-ClaudeStep follows a **layered architecture**, and we test each layer differently:
+ClaudeChain follows a **layered architecture**, and we test each layer differently:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -265,7 +265,7 @@ PYTHONPATH=src:scripts pytest tests/integration/ -v
 PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ -v
 
 # Run with coverage report
-PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=term-missing --cov-report=html
+PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudechain --cov-report=term-missing --cov-report=html
 
 # Run tests for a specific module
 PYTHONPATH=src:scripts pytest tests/integration/cli/commands/test_prepare.py -v
@@ -278,10 +278,10 @@ PYTHONPATH=src:scripts pytest tests/integration/cli/commands/test_prepare.py::Te
 
 ```bash
 # View coverage in terminal
-PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=term-missing
+PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudechain --cov-report=term-missing
 
 # View detailed HTML coverage report (opens in browser)
-PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=html
+PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudechain --cov-report=html
 open htmlcov/index.html  # macOS
 xdg-open htmlcov/index.html  # Linux
 ```
@@ -525,14 +525,14 @@ As of December 2025:
 
 ```bash
 # Generate HTML coverage report
-PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=html
+PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudechain --cov-report=html
 
 # Open in browser
 open htmlcov/index.html  # macOS
 xdg-open htmlcov/index.html  # Linux
 
 # View in terminal with missing lines
-PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudestep --cov-report=term-missing
+PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ --cov=src/claudechain --cov-report=term-missing
 ```
 
 Coverage reports are also available in GitHub Actions artifacts for every CI run.
@@ -553,7 +553,7 @@ Tests run automatically on:
 - name: Run unit and integration tests with coverage
   run: |
     PYTHONPATH=src:scripts pytest tests/unit/ tests/integration/ \
-      --cov=src/claudestep \
+      --cov=src/claudechain \
       --cov-report=term-missing \
       --cov-report=html \
       --cov-fail-under=70
@@ -629,12 +629,12 @@ Current coverage: 85%+ with 506 tests
 
 ### End-to-End Testing
 
-End-to-end integration tests are now located in this repository at `tests/e2e/` and use a **recursive workflow pattern** where ClaudeStep tests itself.
+End-to-end integration tests are now located in this repository at `tests/e2e/` and use a **recursive workflow pattern** where ClaudeChain tests itself.
 
 **Purpose:**
-The E2E tests validate the complete ClaudeStep workflow by:
-- Creating test projects in the same repository (`claude-step/test-*`)
-- Triggering the `claudestep-test.yml` workflow which runs the action on itself
+The E2E tests validate the complete ClaudeChain workflow by:
+- Creating test projects in the same repository (`claude-chain/test-*`)
+- Triggering the `claudechain-test.yml` workflow which runs the action on itself
 - Verifying PRs are created correctly with AI-generated summaries
 - Testing reviewer capacity limits
 - Testing merge trigger functionality
@@ -642,8 +642,8 @@ The E2E tests validate the complete ClaudeStep workflow by:
 
 **Running E2E Tests Locally:**
 ```bash
-# From the claude-step repository root
-cd /path/to/claude-step
+# From the claude-chain repository root
+cd /path/to/claude-chain
 ./tests/e2e/run_test.sh
 ```
 

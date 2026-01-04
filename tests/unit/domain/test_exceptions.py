@@ -2,7 +2,7 @@
 
 import pytest
 
-from claudestep.domain.exceptions import (
+from claudechain.domain.exceptions import (
     ContinuousRefactoringError,
     ConfigurationError,
     FileNotFoundError,

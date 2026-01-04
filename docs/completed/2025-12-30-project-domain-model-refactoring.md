@@ -8,7 +8,7 @@ The current architecture has string parsing and data extraction logic embedded i
 1. **Statistics service performs string parsing** - The `StatisticsService` directly parses YAML configurations and spec.md files using regex and dictionary string key access
 2. **No domain models for projects** - Project data exists only as scattered strings, dictionaries, and tuples passed between functions
 3. **Type safety missing** - Configuration access uses `.get("username")` style dictionary lookups without validation
-4. **Repeated path construction** - Paths like `f"claude-step/{project_name}/spec.md"` are constructed as strings throughout the codebase
+4. **Repeated path construction** - Paths like `f"claude-chain/{project_name}/spec.md"` are constructed as strings throughout the codebase
 5. **Business logic in wrong layer** - Spec file parsing (regex task counting) happens in service methods rather than domain layer
 
 **Desired Architecture:**
@@ -25,7 +25,7 @@ The current architecture has string parsing and data extraction logic embedded i
 
 **Scope Analysis:**
 After comprehensive codebase analysis, identified the following areas requiring refactoring:
-- **15-20 instances** of hardcoded path construction (`f"claude-step/{project}/..."`)
+- **15-20 instances** of hardcoded path construction (`f"claude-chain/{project}/..."`)
 - **10+ instances** of dictionary-based config access (`.get("reviewers")`, `.get("username")`)
 - **5 instances** of spec.md regex parsing scattered across multiple files
 - **3 services** performing string parsing (StatisticsService, TaskManagementService, ReviewerManagementService)
@@ -47,19 +47,19 @@ After comprehensive codebase analysis, identified the following areas requiring 
 
 - [ ] Phase 1: Create Project domain model
 
-Create a `Project` domain model that represents a ClaudeStep project with its paths and metadata.
+Create a `Project` domain model that represents a ClaudeChain project with its paths and metadata.
 
 **Files to create:**
-- `src/claudestep/domain/project.py` - Core Project model
+- `src/claudechain/domain/project.py` - Core Project model
 
 **Domain model structure:**
 ```python
 class Project:
-    """Domain model representing a ClaudeStep project"""
+    """Domain model representing a ClaudeChain project"""
 
     def __init__(self, name: str, base_path: Optional[str] = None):
         self.name = name
-        self.base_path = base_path or f"claude-step/{name}"
+        self.base_path = base_path or f"claude-chain/{name}"
 
     @property
     def config_path(self) -> str:
@@ -78,30 +78,30 @@ class Project:
 
     @property
     def metadata_file_path(self) -> str:
-        """Path to metadata JSON file in claudestep-metadata branch"""
+        """Path to metadata JSON file in claudechain-metadata branch"""
         return f"{self.name}.json"
 
     def get_branch_name(self, task_index: int) -> str:
-        """Generate branch name for a task (claude-step-{project}-{index})"""
-        return f"claude-step-{self.name}-{task_index}"
+        """Generate branch name for a task (claude-chain-{project}-{index})"""
+        return f"claude-chain-{self.name}-{task_index}"
 
     @classmethod
     def from_config_path(cls, config_path: str) -> 'Project':
-        """Factory: Extract project from config path like 'claude-step/my-project/configuration.yml'"""
+        """Factory: Extract project from config path like 'claude-chain/my-project/configuration.yml'"""
         project_name = os.path.basename(os.path.dirname(config_path))
         return cls(project_name)
 
     @classmethod
     def from_branch_name(cls, branch_name: str) -> Optional['Project']:
-        """Factory: Parse project from branch name (claude-step-{project}-{index})"""
-        pattern = r"^claude-step-(.+)-(\d+)$"
+        """Factory: Parse project from branch name (claude-chain-{project}-{index})"""
+        pattern = r"^claude-chain-(.+)-(\d+)$"
         match = re.match(pattern, branch_name)
         if match:
             return cls(match.group(1))
         return None
 
     @classmethod
-    def find_all(cls, base_dir: str = "claude-step") -> List['Project']:
+    def find_all(cls, base_dir: str = "claude-chain") -> List['Project']:
         """Factory: Discover all projects in a directory"""
         projects = []
         if not os.path.exists(base_dir):
@@ -127,7 +127,7 @@ class Project:
 Create models for parsed configuration with type-safe access to reviewers and settings.
 
 **Files to create:**
-- `src/claudestep/domain/project_configuration.py` - Configuration models
+- `src/claudechain/domain/project_configuration.py` - Configuration models
 
 **Domain model structure:**
 ```python
@@ -155,7 +155,7 @@ class ProjectConfiguration:
     @classmethod
     def from_yaml_string(cls, project: Project, yaml_content: str) -> 'ProjectConfiguration':
         """Factory: Parse configuration from YAML string"""
-        from claudestep.domain.config import load_config_from_string
+        from claudechain.domain.config import load_config_from_string
 
         config = load_config_from_string(yaml_content, project.config_path)
         reviewers_config = config.get("reviewers", [])
@@ -189,7 +189,7 @@ class ProjectConfiguration:
 Create models for parsed spec.md files with structured task representation.
 
 **Files to create:**
-- `src/claudestep/domain/spec_content.py` - Spec and task models
+- `src/claudechain/domain/spec_content.py` - Spec and task models
 
 **Domain model structure:**
 ```python
@@ -278,7 +278,7 @@ class SpecContent:
 Create an infrastructure service that fetches and parses project data from GitHub API, returning domain models.
 
 **Files to create:**
-- `src/claudestep/infrastructure/repositories/project_repository.py` - Repository pattern implementation
+- `src/claudechain/infrastructure/repositories/project_repository.py` - Repository pattern implementation
 
 **Repository structure:**
 ```python
@@ -308,7 +308,7 @@ class ProjectRepository:
             GitHubAPIError: If GitHub API fails
             ConfigurationError: If configuration is invalid
         """
-        from claudestep.infrastructure.github.operations import get_file_from_branch
+        from claudechain.infrastructure.github.operations import get_file_from_branch
 
         config_content = get_file_from_branch(self.repo, base_branch, project.config_path)
         if not config_content:
@@ -331,7 +331,7 @@ class ProjectRepository:
         Raises:
             GitHubAPIError: If GitHub API fails
         """
-        from claudestep.infrastructure.github.operations import get_file_from_branch
+        from claudechain.infrastructure.github.operations import get_file_from_branch
 
         spec_content = get_file_from_branch(self.repo, base_branch, project.spec_path)
         if not spec_content:
@@ -387,7 +387,7 @@ Update `StatisticsService` to use the new domain models and repository instead o
 - Build succeeds with new architecture
 
 **Files to modify:**
-- `src/claudestep/services/statistics_service.py`
+- `src/claudechain/services/statistics_service.py`
 
 **Changes:**
 
@@ -410,7 +410,7 @@ def __init__(
 ```python
 # BEFORE:
 def _load_project_config(self, project_name: str, base_branch: str) -> Optional[List[str]]:
-    config_file_path = f"claude-step/{project_name}/configuration.yml"
+    config_file_path = f"claude-chain/{project_name}/configuration.yml"
     config_content = get_file_from_branch(self.repo, base_branch, config_file_path)
     if not config_content:
         return None
@@ -487,13 +487,13 @@ Update CLI commands to instantiate and pass ProjectRepository to services.
 
 **Technical Notes**:
 - Successfully updated `statistics.py` CLI command to instantiate `ProjectRepository` and pass it to `StatisticsService`
-- The ProjectRepository import and instantiation were already added during Phase 5 implementation at src/claudestep/cli/commands/statistics.py:13,58
+- The ProjectRepository import and instantiation were already added during Phase 5 implementation at src/claudechain/cli/commands/statistics.py:13,58
 - This phase was completed as part of Phase 5 to ensure proper dependency injection
 - All StatisticsService unit tests passing (56 tests)
 - Build succeeds with proper dependency injection pattern
 
 **Files modified:**
-- `src/claudestep/cli/commands/statistics.py` (completed in Phase 5)
+- `src/claudechain/cli/commands/statistics.py` (completed in Phase 5)
 
 **Changes:**
 ```python
@@ -503,7 +503,7 @@ metadata_service = MetadataService(metadata_store)
 statistics_service = StatisticsService(repo, metadata_service, base_branch)
 
 # AFTER:
-from claudestep.infrastructure.repositories.project_repository import ProjectRepository
+from claudechain.infrastructure.repositories.project_repository import ProjectRepository
 
 metadata_store = GitHubMetadataStore(repo)
 metadata_service = MetadataService(metadata_store)
@@ -535,7 +535,7 @@ Update remaining services and commands that perform string parsing or path const
 
 **Files to update:**
 
-**A. `src/claudestep/services/task_management_service.py`**
+**A. `src/claudechain/services/task_management_service.py`**
 - **Current**: `find_next_available_task()` does spec.md regex parsing (lines 35-79)
 - **Change**: Use `SpecContent` model's `get_next_available_task()` method
 - **Before**:
@@ -552,7 +552,7 @@ Update remaining services and commands that perform string parsing or path const
       return spec.get_next_available_task(skip_indices)
   ```
 
-**B. `src/claudestep/services/reviewer_management_service.py`**
+**B. `src/claudechain/services/reviewer_management_service.py`**
 - **Current**: `find_available_reviewer()` accepts `List[Dict[str, Any]]` (line 29)
 - **Change**: Accept `ProjectConfiguration` with typed `Reviewer` objects
 - **Before**:
@@ -570,15 +570,15 @@ Update remaining services and commands that perform string parsing or path const
           max_prs = reviewer.max_open_prs
   ```
 
-**C. `src/claudestep/services/project_detection_service.py`**
+**C. `src/claudechain/services/project_detection_service.py`**
 - **Current**: `detect_project_paths()` constructs paths as strings (lines 88-91)
 - **Change**: Return a `Project` object instead of tuple of strings
 - **Before**:
   ```python
   def detect_project_paths(self, project_name: str) -> dict:
       return {
-          "config_path": f"claude-step/{project_name}/configuration.yml",
-          "spec_path": f"claude-step/{project_name}/spec.md",
+          "config_path": f"claude-chain/{project_name}/configuration.yml",
+          "spec_path": f"claude-chain/{project_name}/spec.md",
           ...
       }
   ```
@@ -588,7 +588,7 @@ Update remaining services and commands that perform string parsing or path const
       return Project(project_name)
   ```
 
-**D. `src/claudestep/services/pr_operations_service.py`**
+**D. `src/claudechain/services/pr_operations_service.py`**
 - **Current**: `parse_branch_name()` and `format_branch_name()` static methods (lines 129-161)
 - **Change**: Move to `Project` model or delegate to it
 - **Option 1**: Keep as wrapper but delegate to Project
@@ -608,13 +608,13 @@ Update remaining services and commands that perform string parsing or path const
       ...
   ```
 
-**E. `src/claudestep/cli/commands/prepare.py`**
+**E. `src/claudechain/cli/commands/prepare.py`**
 - **Current**: Path construction (lines 102-103), config dict access (line 135)
 - **Changes**:
   ```python
   # BEFORE:
-  spec_file_path = f"claude-step/{detected_project}/spec.md"
-  config_file_path = f"claude-step/{detected_project}/configuration.yml"
+  spec_file_path = f"claude-chain/{detected_project}/spec.md"
+  config_file_path = f"claude-chain/{detected_project}/configuration.yml"
   config = load_config_from_string(config_content, config_file_path)
   reviewers = config.get("reviewers")
 
@@ -624,7 +624,7 @@ Update remaining services and commands that perform string parsing or path const
   reviewers = config.reviewers  # Typed list of Reviewer objects
   ```
 
-**F. `src/claudestep/cli/commands/discover_ready.py`**
+**F. `src/claudechain/cli/commands/discover_ready.py`**
 - **Current**: Path construction, config extraction, spec parsing (lines 48-91)
 - **Changes**:
   ```python
@@ -642,7 +642,7 @@ Update remaining services and commands that perform string parsing or path const
   uncompleted = spec.pending_tasks
   ```
 
-**G. `src/claudestep/cli/commands/discover.py`**
+**G. `src/claudechain/cli/commands/discover.py`**
 - **Current**: `find_all_projects()` manually scans directories (lines 11-40)
 - **Change**: Use `Project.find_all()` factory method
 - **Before**:
@@ -655,10 +655,10 @@ Update remaining services and commands that perform string parsing or path const
 - **After**:
   ```python
   def find_all_projects(base_dir: str = None) -> List[Project]:
-      return Project.find_all(base_dir or "claude-step")
+      return Project.find_all(base_dir or "claude-chain")
   ```
 
-**H. `src/claudestep/infrastructure/metadata/github_metadata_store.py`**
+**H. `src/claudechain/infrastructure/metadata/github_metadata_store.py`**
 - **Current**: `_get_file_path()` constructs metadata path (line 72)
 - **Change**: Use `Project.metadata_file_path`
 - **Before**:
@@ -792,7 +792,7 @@ Comprehensive validation of the refactoring across all test levels.
 **Manual Verification:**
 1. Run statistics command in test repository:
    ```bash
-   python -m claudestep statistics --repo test/repo --days-back 30
+   python -m claudechain statistics --repo test/repo --days-back 30
    ```
    - Verify output matches expected format
    - Check that project stats are collected correctly

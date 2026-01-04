@@ -1,6 +1,6 @@
 # Feature Guides
 
-User-facing documentation for ClaudeStep features. These guides explain how to use ClaudeStep effectively in your projects.
+User-facing documentation for ClaudeChain features. These guides explain how to use ClaudeChain effectively in your projects.
 
 ## Available Guides
 
@@ -14,7 +14,7 @@ User-facing documentation for ClaudeStep features. These guides explain how to u
 
 ## Reading Order
 
-**New to ClaudeStep?** Start here:
+**New to ClaudeChain?** Start here:
 
 1. **[How It Works](./how-it-works.md)** - Understand the core concepts
 2. **[Setup](./setup.md)** - Configure your repository
@@ -28,8 +28,8 @@ User-facing documentation for ClaudeStep features. These guides explain how to u
 ## What Belongs Here
 
 Documentation that helps users:
-- Understand how ClaudeStep works
-- Set up and configure ClaudeStep
+- Understand how ClaudeChain works
+- Set up and configure ClaudeChain
 - Create and manage projects
 - Enable notifications and visibility
 - Troubleshoot common issues

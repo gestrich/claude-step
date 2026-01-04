@@ -5,8 +5,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from claudestep.domain.exceptions import GitError
-from claudestep.infrastructure.git.operations import run_command, run_git_command
+from claudechain.domain.exceptions import GitError
+from claudechain.infrastructure.git.operations import run_command, run_git_command
 
 
 class TestRunCommand:
@@ -84,7 +84,7 @@ class TestRunCommand:
 class TestRunGitCommand:
     """Test suite for run_git_command function"""
 
-    @patch('claudestep.infrastructure.git.operations.run_command')
+    @patch('claudechain.infrastructure.git.operations.run_command')
     def test_run_git_command_success(self, mock_run):
         """Should execute git command and return stdout"""
         # Arrange
@@ -98,7 +98,7 @@ class TestRunGitCommand:
         assert result == "output text"
         mock_run.assert_called_once_with(["git", "status", "--short"])
 
-    @patch('claudestep.infrastructure.git.operations.run_command')
+    @patch('claudechain.infrastructure.git.operations.run_command')
     def test_run_git_command_strips_whitespace(self, mock_run):
         """Should strip leading and trailing whitespace from output"""
         # Arrange
@@ -111,7 +111,7 @@ class TestRunGitCommand:
         # Assert
         assert result == "branch name"
 
-    @patch('claudestep.infrastructure.git.operations.run_command')
+    @patch('claudechain.infrastructure.git.operations.run_command')
     def test_run_git_command_handles_empty_output(self, mock_run):
         """Should handle empty output correctly"""
         # Arrange
@@ -124,7 +124,7 @@ class TestRunGitCommand:
         # Assert
         assert result == ""
 
-    @patch('claudestep.infrastructure.git.operations.run_command')
+    @patch('claudechain.infrastructure.git.operations.run_command')
     def test_run_git_command_raises_git_error_on_failure(self, mock_run):
         """Should raise GitError when git command fails"""
         # Arrange
@@ -140,7 +140,7 @@ class TestRunGitCommand:
         with pytest.raises(GitError, match="Git command failed"):
             run_git_command(args)
 
-    @patch('claudestep.infrastructure.git.operations.run_command')
+    @patch('claudechain.infrastructure.git.operations.run_command')
     def test_run_git_command_includes_stderr_in_error(self, mock_run):
         """Should include stderr output in GitError message"""
         # Arrange
@@ -156,7 +156,7 @@ class TestRunGitCommand:
         with pytest.raises(GitError, match="nothing to commit"):
             run_git_command(args)
 
-    @patch('claudestep.infrastructure.git.operations.run_command')
+    @patch('claudechain.infrastructure.git.operations.run_command')
     def test_run_git_command_includes_command_in_error(self, mock_run):
         """Should include command arguments in error message"""
         # Arrange
@@ -172,7 +172,7 @@ class TestRunGitCommand:
         with pytest.raises(GitError, match="push origin main"):
             run_git_command(args)
 
-    @patch('claudestep.infrastructure.git.operations.run_command')
+    @patch('claudechain.infrastructure.git.operations.run_command')
     def test_run_git_command_with_multiple_arguments(self, mock_run):
         """Should handle git commands with multiple arguments"""
         # Arrange

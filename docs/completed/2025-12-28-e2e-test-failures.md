@@ -45,7 +45,7 @@ This document proposes a plan to make the E2E suite fast (~5 minutes), reliable,
 ```python
 # In test_statistics_e2e.py:
 gh.trigger_workflow(
-    workflow_name="claudestep-statistics.yml",
+    workflow_name="claudechain-statistics.yml",
     inputs={},
     ref="main"  # ← Triggers on main branch
 )
@@ -93,7 +93,7 @@ reviewers:
 - [ ] Task 4: Fourth task
 ```
 
-**Expected**: ClaudeStep workflow should create 2 PRs to reach the capacity limit
+**Expected**: ClaudeChain workflow should create 2 PRs to reach the capacity limit
 **Actual**: Only 1 PR was created
 
 **Possible Causes**:
@@ -102,7 +102,7 @@ reviewers:
 3. The `maxOpenPRs` logic may not be working correctly
 4. The test may need to trigger the workflow multiple times
 
-**This test reveals a potential bug** in the ClaudeStep workflow that needs investigation.
+**This test reveals a potential bug** in the ClaudeChain workflow that needs investigation.
 
 ### 3. Redundant Test Coverage
 
@@ -146,9 +146,9 @@ This reduces 3 workflow runs (~7 minutes) to 1 workflow run (~2 minutes).
 Each E2E test follows this pattern:
 1. Create test project on e2e-test branch (~5s)
 2. Commit and push (~5s)
-3. Trigger claudestep-test.yml workflow (~2s)
+3. Trigger claudechain-test.yml workflow (~2s)
 4. Wait for GitHub Actions to start workflow (~5-10s)
-5. **Workflow runs ClaudeStep action**:
+5. **Workflow runs ClaudeChain action**:
    - Install Claude Code (~30s)
    - Run Claude with API calls (~60-90s)
    - Create PR (~10s)
@@ -240,7 +240,7 @@ E2E tests should NOT test:
 1. **Merged three workflow tests into one** ✅:
    - Replaced `test_basic_workflow_creates_pr()`, `test_pr_has_ai_summary()`, and `test_pr_has_cost_information()` with a single consolidated `test_basic_workflow_end_to_end()` test
    - The new test performs all validations in a single workflow run:
-     - Triggers claudestep-test.yml workflow
+     - Triggers claudechain-test.yml workflow
      - Waits for completion
      - Verifies PR is created with title and body
      - Verifies PR has AI-generated summary comment (checks for "Summary" or "Changes")
@@ -278,7 +278,7 @@ E2E tests should NOT test:
 
 **Investigation Findings**:
 
-The test was expecting incorrect behavior. After investigating the ClaudeStep workflow architecture:
+The test was expecting incorrect behavior. After investigating the ClaudeChain workflow architecture:
 
 1. **Workflow Design** (action.yml):
    - Each workflow run executes: prepare → claude_code → finalize → summary
@@ -306,7 +306,7 @@ The test was expecting incorrect behavior. After investigating the ClaudeStep wo
    - Added clear documentation explaining the one-PR-per-run behavior
 
 2. **Root Cause**:
-   - The "bug" was actually in the test expectations, not the ClaudeStep code
+   - The "bug" was actually in the test expectations, not the ClaudeChain code
    - The test incorrectly expected a single workflow run to create 2 PRs
    - The capacity checking logic in `reviewer_management.py` works correctly
 

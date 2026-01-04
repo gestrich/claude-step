@@ -1,10 +1,10 @@
-"""End-to-End tests for ClaudeStep workflow.
+"""End-to-End tests for ClaudeChain workflow.
 
-This module contains E2E integration tests that verify the ClaudeStep workflow
+This module contains E2E integration tests that verify the ClaudeChain workflow
 creates PRs correctly, generates AI summaries, and includes cost information.
 
-The tests use a recursive workflow pattern where the claude-step repository
-tests itself by running the actual claudestep.yml workflow against the main-e2e
+The tests use a recursive workflow pattern where the claude-chain repository
+tests itself by running the actual claudechain.yml workflow against the main-e2e
 branch with dynamically generated test projects.
 
 Note: Workflows are triggered via workflow_dispatch (not push events) because
@@ -15,7 +15,7 @@ workflow_dispatch events.
 TESTS IN THIS MODULE:
 
 1. test_auto_start_workflow
-   - What: Verifies claudestep.yml creates a PR for a new project
+   - What: Verifies claudechain.yml creates a PR for a new project
    - Why E2E: Tests the full workflow including AI summary and cost breakdown
 
 2. test_merge_triggered_workflow
@@ -30,7 +30,7 @@ def test_auto_start_workflow(
     gh: GitHubHelper,
     setup_test_project: str
 ) -> None:
-    """Test that claudestep.yml creates a PR when triggered for a new project.
+    """Test that claudechain.yml creates a PR when triggered for a new project.
 
     This test validates the workflow creates a PR correctly when triggered
     via workflow_dispatch with a project name.
@@ -42,7 +42,7 @@ def test_auto_start_workflow(
     The test verifies:
     1. Workflow completes successfully
     2. Workflow creates a PR for the first task
-    3. PR has "claudestep" label
+    3. PR has "claudechain" label
     4. PR targets main-e2e branch
     5. PR has AI summary comment with cost breakdown
 
@@ -52,21 +52,21 @@ def test_auto_start_workflow(
         gh: GitHub helper fixture
         setup_test_project: Test project created, pushed, and workflow triggered
     """
-    from claudestep.domain.constants import DEFAULT_PR_LABEL
+    from claudechain.domain.constants import DEFAULT_PR_LABEL
     from tests.e2e.constants import E2E_TEST_BRANCH
 
     test_project = setup_test_project
 
-    # Wait for claudestep workflow to start (triggered by fixture via workflow_dispatch)
+    # Wait for claudechain workflow to start (triggered by fixture via workflow_dispatch)
     gh.wait_for_workflow_to_start(
-        workflow_name="claudestep.yml",
+        workflow_name="claudechain.yml",
         timeout=60,
         branch=E2E_TEST_BRANCH
     )
 
     # Wait for workflow to complete
     workflow_run = gh.wait_for_workflow_completion(
-        workflow_name="claudestep.yml",
+        workflow_name="claudechain.yml",
         timeout=900,  # 15 minutes
         branch=E2E_TEST_BRANCH
     )
@@ -82,13 +82,13 @@ def test_auto_start_workflow(
 
     # Get the first (most recent) PR
     pr = project_prs[0]
-    pr_url = f"https://github.com/gestrich/claude-step/pull/{pr.number}"
+    pr_url = f"https://github.com/gestrich/claude-chain/pull/{pr.number}"
 
     # Verify PR is open
     assert pr.state == "open", \
         f"PR #{pr.number} should be open but is {pr.state}. PR URL: {pr_url}"
 
-    # Verify PR has claudestep label
+    # Verify PR has claudechain label
     assert DEFAULT_PR_LABEL in [label.lower() for label in pr.labels], \
         f"PR #{pr.number} should have '{DEFAULT_PR_LABEL}' label. PR URL: {pr_url}"
 
@@ -125,7 +125,7 @@ def test_merge_triggered_workflow(
 ) -> None:
     """Test that merging a PR and triggering workflow creates the next PR.
 
-    This test verifies that after a ClaudeStep PR is merged, triggering the
+    This test verifies that after a ClaudeChain PR is merged, triggering the
     workflow creates a PR for the next task in the spec.
 
     Note: We explicitly trigger the workflow after merge because merges done
@@ -135,7 +135,7 @@ def test_merge_triggered_workflow(
     The test verifies:
     1. First workflow (triggered by fixture) creates first PR
     2. Merging the first PR + explicit workflow trigger creates second PR
-    3. Second PR has "claudestep" label
+    3. Second PR has "claudechain" label
     4. Second PR targets main-e2e branch
 
     Cleanup happens at test START (not end) to allow manual inspection.
@@ -144,21 +144,21 @@ def test_merge_triggered_workflow(
         gh: GitHub helper fixture
         setup_test_project: Test project created and pushed to main-e2e (has 3 tasks)
     """
-    from claudestep.domain.constants import DEFAULT_PR_LABEL
+    from claudechain.domain.constants import DEFAULT_PR_LABEL
     from tests.e2e.constants import E2E_TEST_BRANCH
 
     test_project = setup_test_project
 
-    # Wait for claudestep workflow to start (triggered by fixture via workflow_dispatch)
+    # Wait for claudechain workflow to start (triggered by fixture via workflow_dispatch)
     gh.wait_for_workflow_to_start(
-        workflow_name="claudestep.yml",
+        workflow_name="claudechain.yml",
         timeout=60,
         branch=E2E_TEST_BRANCH
     )
 
     # Wait for workflow to complete (creates first PR)
     first_workflow_run = gh.wait_for_workflow_completion(
-        workflow_name="claudestep.yml",
+        workflow_name="claudechain.yml",
         timeout=900,  # 15 minutes
         branch=E2E_TEST_BRANCH
     )
@@ -172,7 +172,7 @@ def test_merge_triggered_workflow(
         f"At least one PR should be created for project '{test_project}'. Workflow run: {first_workflow_run.url}"
 
     first_pr = project_prs[0]
-    first_pr_url = f"https://github.com/gestrich/claude-step/pull/{first_pr.number}"
+    first_pr_url = f"https://github.com/gestrich/claude-chain/pull/{first_pr.number}"
 
     # Verify first PR is open
     assert first_pr.state == "open", \
@@ -184,21 +184,21 @@ def test_merge_triggered_workflow(
     # Explicitly trigger workflow via workflow_dispatch after merge
     # Merges done with GITHUB_TOKEN don't trigger push events (GitHub security feature)
     gh.trigger_workflow(
-        workflow_name="claudestep.yml",
+        workflow_name="claudechain.yml",
         inputs={"project_name": test_project},
         ref=E2E_TEST_BRANCH
     )
 
     # Wait for the workflow to start
     gh.wait_for_workflow_to_start(
-        workflow_name="claudestep.yml",
+        workflow_name="claudechain.yml",
         timeout=60,
         branch=E2E_TEST_BRANCH
     )
 
     # Wait for the second workflow run to complete (creates second PR)
     second_workflow_run = gh.wait_for_workflow_completion(
-        workflow_name="claudestep.yml",
+        workflow_name="claudechain.yml",
         timeout=900,  # 15 minutes
         branch=E2E_TEST_BRANCH
     )
@@ -221,9 +221,9 @@ def test_merge_triggered_workflow(
         f"Found {len(open_prs)} open PR(s). Second workflow run: {second_workflow_run.url}"
 
     second_pr = open_prs[0]
-    second_pr_url = f"https://github.com/gestrich/claude-step/pull/{second_pr.number}"
+    second_pr_url = f"https://github.com/gestrich/claude-chain/pull/{second_pr.number}"
 
-    # Verify second PR has claudestep label
+    # Verify second PR has claudechain label
     assert DEFAULT_PR_LABEL in [label.lower() for label in second_pr.labels], \
         f"Second PR #{second_pr.number} should have '{DEFAULT_PR_LABEL}' label. PR URL: {second_pr_url}"
 

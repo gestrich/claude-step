@@ -2,9 +2,9 @@
 
 ## Background
 
-The current ClaudeStep project structure requires specs to be organized as:
+The current ClaudeChain project structure requires specs to be organized as:
 ```
-claude-step/
+claude-chain/
 ├── project-a/
 │   ├── spec.md
 │   └── configuration.yml  (optional)
@@ -14,7 +14,7 @@ claude-step/
 ```
 
 This nested structure has limitations:
-- Forces a specific directory name (`claude-step/`)
+- Forces a specific directory name (`claude-chain/`)
 - Requires one subdirectory per project
 - Requires the spec file to be named `spec.md`
 
@@ -43,7 +43,7 @@ my-configs/                 (optional)
 
 This simplifies setup and gives users full control over their directory structure.
 
-**Breaking change**: This is a v3 breaking change. Existing `claude-step/{project}/` structures will not work without migration.
+**Breaking change**: This is a v3 breaking change. Existing `claude-chain/{project}/` structures will not work without migration.
 
 ## Phases
 
@@ -83,7 +83,7 @@ inputs:
 **Goal**: Change how projects are identified and how paths are computed.
 
 **Files to modify**:
-- `src/claudestep/domain/project.py`
+- `src/claudechain/domain/project.py`
 
 **Changes**:
 - Update `Project` dataclass to store:
@@ -114,7 +114,7 @@ inputs:
 **Goal**: Configuration loading works with new path structure.
 
 **Files to modify**:
-- `src/claudestep/domain/project_configuration.py`
+- `src/claudechain/domain/project_configuration.py`
 
 **Changes**:
 - `from_yaml_string()` remains unchanged (parses content)
@@ -130,7 +130,7 @@ inputs:
 **Goal**: Repository loads specs and configs from flat directories.
 
 **Files to modify**:
-- `src/claudestep/infrastructure/repositories/project_repository.py`
+- `src/claudechain/infrastructure/repositories/project_repository.py`
 
 **Changes**:
 - Update `load_spec()` to use `project.spec_path` (which now uses spec_directory)
@@ -156,7 +156,7 @@ inputs:
 **Goal**: Ensure all `.md` files in spec_directory are valid specs with task checkboxes.
 
 **Files to modify**:
-- `src/claudestep/domain/spec_content.py` - Add validation method
+- `src/claudechain/domain/spec_content.py` - Add validation method
 
 **Changes**:
 - Add `validate()` method to `SpecContent` that raises `InvalidSpecError` if:
@@ -167,7 +167,7 @@ inputs:
 
 **New exception**:
 ```python
-class InvalidSpecError(ClaudeStepError):
+class InvalidSpecError(ClaudeChainError):
     """Raised when a spec file is invalid (no tasks, malformed, etc.)."""
     pass
 ```
@@ -185,10 +185,10 @@ class InvalidSpecError(ClaudeStepError):
 **Goal**: Commands receive and use new directory parameters.
 
 **Files to modify**:
-- `src/claudestep/__main__.py` - Update argument parsing and environment reading
-- `src/claudestep/cli/commands/prepare.py` - Use new project discovery
-- `src/claudestep/cli/commands/finalize.py` - Use new paths
-- `src/claudestep/cli/commands/discover_ready.py` - Use new discovery
+- `src/claudechain/__main__.py` - Update argument parsing and environment reading
+- `src/claudechain/cli/commands/prepare.py` - Use new project discovery
+- `src/claudechain/cli/commands/finalize.py` - Use new paths
+- `src/claudechain/cli/commands/discover_ready.py` - Use new discovery
 
 **Changes**:
 - Add `--spec-directory` and `--config-directory` CLI arguments
@@ -196,7 +196,7 @@ class InvalidSpecError(ClaudeStepError):
 - Read from `SPEC_DIRECTORY`, `CONFIG_DIRECTORY`, and `PROJECT_NAME` environment variables
 - Update project discovery to use new `ProjectRepository.discover_projects()`
 - If `project_name` provided, filter to only that project
-- Remove logic that assumes `claude-step/{project}/` structure
+- Remove logic that assumes `claude-chain/{project}/` structure
 
 **Environment variable mapping**:
 ```python
@@ -216,14 +216,14 @@ project_name = args.project_name or os.environ.get("PROJECT_NAME", "")
 **Goal**: Statistics collection works with new structure.
 
 **Files to modify**:
-- `src/claudestep/cli/commands/statistics.py`
-- `src/claudestep/services/composite/statistics_service.py`
+- `src/claudechain/cli/commands/statistics.py`
+- `src/claudechain/services/composite/statistics_service.py`
 
 **Changes**:
 - Accept spec_directory and config_directory parameters
 - Discover projects from spec_directory
 - Load configs from config_directory (or use defaults)
-- Remove references to old `claude-step/{project}/` paths
+- Remove references to old `claude-chain/{project}/` paths
 
 **Tests to update**:
 - `tests/integration/cli/commands/test_statistics.py`
@@ -235,10 +235,10 @@ project_name = args.project_name or os.environ.get("PROJECT_NAME", "")
 **Goal**: Branch names and PR detection work with new project names.
 
 **Files to modify**:
-- `src/claudestep/services/core/pr_service.py`
+- `src/claudechain/services/core/pr_service.py`
 
 **Changes**:
-- Branch naming format unchanged: `claude-step-{project}-{task_hash}`
+- Branch naming format unchanged: `claude-chain-{project}-{task_hash}`
 - Project detection from branch unchanged (extracts project name)
 - Verify no assumptions about directory structure in PR service
 
@@ -252,8 +252,8 @@ project_name = args.project_name or os.environ.get("PROJECT_NAME", "")
 **Goal**: Auto-start detection works with new flat directory structure.
 
 **Files to modify**:
-- `src/claudestep/services/composite/auto_start_service.py`
-- `.github/workflows/claudestep.yml` (path filters)
+- `src/claudechain/services/composite/auto_start_service.py`
+- `.github/workflows/claudechain.yml` (path filters)
 
 **Changes**:
 - Update `detect_changed_projects()` to:
@@ -261,7 +261,7 @@ project_name = args.project_name or os.environ.get("PROJECT_NAME", "")
   - Detect changes to `{spec_directory}/*.md` files
   - Extract project name from changed filename
 - Update workflow path filters:
-  - Old: `claude-step/**/spec.md`
+  - Old: `claude-chain/**/spec.md`
   - New: User-configured via workflow inputs (document how to set up)
 
 **Note**: Auto-start path filters require user configuration since `spec_directory` is user-defined. Document in README that users should update their workflow triggers:
@@ -288,7 +288,7 @@ on:
 - `action.yml` description updates (done in Phase 1)
 
 **Documentation changes**:
-- Remove `claude-step/{project}/` examples
+- Remove `claude-chain/{project}/` examples
 - Show new flat directory structure
 - Explain spec_directory (required) and config_directory (optional)
 - Show examples of same-directory and separate-directory configurations
@@ -320,7 +320,7 @@ configs/
 3. Configure the workflow:
 
 ```yaml
-- uses: gestrich/claude-step@v3
+- uses: gestrich/claude-chain@v3
   with:
     spec_directory: 'specs'
     config_directory: 'configs'  # Optional
@@ -335,7 +335,7 @@ v3 changes from nested to flat directory structure:
 
 **Before (v2)**:
 ```
-claude-step/
+claude-chain/
 ├── my-project/
 │   ├── spec.md
 │   ├── configuration.yml
@@ -355,12 +355,12 @@ configs/  # Optional
 **Workflow changes**:
 ```yaml
 # Before (v2)
-- uses: gestrich/claude-step@v2
+- uses: gestrich/claude-chain@v2
   with:
     project_name: 'my-project'
 
 # After (v3)
-- uses: gestrich/claude-step@v3
+- uses: gestrich/claude-chain@v3
   with:
     spec_directory: 'specs'
     config_directory: 'configs'

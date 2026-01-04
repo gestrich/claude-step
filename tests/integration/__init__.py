@@ -1,1 +1,1 @@
-# Integration tests for ClaudeStep
+# Integration tests for ClaudeChain

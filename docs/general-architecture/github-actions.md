@@ -4,7 +4,7 @@
 
 ### Convention: Multiple Actions in One Repository
 
-ClaudeStep provides **two GitHub Actions** in a single repository:
+ClaudeChain provides **two GitHub Actions** in a single repository:
 
 1. **Main Action** (`action.yml`) - Core refactoring automation
 2. **Statistics Action** (`statistics/action.yml`) - Reporting and analytics
@@ -17,9 +17,9 @@ claude-refactor-chain/
 ├── statistics/
 │   └── action.yml                # Statistics action
 ├── src/
-│   └── claudestep/               # Modern Python package (layered architecture)
+│   └── claudechain/               # Modern Python package (layered architecture)
 └── scripts/
-    └── claudestep/               # Legacy compatibility layer (deprecated)
+    └── claudechain/               # Legacy compatibility layer (deprecated)
 ```
 
 ### Naming Convention
@@ -37,15 +37,15 @@ claude-refactor-chain/
 - Separates concerns while sharing common code
 
 **Package Structure**:
-- Modern code lives in `src/claudestep/` following layered architecture
-- Legacy code in `scripts/claudestep/` for backward compatibility
+- Modern code lives in `src/claudechain/` following layered architecture
+- Legacy code in `scripts/claudechain/` for backward compatibility
 - PYTHONPATH includes both directories during migration
 
 ### Usage Patterns
 
 **Main Action** (Primary use case):
 ```yaml
-- uses: gestrich/claude-step@v1
+- uses: gestrich/claude-chain@v1
   with:
     anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
     project_name: 'my-refactor'
@@ -53,7 +53,7 @@ claude-refactor-chain/
 
 **Statistics Action** (Reporting):
 ```yaml
-- uses: gestrich/claude-step/statistics@v1
+- uses: gestrich/claude-chain/statistics@v1
   with:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     days_back: 7
@@ -65,25 +65,25 @@ When adding new actions to this repository:
 
 1. **Create a subdirectory** with a descriptive name (e.g., `validation/`, `metrics/`)
 2. **Add `action.yml`** in that subdirectory (not `action-name.yml`)
-3. **Keep Python logic** in `src/claudestep/` following layered architecture
-4. **Add command** to `src/claudestep/cli/` directory
+3. **Keep Python logic** in `src/claudechain/` following layered architecture
+4. **Add command** to `src/claudechain/cli/` directory
 5. **Update this document** with the new action
 
 **Example for a hypothetical "validate" action**:
 ```
 validate/
-└── action.yml    # Calls: python3 -m claudestep validate
+└── action.yml    # Calls: python3 -m claudechain validate
 ```
 
 ## Python-First Approach
 
 ### Convention: Minimal YAML, Maximal Python
 
-ClaudeStep follows a **Python-first architecture** where:
+ClaudeChain follows a **Python-first architecture** where:
 
 - **GitHub Actions YAML files** are lightweight wrappers
 - **Python code** contains all business logic
-- **Actions invoke Python** via `python3 -m claudestep <command>`
+- **Actions invoke Python** via `python3 -m claudechain <command>`
 
 ### Why Python-First?
 
@@ -117,7 +117,7 @@ runs:
 runs:
   using: 'composite'
   steps:
-    - run: python3 -m claudestep statistics
+    - run: python3 -m claudechain statistics
       env:
         CONFIG_PATH: ${{ inputs.config_path }}
 ```
@@ -144,7 +144,7 @@ Action YAML files should **never**:
 **YAML (Minimal)**:
 ```yaml
 # statistics/action.yml
-name: 'ClaudeStep Statistics'
+name: 'ClaudeChain Statistics'
 inputs:
   days_back:
     description: 'Days to look back'
@@ -169,7 +169,7 @@ runs:
 
     - name: Generate statistics
       id: stats
-      run: python3 -m claudestep statistics
+      run: python3 -m claudechain statistics
       env:
         STATS_DAYS_BACK: ${{ inputs.days_back }}
         SLACK_WEBHOOK_URL: ${{ inputs.slack_webhook_url }}
@@ -190,7 +190,7 @@ runs:
 
 **Python (All Logic)**:
 ```python
-# scripts/claudestep/commands/statistics.py
+# scripts/claudechain/commands/statistics.py
 def cmd_statistics(args, gh):
     """All business logic lives here"""
     days_back = int(os.environ.get("STATS_DAYS_BACK", "30"))
@@ -226,7 +226,7 @@ def test_progress_bar():
 
 ### Convention: Spec Files Must Live in Base Branch
 
-ClaudeStep follows a **base branch source of truth** pattern where:
+ClaudeChain follows a **base branch source of truth** pattern where:
 
 - **Spec files** (`spec.md`, `configuration.yml`) must exist in the base branch (typically `main`)
 - **All operations** fetch spec files via GitHub API, never from filesystem
@@ -241,14 +241,14 @@ ClaudeStep follows a **base branch source of truth** pattern where:
 2. **Reliability** - No "file not found" errors from missing specs in test branches
 3. **Simplicity** - Users create/update specs once, merge to base, then run workflows
 4. **Scalability** - Statistics and discovery work across all projects without filesystem dependencies
-5. **Clear Workflow** - Create spec → Merge to base → Run ClaudeStep (easy to understand)
+5. **Clear Workflow** - Create spec → Merge to base → Run ClaudeChain (easy to understand)
 
 **Comparison**:
 
 ❌ **Filesystem-based approach** (what we avoid):
 ```python
 # BAD: Reading from local filesystem
-with open("claude-step/my-project/spec.md", "r") as f:
+with open("claude-chain/my-project/spec.md", "r") as f:
     spec_content = f.read()
 # Problem: File might not exist if not merged to current branch
 ```
@@ -259,7 +259,7 @@ with open("claude-step/my-project/spec.md", "r") as f:
 spec_content = get_file_from_branch(
     repo="owner/repo",
     branch="main",
-    file_path="claude-step/my-project/spec.md"
+    file_path="claude-chain/my-project/spec.md"
 )
 # Always fetches from base branch, regardless of current context
 ```
@@ -271,9 +271,9 @@ spec_content = get_file_from_branch(
 # Before proceeding, validate spec files exist in base branch
 base_branch = os.getenv("BASE_BRANCH", "main")
 
-if not file_exists_in_branch(repo, base_branch, f"claude-step/{project}/spec.md"):
+if not file_exists_in_branch(repo, base_branch, f"claude-chain/{project}/spec.md"):
     print(f"Error: spec.md not found in branch '{base_branch}'")
-    print(f"Please merge your spec files to '{base_branch}' before running ClaudeStep.")
+    print(f"Please merge your spec files to '{base_branch}' before running ClaudeChain.")
     sys.exit(1)
 ```
 
@@ -283,7 +283,7 @@ if not file_exists_in_branch(repo, base_branch, f"claude-step/{project}/spec.md"
 spec_content = get_file_from_branch(
     repo=repo,
     branch=base_branch,
-    file_path=f"claude-step/{project}/spec.md"
+    file_path=f"claude-chain/{project}/spec.md"
 )
 
 # Parse tasks from content string (not file path)
@@ -307,18 +307,18 @@ def file_exists_in_branch(repo: str, branch: str, file_path: str) -> bool:
 
 **Step 1**: Create spec files in project directory:
 ```bash
-mkdir -p claude-step/my-project
+mkdir -p claude-chain/my-project
 # Create spec.md and configuration.yml
 ```
 
 **Step 2**: Merge to base branch:
 ```bash
-git add claude-step/my-project/
-git commit -m "Add ClaudeStep project: my-project"
+git add claude-chain/my-project/
+git commit -m "Add ClaudeChain project: my-project"
 git push origin main
 ```
 
-**Step 3**: Run ClaudeStep workflow:
+**Step 3**: Run ClaudeChain workflow:
 - Workflow fetches specs from base branch via API
 - Creates PR with code changes AND marks task as complete in spec.md
 - Users merge PR when ready
@@ -330,16 +330,16 @@ git push origin main
 ```
 Error: Spec files not found in branch 'main'
 Required files:
-  - claude-step/my-project/spec.md
-  - claude-step/my-project/configuration.yml
+  - claude-chain/my-project/spec.md
+  - claude-chain/my-project/configuration.yml
 
-Please merge your spec files to the 'main' branch before running ClaudeStep.
+Please merge your spec files to the 'main' branch before running ClaudeChain.
 ```
 
 **Custom Base Branch**:
 ```yaml
-# .github/workflows/claudestep.yml
-- uses: gestrich/claude-step@v1
+# .github/workflows/claudechain.yml
+- uses: gestrich/claude-chain@v1
   with:
     project_name: 'my-project'
     base_branch: 'master'  # For repos using 'master' instead of 'main'
@@ -359,9 +359,9 @@ Please merge your spec files to the 'main' branch before running ClaudeStep.
 │  action.yml (Composite Action)          │
 │                                         │
 │  1. Setup Python                        │
-│  2. python3 -m claudestep prepare       │
+│  2. python3 -m claudechain prepare       │
 │  3. anthropics/claude-code-action@v1    │
-│  4. python3 -m claudestep finalize      │
+│  4. python3 -m claudechain finalize      │
 │  5. Upload artifacts                    │
 └─────────────────────────────────────────┘
          │
@@ -409,7 +409,7 @@ Please merge your spec files to the 'main' branch before running ClaudeStep.
 │  statistics/action.yml                  │
 │                                         │
 │  1. Setup Python                        │
-│  2. python3 -m claudestep statistics    │
+│  2. python3 -m claudechain statistics    │
 └─────────────────────────────────────────┘
          │
          ▼
@@ -443,7 +443,7 @@ Please merge your spec files to the 'main' branch before running ClaudeStep.
 
 ### Supported Triggers
 
-ClaudeStep workflows support two trigger modes:
+ClaudeChain workflows support two trigger modes:
 
 1. **`workflow_dispatch`**: Manual trigger with project name input
 2. **`pull_request: types: [closed]`**: Automatic continuation after PR merge
@@ -453,7 +453,7 @@ on:
   workflow_dispatch:
     inputs:
       project_name:
-        description: 'Project name (folder under claude-step/)'
+        description: 'Project name (folder under claude-chain/)'
         required: true
         type: string
 
@@ -465,17 +465,17 @@ on:
 
 ### How PR Merge Triggers Work
 
-When a ClaudeStep PR is merged:
+When a ClaudeChain PR is merged:
 1. The `pull_request: types: [closed]` event fires
-2. ClaudeStep checks if the PR has the `claudestep` label
-3. ClaudeStep verifies the PR was merged (not just closed)
+2. ClaudeChain checks if the PR has the `claudechain` label
+3. ClaudeChain verifies the PR was merged (not just closed)
 4. If both conditions are met, the next task is triggered
 
 **Note:** The `claude-code-action` does not support `push` events. The first task for a new project must be triggered manually via `workflow_dispatch`.
 
 ## Summary
 
-**ClaudeStep GitHub Actions** follow these key principles:
+**ClaudeChain GitHub Actions** follow these key principles:
 
 ✅ **Python-First**: Business logic in Python, YAML as thin wrapper
 ✅ **Multiple Actions**: Organized in subdirectories (`statistics/`)

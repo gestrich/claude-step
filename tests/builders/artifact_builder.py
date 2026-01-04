@@ -56,7 +56,7 @@ class TaskMetadataBuilder:
         self._task_index: int = 1
         self._task_description: str = "Default task"
         self._project: str = "sample-project"
-        self._branch_name: str = "claude-step-sample-project-1"
+        self._branch_name: str = "claude-chain-sample-project-1"
         self._assignee: str = "alice"
         self._created_at: datetime = datetime(2025, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
         self._workflow_run_id: int = 123456789
@@ -79,7 +79,7 @@ class TaskMetadataBuilder:
         """
         self._task_index = index
         self._task_description = description
-        self._branch_name = f"claude-step-{self._project}-{index}"
+        self._branch_name = f"claude-chain-{self._project}-{index}"
         return self
 
     def with_project(self, project: str) -> "TaskMetadataBuilder":
@@ -94,7 +94,7 @@ class TaskMetadataBuilder:
             Self for method chaining
         """
         self._project = project
-        self._branch_name = f"claude-step-{project}-{self._task_index}"
+        self._branch_name = f"claude-chain-{project}-{self._task_index}"
         return self
 
     def with_assignee(self, assignee: str) -> "TaskMetadataBuilder":

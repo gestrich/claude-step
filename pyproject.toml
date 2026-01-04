@@ -3,13 +3,13 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "claudestep"
+name = "claudechain"
 version = "0.1.0"
 description = "Incremental AI-powered refactoring automation"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-    { name = "ClaudeStep Contributors" }
+    { name = "ClaudeChain Contributors" }
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -32,7 +32,7 @@ dev = [
 ]
 
 [project.scripts]
-claudestep = "claudestep.__main__:main"
+claudechain = "claudechain.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -47,7 +47,7 @@ addopts = [
     "--strict-markers",
     "--tb=short",
     "--disable-warnings",
-    "--cov=src/claudestep",
+    "--cov=src/claudechain",
     "--cov-report=term-missing",
     "--cov-report=html",
 ]
@@ -59,7 +59,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["src/claudestep"]
+source = ["src/claudechain"]
 omit = ["*/tests/*"]
 
 [tool.coverage.report]

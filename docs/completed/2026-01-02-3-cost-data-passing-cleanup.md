@@ -32,7 +32,7 @@ After completing the token-based cost calculation feature (Phase 4 in `2026-01-0
 - [x] Phase 1: Rename `notify_pr` to `format_slack_notification`
 
 Rename the command to clearly indicate its purpose:
-- Rename `src/claudestep/cli/commands/notify_pr.py` → `src/claudestep/cli/commands/format_slack_notification.py`
+- Rename `src/claudechain/cli/commands/notify_pr.py` → `src/claudechain/cli/commands/format_slack_notification.py`
 - Rename function `cmd_notify_pr` → `cmd_format_slack_notification`
 - Update CLI command from `notify-pr` → `format-slack-notification`
 - Update imports in `__main__.py`
@@ -40,9 +40,9 @@ Rename the command to clearly indicate its purpose:
 - Update tests: rename test file and update references
 
 **Files to modify:**
-- `src/claudestep/cli/commands/notify_pr.py` (rename to `format_slack_notification.py`)
-- `src/claudestep/__main__.py`
-- `src/claudestep/cli/parser.py` (if command is registered there)
+- `src/claudechain/cli/commands/notify_pr.py` (rename to `format_slack_notification.py`)
+- `src/claudechain/__main__.py`
+- `src/claudechain/cli/parser.py` (if command is registered there)
 - `action.yml`
 - `tests/unit/cli/commands/test_notify_pr.py` (rename)
 
@@ -113,10 +113,10 @@ Instead of passing three separate cost parameters, pass a serialized `CostBreakd
    ```
 
 **Files to modify:**
-- `src/claudestep/domain/cost_breakdown.py` (add `to_json`/`from_json`)
-- `src/claudestep/cli/commands/format_slack_notification.py`
-- `src/claudestep/cli/commands/post_pr_comment.py`
-- `src/claudestep/__main__.py`
+- `src/claudechain/domain/cost_breakdown.py` (add `to_json`/`from_json`)
+- `src/claudechain/cli/commands/format_slack_notification.py`
+- `src/claudechain/cli/commands/post_pr_comment.py`
+- `src/claudechain/__main__.py`
 - `action.yml`
 
 - [x] Phase 3: Update tests

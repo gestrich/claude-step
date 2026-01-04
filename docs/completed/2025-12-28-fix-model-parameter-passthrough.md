@@ -2,10 +2,10 @@
 
 ## Background
 
-ClaudeStep accepts a `claude_model` input parameter that allows users to specify which Claude model to use (e.g., `claude-3-haiku-20240307` for cost savings or `claude-sonnet-4-5` for better performance). However, this parameter is currently not being passed to the underlying `anthropics/claude-code-action@v1` when it executes.
+ClaudeChain accepts a `claude_model` input parameter that allows users to specify which Claude model to use (e.g., `claude-3-haiku-20240307` for cost savings or `claude-sonnet-4-5` for better performance). However, this parameter is currently not being passed to the underlying `anthropics/claude-code-action@v1` when it executes.
 
 **The Problem:**
-- E2E tests specify `claude_model: 'claude-3-haiku-20240307'` in `.github/workflows/claudestep-test.yml`
+- E2E tests specify `claude_model: 'claude-3-haiku-20240307'` in `.github/workflows/claudechain-test.yml`
 - The action.yml accepts this input with default `'claude-sonnet-4-5'`
 - BUT the model parameter is never passed to Claude Code CLI via `claude_args`
 - Result: Claude Code always uses its default model (Sonnet 4.5), ignoring the configuration
@@ -99,7 +99,7 @@ Modify `action.yml` in the "Generate and post PR summary" step (around line 181-
 
 - [x] Phase 3: Verify E2E test configuration
 
-Confirm that `.github/workflows/claudestep-test.yml` is correctly configured to use Haiku:
+Confirm that `.github/workflows/claudechain-test.yml` is correctly configured to use Haiku:
 
 **Expected configuration (line 35):**
 ```yaml
@@ -172,7 +172,7 @@ Update `README.md` to clarify how the `claude_model` parameter works:
 - Both invocations of `anthropics/claude-code-action@v1` now respect the `claude_model` input parameter
 
 ### Phase 3 Completion (2025-12-28)
-- Verified `.github/workflows/claudestep-test.yml` line 35 correctly specifies `claude_model: 'claude-3-haiku-20240307'`
+- Verified `.github/workflows/claudechain-test.yml` line 35 correctly specifies `claude_model: 'claude-3-haiku-20240307'`
 - Configuration was already present from the E2E test isolation work - no changes needed
 - Validated `action.yml` is well-formed YAML with no syntax errors
 - E2E test workflow is properly configured to use Haiku model for cost-effective testing

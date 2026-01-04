@@ -3,12 +3,12 @@
 import pytest
 from pathlib import Path
 
-from claudestep.domain.config import (
+from claudechain.domain.config import (
     load_config,
     substitute_template,
     validate_spec_format,
 )
-from claudestep.domain.exceptions import ConfigurationError, FileNotFoundError
+from claudechain.domain.exceptions import ConfigurationError, FileNotFoundError
 
 
 class TestLoadConfig:
@@ -88,7 +88,7 @@ reviewers: []
         # Act & Assert
         with pytest.raises(
             ConfigurationError,
-            match="claude-step-{project}-{index}"
+            match="claude-chain-{project}-{index}"
         ):
             load_config(str(config_file))
 

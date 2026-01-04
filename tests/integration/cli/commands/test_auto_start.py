@@ -4,8 +4,8 @@ from unittest.mock import Mock, patch, call
 
 import pytest
 
-from claudestep.cli.commands.auto_start import cmd_auto_start, cmd_auto_start_summary
-from claudestep.domain.auto_start import AutoStartProject, ProjectChangeType
+from claudechain.cli.commands.auto_start import cmd_auto_start, cmd_auto_start_summary
+from claudechain.domain.auto_start import AutoStartProject, ProjectChangeType
 
 
 class TestCmdAutoStart:
@@ -24,15 +24,15 @@ class TestCmdAutoStart:
     def sample_changed_projects(self):
         """Fixture providing sample changed projects"""
         return [
-            AutoStartProject("project-a", ProjectChangeType.ADDED, "claude-step/project-a/spec.md"),
-            AutoStartProject("project-b", ProjectChangeType.MODIFIED, "claude-step/project-b/spec.md"),
+            AutoStartProject("project-a", ProjectChangeType.ADDED, "claude-chain/project-a/spec.md"),
+            AutoStartProject("project-b", ProjectChangeType.MODIFIED, "claude-chain/project-b/spec.md"),
         ]
 
     @pytest.fixture
     def sample_deleted_project(self):
         """Fixture providing sample deleted project"""
         return [
-            AutoStartProject("project-deleted", ProjectChangeType.DELETED, "claude-step/project-deleted/spec.md"),
+            AutoStartProject("project-deleted", ProjectChangeType.DELETED, "claude-chain/project-deleted/spec.md"),
         ]
 
     def test_cmd_auto_start_detects_and_triggers_new_projects(
@@ -41,18 +41,18 @@ class TestCmdAutoStart:
         """Should detect new projects and trigger workflows successfully"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.auto_start.AutoStartService"
+            "claudechain.cli.commands.auto_start.AutoStartService"
         ) as mock_auto_start_service_class, patch(
-            "claudestep.cli.commands.auto_start.WorkflowService"
+            "claudechain.cli.commands.auto_start.WorkflowService"
         ) as mock_workflow_service_class, patch(
-            "claudestep.cli.commands.auto_start.PRService"
+            "claudechain.cli.commands.auto_start.PRService"
         ):
             # Mock AutoStartService
             mock_auto_start_service = Mock()
             mock_auto_start_service.detect_changed_projects.return_value = sample_changed_projects
             mock_auto_start_service.determine_new_projects.return_value = [sample_changed_projects[0]]
 
-            from claudestep.domain.auto_start import AutoStartDecision
+            from claudechain.domain.auto_start import AutoStartDecision
             mock_auto_start_service.should_auto_trigger.return_value = AutoStartDecision(
                 project=sample_changed_projects[0],
                 should_trigger=True,
@@ -62,7 +62,7 @@ class TestCmdAutoStart:
 
             # Mock WorkflowService
             mock_workflow_service = Mock()
-            mock_workflow_service.batch_trigger_claudestep_workflows.return_value = (
+            mock_workflow_service.batch_trigger_claudechain_workflows.return_value = (
                 ["project-a"],  # triggered
                 []  # failed
             )
@@ -84,13 +84,13 @@ class TestCmdAutoStart:
         mock_auto_start_service.detect_changed_projects.assert_called_once_with(
             ref_before="abc123",
             ref_after="def456",
-            spec_pattern="claude-step/*/spec.md"
+            spec_pattern="claude-chain/*/spec.md"
         )
         mock_auto_start_service.determine_new_projects.assert_called_once()
         mock_auto_start_service.should_auto_trigger.assert_called_once()
 
         # Verify workflow triggering
-        mock_workflow_service.batch_trigger_claudestep_workflows.assert_called_once_with(
+        mock_workflow_service.batch_trigger_claudechain_workflows.assert_called_once_with(
             projects=["project-a"],
             base_branch="main",
             checkout_ref="def456"
@@ -105,7 +105,7 @@ class TestCmdAutoStart:
 
         # Verify console output
         captured = capsys.readouterr()
-        assert "ClaudeStep Auto-Start Detection" in captured.out
+        assert "ClaudeChain Auto-Start Detection" in captured.out
         assert "Successfully triggered: 1 project(s)" in captured.out
 
     def test_cmd_auto_start_handles_no_changes(
@@ -114,9 +114,9 @@ class TestCmdAutoStart:
         """Should handle case when no spec.md changes are detected"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.auto_start.AutoStartService"
+            "claudechain.cli.commands.auto_start.AutoStartService"
         ) as mock_auto_start_service_class, patch(
-            "claudestep.cli.commands.auto_start.PRService"
+            "claudechain.cli.commands.auto_start.PRService"
         ):
             mock_auto_start_service = Mock()
             mock_auto_start_service.detect_changed_projects.return_value = []
@@ -145,9 +145,9 @@ class TestCmdAutoStart:
         """Should handle case when all changed projects already have PRs"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.auto_start.AutoStartService"
+            "claudechain.cli.commands.auto_start.AutoStartService"
         ) as mock_auto_start_service_class, patch(
-            "claudestep.cli.commands.auto_start.PRService"
+            "claudechain.cli.commands.auto_start.PRService"
         ):
             mock_auto_start_service = Mock()
             mock_auto_start_service.detect_changed_projects.return_value = sample_changed_projects
@@ -177,15 +177,15 @@ class TestCmdAutoStart:
         """Should skip deleted projects based on business logic"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.auto_start.AutoStartService"
+            "claudechain.cli.commands.auto_start.AutoStartService"
         ) as mock_auto_start_service_class, patch(
-            "claudestep.cli.commands.auto_start.PRService"
+            "claudechain.cli.commands.auto_start.PRService"
         ):
             mock_auto_start_service = Mock()
             mock_auto_start_service.detect_changed_projects.return_value = sample_deleted_project
             mock_auto_start_service.determine_new_projects.return_value = sample_deleted_project
 
-            from claudestep.domain.auto_start import AutoStartDecision
+            from claudechain.domain.auto_start import AutoStartDecision
             mock_auto_start_service.should_auto_trigger.return_value = AutoStartDecision(
                 project=sample_deleted_project[0],
                 should_trigger=False,
@@ -218,18 +218,18 @@ class TestCmdAutoStart:
         """Should handle partial failures when some workflows fail to trigger"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.auto_start.AutoStartService"
+            "claudechain.cli.commands.auto_start.AutoStartService"
         ) as mock_auto_start_service_class, patch(
-            "claudestep.cli.commands.auto_start.WorkflowService"
+            "claudechain.cli.commands.auto_start.WorkflowService"
         ) as mock_workflow_service_class, patch(
-            "claudestep.cli.commands.auto_start.PRService"
+            "claudechain.cli.commands.auto_start.PRService"
         ):
             # Mock AutoStartService
             mock_auto_start_service = Mock()
             mock_auto_start_service.detect_changed_projects.return_value = sample_changed_projects
             mock_auto_start_service.determine_new_projects.return_value = sample_changed_projects
 
-            from claudestep.domain.auto_start import AutoStartDecision
+            from claudechain.domain.auto_start import AutoStartDecision
             mock_auto_start_service.should_auto_trigger.side_effect = [
                 AutoStartDecision(sample_changed_projects[0], True, "New project"),
                 AutoStartDecision(sample_changed_projects[1], True, "New project"),
@@ -238,7 +238,7 @@ class TestCmdAutoStart:
 
             # Mock WorkflowService with partial failure
             mock_workflow_service = Mock()
-            mock_workflow_service.batch_trigger_claudestep_workflows.return_value = (
+            mock_workflow_service.batch_trigger_claudechain_workflows.return_value = (
                 ["project-a"],  # triggered
                 ["project-b"]   # failed
             )
@@ -271,18 +271,18 @@ class TestCmdAutoStart:
         """Should handle case when all workflow triggers fail"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.auto_start.AutoStartService"
+            "claudechain.cli.commands.auto_start.AutoStartService"
         ) as mock_auto_start_service_class, patch(
-            "claudestep.cli.commands.auto_start.WorkflowService"
+            "claudechain.cli.commands.auto_start.WorkflowService"
         ) as mock_workflow_service_class, patch(
-            "claudestep.cli.commands.auto_start.PRService"
+            "claudechain.cli.commands.auto_start.PRService"
         ):
             # Mock AutoStartService
             mock_auto_start_service = Mock()
             mock_auto_start_service.detect_changed_projects.return_value = sample_changed_projects
             mock_auto_start_service.determine_new_projects.return_value = [sample_changed_projects[0]]
 
-            from claudestep.domain.auto_start import AutoStartDecision
+            from claudechain.domain.auto_start import AutoStartDecision
             mock_auto_start_service.should_auto_trigger.return_value = AutoStartDecision(
                 sample_changed_projects[0], True, "New project"
             )
@@ -290,7 +290,7 @@ class TestCmdAutoStart:
 
             # Mock WorkflowService with all failures
             mock_workflow_service = Mock()
-            mock_workflow_service.batch_trigger_claudestep_workflows.return_value = (
+            mock_workflow_service.batch_trigger_claudechain_workflows.return_value = (
                 [],  # triggered
                 ["project-a"]  # failed
             )
@@ -322,9 +322,9 @@ class TestCmdAutoStart:
         """Should handle exceptions and return error code"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.auto_start.AutoStartService"
+            "claudechain.cli.commands.auto_start.AutoStartService"
         ) as mock_auto_start_service_class, patch(
-            "claudestep.cli.commands.auto_start.PRService"
+            "claudechain.cli.commands.auto_start.PRService"
         ):
             mock_auto_start_service = Mock()
             mock_auto_start_service.detect_changed_projects.side_effect = Exception("Test error")
@@ -352,15 +352,15 @@ class TestCmdAutoStart:
         """Should skip all projects when auto-start is disabled"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.auto_start.AutoStartService"
+            "claudechain.cli.commands.auto_start.AutoStartService"
         ) as mock_auto_start_service_class, patch(
-            "claudestep.cli.commands.auto_start.PRService"
+            "claudechain.cli.commands.auto_start.PRService"
         ):
             mock_auto_start_service = Mock()
             mock_auto_start_service.detect_changed_projects.return_value = sample_changed_projects
             mock_auto_start_service.determine_new_projects.return_value = [sample_changed_projects[0]]
 
-            from claudestep.domain.auto_start import AutoStartDecision
+            from claudechain.domain.auto_start import AutoStartDecision
             mock_auto_start_service.should_auto_trigger.return_value = AutoStartDecision(
                 sample_changed_projects[0],
                 should_trigger=False,
@@ -396,18 +396,18 @@ class TestCmdAutoStart:
         """Should print progress information to console"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.auto_start.AutoStartService"
+            "claudechain.cli.commands.auto_start.AutoStartService"
         ) as mock_auto_start_service_class, patch(
-            "claudestep.cli.commands.auto_start.WorkflowService"
+            "claudechain.cli.commands.auto_start.WorkflowService"
         ) as mock_workflow_service_class, patch(
-            "claudestep.cli.commands.auto_start.PRService"
+            "claudechain.cli.commands.auto_start.PRService"
         ):
             # Mock AutoStartService
             mock_auto_start_service = Mock()
             mock_auto_start_service.detect_changed_projects.return_value = sample_changed_projects
             mock_auto_start_service.determine_new_projects.return_value = [sample_changed_projects[0]]
 
-            from claudestep.domain.auto_start import AutoStartDecision
+            from claudechain.domain.auto_start import AutoStartDecision
             mock_auto_start_service.should_auto_trigger.return_value = AutoStartDecision(
                 sample_changed_projects[0], True, "New project"
             )
@@ -415,7 +415,7 @@ class TestCmdAutoStart:
 
             # Mock WorkflowService
             mock_workflow_service = Mock()
-            mock_workflow_service.batch_trigger_claudestep_workflows.return_value = (
+            mock_workflow_service.batch_trigger_claudechain_workflows.return_value = (
                 ["project-a"], []
             )
             mock_workflow_service_class.return_value = mock_workflow_service
@@ -445,11 +445,11 @@ class TestCmdAutoStart:
         """Should instantiate services with correct dependencies"""
         # Arrange
         with patch(
-            "claudestep.cli.commands.auto_start.AutoStartService"
+            "claudechain.cli.commands.auto_start.AutoStartService"
         ) as mock_auto_start_service_class, patch(
-            "claudestep.cli.commands.auto_start.WorkflowService"
+            "claudechain.cli.commands.auto_start.WorkflowService"
         ) as mock_workflow_service_class, patch(
-            "claudestep.cli.commands.auto_start.PRService"
+            "claudechain.cli.commands.auto_start.PRService"
         ) as mock_pr_service_class:
             # Mock services
             mock_pr_service = Mock()
@@ -459,14 +459,14 @@ class TestCmdAutoStart:
             mock_auto_start_service.detect_changed_projects.return_value = sample_changed_projects
             mock_auto_start_service.determine_new_projects.return_value = [sample_changed_projects[0]]
 
-            from claudestep.domain.auto_start import AutoStartDecision
+            from claudechain.domain.auto_start import AutoStartDecision
             mock_auto_start_service.should_auto_trigger.return_value = AutoStartDecision(
                 sample_changed_projects[0], True, "New project"
             )
             mock_auto_start_service_class.return_value = mock_auto_start_service
 
             mock_workflow_service = Mock()
-            mock_workflow_service.batch_trigger_claudestep_workflows.return_value = (["project-a"], [])
+            mock_workflow_service.batch_trigger_claudechain_workflows.return_value = (["project-a"], [])
             mock_workflow_service_class.return_value = mock_workflow_service
 
             # Act
@@ -525,7 +525,7 @@ class TestCmdAutoStartSummary:
         summary_calls = mock_github_helper.write_step_summary.call_args_list
         summary_text = " ".join([str(c) for c in summary_calls])
 
-        assert "ClaudeStep Auto-Start Summary" in summary_text
+        assert "ClaudeChain Auto-Start Summary" in summary_text
         assert "All workflows triggered successfully" in summary_text
         assert "project-a" in summary_text
         assert "project-b" in summary_text

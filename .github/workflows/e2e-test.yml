@@ -1,9 +1,9 @@
 name: E2E Integration Tests
 
-# This workflow runs the E2E test suite which validates ClaudeStep by testing it
+# This workflow runs the E2E test suite which validates ClaudeChain by testing it
 # against test projects within this repository (recursive workflow pattern).
 #
-# The tests create temporary test projects, trigger the claudestep.yml workflow,
+# The tests create temporary test projects, trigger the claudechain.yml workflow,
 # verify PRs are created correctly, and clean up all test resources.
 
 on:
@@ -37,8 +37,8 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config --global user.name 'ClaudeStep E2E Tests'
-          git config --global user.email 'claudestep-e2e@users.noreply.github.com'
+          git config --global user.name 'ClaudeChain E2E Tests'
+          git config --global user.email 'claudechain-e2e@users.noreply.github.com'
 
       - name: Set up ephemeral test branch
         env:

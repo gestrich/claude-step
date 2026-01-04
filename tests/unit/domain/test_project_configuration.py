@@ -2,9 +2,9 @@
 
 import pytest
 
-from claudestep.domain.constants import DEFAULT_STALE_PR_DAYS
-from claudestep.domain.project import Project
-from claudestep.domain.project_configuration import ProjectConfiguration
+from claudechain.domain.constants import DEFAULT_STALE_PR_DAYS
+from claudechain.domain.project import Project
+from claudechain.domain.project_configuration import ProjectConfiguration
 
 
 class TestProjectConfigurationDefault:

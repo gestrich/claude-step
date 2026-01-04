@@ -6,43 +6,43 @@
 
 ## Executive Summary
 
-This document outlines a plan to migrate end-to-end integration tests from the separate demo repository (`claude-step-demo`) into the main `claude-step` repository. This migration will eliminate the dependency on an external repository for testing and enable self-contained testing through a recursive workflow pattern.
+This document outlines a plan to migrate end-to-end integration tests from the separate demo repository (`claude-chain-demo`) into the main `claude-chain` repository. This migration will eliminate the dependency on an external repository for testing and enable self-contained testing through a recursive workflow pattern.
 
 ## Current State
 
 ### Repository Structure
 
-**claude-step repository:**
+**claude-chain repository:**
 - Contains the GitHub Action implementation
 - Has unit tests in `tests/unit/` (493 tests, 85% coverage)
 - No E2E tests
 
-**claude-step-demo repository:**
+**claude-chain-demo repository:**
 - Separate repository used solely for testing
 - Contains E2E integration tests in `tests/integration/`:
   - `test_workflow_e2e.py` - Main workflow test (PR creation, summaries, capacity)
   - `test_statistics_e2e.py` - Statistics workflow test
   - `run_test.sh` - Test runner script
   - `README.md` - Test documentation
-- Has a workflow (`.github/workflows/claudestep.yml`) that checks out and runs the claude-step action
-- Contains sample projects in `claude-step/` directory for testing
+- Has a workflow (`.github/workflows/claudechain.yml`) that checks out and runs the claude-chain action
+- Contains sample projects in `claude-chain/` directory for testing
 
 ### Current Testing Flow
 
-1. Developer pushes changes to `claude-step` repository
+1. Developer pushes changes to `claude-chain` repository
 2. Unit tests run automatically via `.github/workflows/test.yml`
-3. Developer manually runs E2E tests in `claude-step-demo`:
+3. Developer manually runs E2E tests in `claude-chain-demo`:
    - Clone demo repo
    - Run `./tests/integration/run_test.sh`
    - Tests trigger workflows in demo repo
-   - Demo repo checks out and runs the claude-step action
+   - Demo repo checks out and runs the claude-chain action
 4. Demo repo serves as the test bed for validating the action
 
 ### Current E2E Test Coverage
 
 **test_workflow_e2e.py:**
 - Creates test projects with tasks
-- Triggers ClaudeStep workflow manually
+- Triggers ClaudeChain workflow manually
 - Verifies PR creation
 - Verifies AI-generated PR summaries
 - Verifies cost information in PR comments
@@ -59,9 +59,9 @@ This document outlines a plan to migrate end-to-end integration tests from the s
 
 ### New Repository Structure
 
-**claude-step repository (after migration):**
+**claude-chain repository (after migration):**
 ```
-claude-step/
+claude-chain/
 ├── .github/
 │   └── workflows/
 │       ├── test.yml                    # Existing unit tests
@@ -86,14 +86,14 @@ claude-step/
         └── e2e-test-migration.md      # This document
 ```
 
-**claude-step-demo repository (after migration):**
+**claude-chain-demo repository (after migration):**
 - Can be archived or deleted
 - No longer needed for testing
 - Historical value only
 
 ### Recursive Workflow Pattern
 
-The key innovation is that the `claude-step` repository will have a workflow that invokes the `claude-step` action on itself:
+The key innovation is that the `claude-chain` repository will have a workflow that invokes the `claude-chain` action on itself:
 
 ```yaml
 # .github/workflows/e2e-test.yml
@@ -131,15 +131,15 @@ jobs:
           ./tests/e2e/run_test.sh
 
 # The E2E tests themselves will:
-# 1. Create test projects in claude-step/test-project-xxx/
-# 2. Trigger the claude-step workflow (below) manually
+# 1. Create test projects in claude-chain/test-project-xxx/
+# 2. Trigger the claude-chain workflow (below) manually
 # 3. Verify the workflow creates PRs correctly
 # 4. Clean up test resources
 
 ---
 
 # This workflow gets triggered BY the E2E tests (recursive)
-name: ClaudeStep Test Workflow
+name: ClaudeChain Test Workflow
 
 on:
   workflow_dispatch:
@@ -148,14 +148,14 @@ on:
         required: true
 
 jobs:
-  run-claudestep:
+  run-claudechain:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       # THIS IS THE RECURSIVE PART:
       # The action uses itself from the current branch/commit
-      - name: Run ClaudeStep action
+      - name: Run ClaudeChain action
         uses: ./  # Use the action from the current repository
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -201,7 +201,7 @@ jobs:
 - Created comprehensive pytest fixtures in `conftest.py` for test isolation and cleanup
 - Added GitHub workflows:
   - `e2e-test.yml`: Runs the E2E test suite
-  - `claudestep-test.yml`: Recursive workflow that tests ClaudeStep on itself
+  - `claudechain-test.yml`: Recursive workflow that tests ClaudeChain on itself
 - Updated `.gitignore` to prevent test artifacts from being committed
 - All helper modules include comprehensive type hints and docstrings
 - Unit tests still pass successfully (506 tests)
@@ -216,11 +216,11 @@ jobs:
 
 2. **Create GitHub workflows:**
    - Create `.github/workflows/e2e-test.yml` (runs E2E test suite)
-   - Create `.github/workflows/claudestep-test.yml` (recursive workflow target)
+   - Create `.github/workflows/claudechain-test.yml` (recursive workflow target)
    - Add workflow documentation comments
 
 3. **Update .gitignore:**
-   - Add `claude-step/test-*` pattern
+   - Add `claude-chain/test-*` pattern
    - Add `tests/e2e/__pycache__/`
    - Prevent committing test artifacts
 
@@ -228,7 +228,7 @@ jobs:
    - Create `tests/e2e/helpers/__init__.py`
    - Create `tests/e2e/helpers/github_helper.py`:
      - Extract `GitHubHelper` class from demo repo
-     - Update repository references to `gestrich/claude-step`
+     - Update repository references to `gestrich/claude-chain`
      - Add type hints and docstrings
      - Handle recursive workflow pattern
    - Create `tests/e2e/helpers/project_manager.py`:
@@ -259,7 +259,7 @@ jobs:
 - `tests/e2e/helpers/github_helper.py`
 - `tests/e2e/helpers/project_manager.py`
 - `.github/workflows/e2e-test.yml`
-- `.github/workflows/claudestep-test.yml`
+- `.github/workflows/claudechain-test.yml`
 
 **Files Modified:**
 - `.gitignore`
@@ -282,7 +282,7 @@ jobs:
   - Merge-triggered workflows (placeholder for future implementation)
   - Empty spec handling
 - All tests use the migrated helper classes (GitHubHelper, TestProjectManager)
-- Tests trigger `claudestep-test.yml` workflow for recursive self-testing
+- Tests trigger `claudechain-test.yml` workflow for recursive self-testing
 - Comprehensive docstrings explain the recursive workflow pattern
 - Tests use fixtures for cleanup to ensure resources are removed even on failure
 - Each test uses unique project IDs via the `project_id` fixture to prevent conflicts
@@ -293,8 +293,8 @@ jobs:
 1. **Copy and adapt test file:**
    - Copy `test_workflow_e2e.py` from demo repo to `tests/e2e/`
    - Update imports to use new helper modules
-   - Change repository from `gestrich/claude-step-demo` to `gestrich/claude-step`
-   - Update workflow name to `claudestep-test.yml`
+   - Change repository from `gestrich/claude-chain-demo` to `gestrich/claude-chain`
+   - Update workflow name to `claudechain-test.yml`
 
 2. **Adapt test logic:**
    - Update test project creation to use same repo
@@ -315,8 +315,8 @@ jobs:
 **Acceptance Criteria:**
 - [ ] Test file exists in `tests/e2e/test_workflow_e2e.py`
 - [ ] Test uses migrated helper classes from helpers/
-- [ ] Test triggers `claudestep-test.yml` workflow correctly
-- [ ] Test verifies PRs are created in claude-step repo
+- [ ] Test triggers `claudechain-test.yml` workflow correctly
+- [ ] Test verifies PRs are created in claude-chain repo
 - [ ] Test verifies AI-generated summaries
 - [ ] Test verifies cost information
 - [ ] Test cleans up all resources (projects, PRs, branches)
@@ -327,8 +327,8 @@ jobs:
 - `tests/e2e/test_workflow_e2e.py`
 
 **Key Changes from Demo Repo:**
-- Repository: `gestrich/claude-step-demo` → `gestrich/claude-step`
-- Workflow: `claudestep.yml` → `claudestep-test.yml`
+- Repository: `gestrich/claude-chain-demo` → `gestrich/claude-chain`
+- Workflow: `claudechain.yml` → `claudechain-test.yml`
 - Same-repo project and branch cleanup
 
 ---
@@ -344,7 +344,7 @@ jobs:
   - `test_statistics_workflow_runs_successfully` - Verifies workflow execution
   - `test_statistics_workflow_with_custom_days` - Tests workflow with default configuration
   - `test_statistics_output_format` - Validates workflow completes and produces output
-- All tests trigger the `claudestep-statistics.yml` workflow
+- All tests trigger the `claudechain-statistics.yml` workflow
 - Tests verify workflow completion status (success or skipped)
 - Created comprehensive `run_test.sh` script with:
   - Prerequisite checks (gh CLI, pytest, Python 3.11+, git config)
@@ -361,7 +361,7 @@ jobs:
 1. **Migrate statistics test:**
    - Copy `test_statistics_e2e.py` from demo repo to `tests/e2e/`
    - Update imports to use new helper modules
-   - Update repository references to `gestrich/claude-step`
+   - Update repository references to `gestrich/claude-chain`
    - Update workflow name if needed
    - Verify test logic works with self-testing
 
@@ -391,7 +391,7 @@ jobs:
 - `tests/e2e/run_test.sh`
 
 **Key Implementation Details:**
-- Tests trigger `claudestep-statistics.yml` which uses the statistics action from `./statistics`
+- Tests trigger `claudechain-statistics.yml` which uses the statistics action from `./statistics`
 - Workflow accepts no manual inputs (runs with default `days_back: 7`)
 - Tests verify workflow completes successfully without checking actual statistics content
 - Future enhancement noted: Add workflow_dispatch inputs to support custom parameters
@@ -412,7 +412,7 @@ jobs:
   - Included link to detailed documentation
 - Completely rewrote `docs/architecture/e2e-testing.md`:
   - Added detailed explanation of recursive workflow pattern
-  - Updated all paths from `claude-step-demo` to `claude-step`
+  - Updated all paths from `claude-chain-demo` to `claude-chain`
   - Documented test structure and expected behavior
   - Updated troubleshooting and configuration sections
   - Added comprehensive test descriptions for both workflow and statistics tests
@@ -529,8 +529,8 @@ jobs:
    - Verify secrets are accessible
 
 3. **Recursive workflow validation:**
-   - Manually trigger `claudestep-test.yml` workflow
-   - Verify it creates PRs in claude-step repo
+   - Manually trigger `claudechain-test.yml` workflow
+   - Verify it creates PRs in claude-chain repo
    - Verify AI-generated summaries are posted
    - Verify cost information appears
    - Test with different project names
@@ -580,14 +580,14 @@ jobs:
 **Goal:** Archive or deprecate the demo repository
 
 **Technical Notes:**
-- Phase 6 requires manual intervention in the external `claude-step-demo` repository
+- Phase 6 requires manual intervention in the external `claude-chain-demo` repository
 - All references to the demo repository have been removed from active documentation in the main repository (completed in Phase 4)
-- The demo repository is at: https://github.com/gestrich/claude-step-demo
+- The demo repository is at: https://github.com/gestrich/claude-chain-demo
 - Documentation below provides the exact steps and content needed for manual deprecation
 
 **Manual Steps Required:**
 
-To complete the deprecation of the demo repository, perform the following steps in the `claude-step-demo` repository:
+To complete the deprecation of the demo repository, perform the following steps in the `claude-chain-demo` repository:
 
 1. **Update README.md** with the deprecation notice provided below
 2. **Optionally archive** the repository via GitHub Settings > Archive this repository
@@ -596,12 +596,12 @@ To complete the deprecation of the demo repository, perform the following steps 
 **Tasks:**
 
 1. **Add deprecation notice:**
-   - Update `claude-step-demo/README.md` with deprecation notice
-   - Link to new test location in claude-step repo
+   - Update `claude-chain-demo/README.md` with deprecation notice
+   - Link to new test location in claude-chain repo
    - Explain migration reasoning
 
 2. **Archive repository (optional):**
-   - Consider archiving `claude-step-demo` on GitHub
+   - Consider archiving `claude-chain-demo` on GitHub
    - OR add clear deprecation warnings
 
 3. **Update external references:**
@@ -616,21 +616,21 @@ To complete the deprecation of the demo repository, perform the following steps 
 - [ ] Demo repo is archived OR clearly marked as deprecated (requires manual action)
 - [ ] External references are updated (requires manual verification)
 
-**Files Modified (in claude-step-demo repo - requires manual action):**
+**Files Modified (in claude-chain-demo repo - requires manual action):**
 - `README.md`
 
 **Deprecation Notice Template:**
 
-Add the following to the top of `claude-step-demo/README.md`:
+Add the following to the top of `claude-chain-demo/README.md`:
 
 ```markdown
 # ⚠️ DEPRECATED
 
 This repository has been deprecated as of December 2025.
 
-End-to-end tests have been migrated to the main `claude-step` repository using a recursive workflow pattern.
+End-to-end tests have been migrated to the main `claude-chain` repository using a recursive workflow pattern.
 
-**For ClaudeStep testing, see:** https://github.com/gestrich/claude-step/tree/main/tests/e2e
+**For ClaudeChain testing, see:** https://github.com/gestrich/claude-chain/tree/main/tests/e2e
 
 This repository is kept for historical purposes only.
 ```
@@ -638,14 +638,14 @@ This repository is kept for historical purposes only.
 **Repository Archival Instructions:**
 
 To archive the repository on GitHub:
-1. Go to https://github.com/gestrich/claude-step-demo
+1. Go to https://github.com/gestrich/claude-chain-demo
 2. Click Settings
 3. Scroll down to "Danger Zone"
 4. Click "Archive this repository"
 5. Confirm the action
 
 **External References to Check:**
-- Blog posts or articles about ClaudeStep
+- Blog posts or articles about ClaudeChain
 - Documentation in other repositories
 - README badges or links
 - Social media posts or announcements
@@ -656,9 +656,9 @@ To archive the repository on GitHub:
 
 The migration is complete when:
 
-1. ✅ All E2E tests run successfully from `claude-step` repository
+1. ✅ All E2E tests run successfully from `claude-chain` repository
 2. ✅ Recursive workflow pattern works correctly
-3. ✅ Tests create PRs in `claude-step` repository
+3. ✅ Tests create PRs in `claude-chain` repository
 4. ✅ Tests clean up all resources (projects, PRs, branches)
 5. ✅ Documentation is updated and accurate
 6. ✅ CI/CD integration works
@@ -679,7 +679,7 @@ The migration is complete when:
    - Runs E2E tests via `run_test.sh`
    - Tests trigger the recursive workflow below
 
-2. **`.github/workflows/claudestep-test.yml`** - The recursive ClaudeStep workflow
+2. **`.github/workflows/claudechain-test.yml`** - The recursive ClaudeChain workflow
    - Triggered manually by E2E tests
    - Uses the action from current repository: `uses: ./`
    - Creates PRs in the same repository
@@ -690,7 +690,7 @@ The migration is complete when:
 To avoid conflicts and enable cleanup:
 
 ```
-claude-step/test-project-{unique-id}/
+claude-chain/test-project-{unique-id}/
 ├── spec.md
 ├── configuration.yml
 └── pr-template.md
@@ -702,7 +702,7 @@ Where `{unique-id}` is generated using `uuid.uuid4().hex[:8]`
 
 1. **Test project cleanup:**
    - Delete from filesystem
-   - Remove from git: `git rm -rf claude-step/test-project-*`
+   - Remove from git: `git rm -rf claude-chain/test-project-*`
    - Commit removal
    - Push to main
 
@@ -752,7 +752,7 @@ Each test run must be completely isolated:
 Developers can run E2E tests locally:
 
 ```bash
-cd /path/to/claude-step
+cd /path/to/claude-chain
 ./tests/e2e/run_test.sh
 ```
 
@@ -797,7 +797,7 @@ Consider making E2E tests optional in PR checks to avoid API costs and execution
 **Risk:** Confusion about which workflow does what
 
 **Mitigation:**
-- Clear naming: `e2e-test.yml` vs `claudestep-test.yml`
+- Clear naming: `e2e-test.yml` vs `claudechain-test.yml`
 - Comprehensive documentation
 - Comments in workflow files
 - Diagrams showing the flow
@@ -824,9 +824,9 @@ After successful migration:
 
 ## References
 
-- Current E2E test location: `claude-step-demo/tests/integration/`
-- Current test documentation: `claude-step-demo/tests/integration/README.md`
-- Demo repo workflow: `claude-step-demo/.github/workflows/claudestep.yml`
+- Current E2E test location: `claude-chain-demo/tests/integration/`
+- Current test documentation: `claude-chain-demo/tests/integration/README.md`
+- Demo repo workflow: `claude-chain-demo/.github/workflows/claudechain.yml`
 - Architecture docs: `docs/architecture/e2e-testing.md`
 
 ## Appendix: Example Workflow Sequence
@@ -841,7 +841,7 @@ Here's how the recursive workflow pattern works in practice:
                      │
                      ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ 2. E2E test creates test project in claude-step/test-xxx/  │
+│ 2. E2E test creates test project in claude-chain/test-xxx/  │
 │    - spec.md with tasks                                     │
 │    - configuration.yml with reviewers                       │
 │    - pr-template.md                                         │
@@ -854,16 +854,16 @@ Here's how the recursive workflow pattern works in practice:
                      │
                      ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ 4. E2E test triggers claudestep-test.yml workflow          │
-│    via gh CLI: gh workflow run claudestep-test.yml          │
+│ 4. E2E test triggers claudechain-test.yml workflow          │
+│    via gh CLI: gh workflow run claudechain-test.yml          │
 │                -f project_name=test-xxx                     │
 └────────────────────┬────────────────────────────────────────┘
                      │
                      ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ 5. claudestep-test.yml workflow runs                        │
-│    - Checks out claude-step repo                            │
-│    - Runs ClaudeStep action: uses: ./                       │
+│ 5. claudechain-test.yml workflow runs                        │
+│    - Checks out claude-chain repo                            │
+│    - Runs ClaudeChain action: uses: ./                       │
 │    - Action reads test project                              │
 │    - Action creates PR for first task                       │
 └────────────────────┬────────────────────────────────────────┘
@@ -894,4 +894,4 @@ Here's how the recursive workflow pattern works in practice:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-The key insight: **The claude-step action tests itself by running on its own repository.**
+The key insight: **The claude-chain action tests itself by running on its own repository.**

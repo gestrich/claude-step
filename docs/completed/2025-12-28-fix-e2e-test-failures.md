@@ -2,9 +2,9 @@
 
 ## Background
 
-The E2E test suite is currently failing with 2 out of 5 tests not passing. These tests run the full ClaudeStep workflow on GitHub Actions to validate end-to-end functionality.
+The E2E test suite is currently failing with 2 out of 5 tests not passing. These tests run the full ClaudeChain workflow on GitHub Actions to validate end-to-end functionality.
 
-**Test Run Reference:** https://github.com/gestrich/claude-step/actions/runs/20561563291
+**Test Run Reference:** https://github.com/gestrich/claude-chain/actions/runs/20561563291
 
 ### Current State
 - **Passed:** 2 tests (statistics collection, empty spec handling)
@@ -34,9 +34,9 @@ The E2E test suite is currently failing with 2 out of 5 tests not passing. These
 1. Review the PR summary generation workflow in `.github/workflows/`
 2. Check if the `prepare_summary` command is being called correctly
 3. Verify ANTHROPIC_API_KEY is properly configured in GitHub Actions secrets
-4. Review recent changes to `src/claudestep/cli/commands/prepare_summary.py`
+4. Review recent changes to `src/claudechain/cli/commands/prepare_summary.py`
 5. Check logs from failed workflow run 20561563291 for the summary generation step
-6. Verify the PR comment posting logic in `src/claudestep/application/services/pr_operations.py`
+6. Verify the PR comment posting logic in `src/claudechain/application/services/pr_operations.py`
 
 **Potential Issues to Investigate:**
 - API key authentication failures
@@ -47,8 +47,8 @@ The E2E test suite is currently failing with 2 out of 5 tests not passing. These
 
 **Files to Review:**
 - `.github/workflows/main.yml` (or relevant workflow file)
-- `src/claudestep/cli/commands/prepare_summary.py`
-- `src/claudestep/application/services/pr_operations.py`
+- `src/claudechain/cli/commands/prepare_summary.py`
+- `src/claudechain/application/services/pr_operations.py`
 - `tests/e2e/test_workflow_e2e.py` (test expectations)
 - `tests/e2e/helpers/github_helper.py` (comment detection logic)
 
@@ -69,7 +69,7 @@ After investigating the AI summary generation workflow, I've identified the root
 
 2. **Prepare Summary Command** (prepare_summary.py):
    - Reads environment variables: PR_NUMBER, TASK, GITHUB_REPOSITORY, GITHUB_RUN_ID, ACTION_PATH
-   - Loads template from `src/claudestep/resources/prompts/summary_prompt.md`
+   - Loads template from `src/claudechain/resources/prompts/summary_prompt.md`
    - Substitutes variables and outputs the prompt
 
 3. **Summary Prompt Template** (summary_prompt.md):
@@ -187,8 +187,8 @@ The AI summary generation was failing because Claude Code Action only had access
 
 **Files to Review:**
 - `tests/e2e/test_workflow_e2e.py` (test setup and expectations)
-- `src/claudestep/application/services/reviewer_management.py`
-- `src/claudestep/cli/commands/discover_ready.py`
+- `src/claudechain/application/services/reviewer_management.py`
+- `src/claudechain/cli/commands/discover_ready.py`
 - Workflow execution logs for timing breakdown
 - `tests/e2e/helpers/github_helper.py` (timeout configuration)
 
@@ -202,9 +202,9 @@ After investigating the `test_reviewer_capacity_limits` test and workflow execut
 
 **Test Structure and Timing:**
 
-The `test_reviewer_capacity_limits` test (test_workflow_e2e.py:139-264) validates that ClaudeStep respects reviewer capacity limits by:
+The `test_reviewer_capacity_limits` test (test_workflow_e2e.py:139-264) validates that ClaudeChain respects reviewer capacity limits by:
 1. Creating a project with 4 tasks and a reviewer capacity limit of 2 (maxOpenPRs: 2)
-2. Triggering the claudestep.yml workflow **three times sequentially**
+2. Triggering the claudechain.yml workflow **three times sequentially**
 3. Verifying that only 2 PRs are created (respecting the capacity limit)
 
 **Timing Breakdown:**
@@ -275,7 +275,7 @@ The timeout occurs when any of the three workflow executions takes longer than 1
 
 **Conclusion:**
 
-The test timeout is **not a bug** in the ClaudeStep code itself, but rather a **test design challenge**. The test needs to execute three complete end-to-end workflow runs sequentially, and each run legitimately takes several minutes due to:
+The test timeout is **not a bug** in the ClaudeChain code itself, but rather a **test design challenge**. The test needs to execute three complete end-to-end workflow runs sequentially, and each run legitimately takes several minutes due to:
 - AI inference time
 - PR creation and analysis
 - Multiple step dependencies
@@ -288,7 +288,7 @@ The issue isn't a performance bug to fix, but rather a test reliability challeng
 - Optimizing the test to be more resilient to timing variations
 - Potentially increasing per-workflow timeout to 900 seconds (15 minutes) for E2E tests
 - Considering parallel execution where possible (though reviewer capacity testing requires sequential runs)
-- Using faster Claude models for E2E tests (already using haiku: claudestep.yml:41)
+- Using faster Claude models for E2E tests (already using haiku: claudechain.yml:41)
 - Potentially reducing the number of workflow runs from 3 to 2 to validate capacity limits
 - Adding better progress logging to identify which specific step is slow
 
@@ -399,7 +399,7 @@ This change makes the E2E tests more resilient to timing variations while still 
 **COMPLETED:**
 
 **Root Cause:**
-The E2E test workflow was failing with 0% coverage because E2E tests run code remotely within GitHub Actions workflows, not locally in the pytest process. The pytest configuration in `pyproject.toml` (lines 51-54) globally enforces coverage collection and a 70% minimum threshold (`--cov=src/claudestep`, `--cov-fail-under=70`), which is appropriate for unit tests but not applicable to E2E tests.
+The E2E test workflow was failing with 0% coverage because E2E tests run code remotely within GitHub Actions workflows, not locally in the pytest process. The pytest configuration in `pyproject.toml` (lines 51-54) globally enforces coverage collection and a 70% minimum threshold (`--cov=src/claudechain`, `--cov-fail-under=70`), which is appropriate for unit tests but not applicable to E2E tests.
 
 **Solution Implemented:**
 Disabled coverage collection for E2E tests by adding the `--no-cov` flag to the pytest command in the E2E test workflow.
@@ -408,7 +408,7 @@ Disabled coverage collection for E2E tests by adding the `--no-cov` flag to the 
 1. **e2e-test.yml:60** - Added `--no-cov` flag to pytest command: `pytest tests/e2e/ -v --no-cov`
 
 **Technical Details:**
-- E2E tests validate ClaudeStep by running it as a GitHub Action in test workflows, meaning the tested code executes in a separate GitHub Actions runner, not in the pytest process
+- E2E tests validate ClaudeChain by running it as a GitHub Action in test workflows, meaning the tested code executes in a separate GitHub Actions runner, not in the pytest process
 - The `--no-cov` flag disables pytest-cov for this specific test run while preserving coverage requirements for unit tests (which run code locally)
 - This keeps coverage requirements strict (70%) for unit tests while exempting E2E tests where coverage collection is not meaningful
 - Unit test coverage is still enforced via the default pytest configuration when running `pytest tests/unit/`
@@ -615,12 +615,12 @@ Enhanced E2E test reliability by replacing fixed sleeps with smart polling, addi
 3. **Pre-Test Cleanup for Idempotency** (tests/e2e/helpers/github_helper.py, tests/e2e/conftest.py):
    - Added `cleanup_test_branches()` method to GitHubHelper:
      - Lists all branches in repository via GitHub API
-     - Deletes branches matching test prefix pattern (default: "claude-step-test-")
+     - Deletes branches matching test prefix pattern (default: "claude-chain-test-")
      - Idempotent: safe to run even if no cleanup needed
      - Logs cleanup count for visibility
    - Added `cleanup_test_prs()` method to GitHubHelper:
      - Lists all open PRs in repository
-     - Closes PRs that match test patterns (ClaudeStep + "test-project-")
+     - Closes PRs that match test patterns (ClaudeChain + "test-project-")
      - Prevents test interference from previous failed runs
      - Logs cleanup count for visibility
    - Added session-level `cleanup_previous_test_runs()` fixture (conftest.py:124-144):
@@ -829,7 +829,7 @@ This documentation significantly reduces the time needed to debug E2E test failu
 ```
 
 **Reference Workflow:**
-- Original failing run: https://github.com/gestrich/claude-step/actions/runs/20561563291
+- Original failing run: https://github.com/gestrich/claude-chain/actions/runs/20561563291
 - Compare new runs to this baseline
 
 **If Tests Fail:**
@@ -852,7 +852,7 @@ Successfully validated the E2E test suite with all fixes from Phases 1-8 in plac
 1. **Pushed Phases 1-8 to Remote**: First ensured that all fixes from the previous phases were pushed to the remote `main` branch (commits through 690e28e38936cf415d0a2db84ddafa6ed288f068).
 
 2. **Triggered Full E2E Test Suite**: Ran `./tests/e2e/run_test.sh` which triggered the complete E2E test workflow on GitHub Actions with all the improvements:
-   - Run ID: https://github.com/gestrich/claude-step/actions/runs/20562873886
+   - Run ID: https://github.com/gestrich/claude-chain/actions/runs/20562873886
    - Branch: main
    - Commit: 690e28e (Phase 8: Document E2E Test Execution and Debugging)
 
@@ -911,7 +911,7 @@ With all the fixes in place, the tests should:
 - Provide clear diagnostics on any failures (Phase 6 enhanced logging)
 
 **Workflow Run Details:**
-- Run URL: https://github.com/gestrich/claude-step/actions/runs/20562873886
+- Run URL: https://github.com/gestrich/claude-chain/actions/runs/20562873886
 - Status: In Progress (as of completion of this phase)
 - Using commit: 690e28e (includes all Phase 1-8 improvements)
 

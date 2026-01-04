@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from claudestep.domain.github_models import GitHubPullRequest
-from claudestep.services.core.pr_service import PRService
+from claudechain.domain.github_models import GitHubPullRequest
+from claudechain.services.core.pr_service import PRService
 
 
 class TestFormatBranchName:
@@ -16,22 +16,22 @@ class TestFormatBranchName:
     def test_format_basic_branch_name(self):
         """Should format branch name with project and hash"""
         result = PRService.format_branch_name("my-refactor", "a3f2b891")
-        assert result == "claude-step-my-refactor-a3f2b891"
+        assert result == "claude-chain-my-refactor-a3f2b891"
 
     def test_format_with_multi_word_project(self):
         """Should handle project names with multiple words"""
         result = PRService.format_branch_name("swift-migration", "f7c4d3e2")
-        assert result == "claude-step-swift-migration-f7c4d3e2"
+        assert result == "claude-chain-swift-migration-f7c4d3e2"
 
     def test_format_with_different_hash(self):
         """Should handle different task hashes"""
         result = PRService.format_branch_name("api-refactor", "12345678")
-        assert result == "claude-step-api-refactor-12345678"
+        assert result == "claude-chain-api-refactor-12345678"
 
     def test_format_with_complex_project_name(self):
         """Should handle complex project names with hyphens"""
         result = PRService.format_branch_name("my-complex-project-name", "9abcdef0")
-        assert result == "claude-step-my-complex-project-name-9abcdef0"
+        assert result == "claude-chain-my-complex-project-name-9abcdef0"
 
 
 class TestParseBranchName:
@@ -40,7 +40,7 @@ class TestParseBranchName:
 
     def test_parse_basic_hash_branch_name(self):
         """Should parse hash-based branch name (new format)"""
-        result = PRService.parse_branch_name("claude-step-my-refactor-a3f2b891")
+        result = PRService.parse_branch_name("claude-chain-my-refactor-a3f2b891")
         assert result is not None
         assert result.project_name == "my-refactor"
         assert result.task_hash == "a3f2b891"
@@ -49,7 +49,7 @@ class TestParseBranchName:
 
     def test_parse_multi_word_project_hash(self):
         """Should parse project names with multiple words (hash format)"""
-        result = PRService.parse_branch_name("claude-step-swift-migration-f7c4d3e2")
+        result = PRService.parse_branch_name("claude-chain-swift-migration-f7c4d3e2")
         assert result is not None
         assert result.project_name == "swift-migration"
         assert result.task_hash == "f7c4d3e2"
@@ -58,13 +58,13 @@ class TestParseBranchName:
 
 
     def test_parse_invalid_branch_no_prefix(self):
-        """Should return None for branch without claude-step prefix"""
+        """Should return None for branch without claude-chain prefix"""
         result = PRService.parse_branch_name("my-refactor-1")
         assert result is None
 
     def test_parse_invalid_branch_wrong_format(self):
         """Should return None for branch with wrong format"""
-        result = PRService.parse_branch_name("claude-step-no-index")
+        result = PRService.parse_branch_name("claude-chain-no-index")
         assert result is None
 
     def test_parse_invalid_branch_empty(self):
@@ -74,7 +74,7 @@ class TestParseBranchName:
 
     def test_parse_invalid_branch_no_index(self):
         """Should return None for branch without index"""
-        result = PRService.parse_branch_name("claude-step-my-refactor-")
+        result = PRService.parse_branch_name("claude-chain-my-refactor-")
         assert result is None
 
     def test_parse_roundtrip(self):
@@ -94,14 +94,14 @@ class TestParseBranchName:
 
     def test_parse_invalid_branch_non_hex_hash(self):
         """Should return None for branch with invalid hash (contains non-hex chars)"""
-        result = PRService.parse_branch_name("claude-step-my-refactor-abcdefgh")
+        result = PRService.parse_branch_name("claude-chain-my-refactor-abcdefgh")
         assert result is None
 
     def test_parse_invalid_branch_negative_index(self):
         """Should return None for branch with negative index (contains hyphen before number)"""
         # Note: This will match the pattern but the last -1 will be treated as index 1
         # The project name will be "my-refactor-" which is still valid
-        result = PRService.parse_branch_name("claude-step-my-refactor--a3f2b89")
+        result = PRService.parse_branch_name("claude-chain-my-refactor--a3f2b89")
         # This should parse, but the project name will be "my-refactor-"
         # Actually testing the current behavior
         if result:
@@ -113,7 +113,7 @@ class TestParseBranchName:
 
     def test_parse_single_char_project(self):
         """Should handle single character project names"""
-        result = PRService.parse_branch_name("claude-step-x-a3f2b891")
+        result = PRService.parse_branch_name("claude-chain-x-a3f2b891")
         assert result is not None
         assert result.project_name == "x"
         assert result.task_hash == "a3f2b891"
@@ -124,7 +124,7 @@ class TestParseBranchName:
         """Should handle branch with whitespace (though not recommended)"""
         # The regex pattern (.+) will match whitespace in project names
         # While not recommended, this tests the actual behavior
-        result = PRService.parse_branch_name("claude-step-my refactor-a3f2b891")
+        result = PRService.parse_branch_name("claude-chain-my refactor-a3f2b891")
         assert result is not None
         assert result.project_name == "my refactor"
         assert result.task_hash == "a3f2b891"
@@ -132,14 +132,14 @@ class TestParseBranchName:
 
     def test_parse_case_sensitivity(self):
         """Should handle case sensitivity in prefix (expects lowercase)"""
-        result = PRService.parse_branch_name("Claude-Step-my-refactor-1")
+        result = PRService.parse_branch_name("Claude-Chain-my-refactor-1")
         assert result is None  # Should fail because prefix is case-sensitive
 
 
 class TestGetProjectPrs:
     """Tests for get_project_prs instance method"""
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_open_prs(self, mock_list_prs):
         """Should fetch and filter open PRs for a project"""
         # Mock infrastructure layer response with domain models
@@ -147,7 +147,7 @@ class TestGetProjectPrs:
             GitHubPullRequest(
                 number=1,
                 state="open",
-                head_ref_name="claude-step-my-refactor-a3f2b891",
+                head_ref_name="claude-chain-my-refactor-a3f2b891",
                 title="Task 1",
                 labels=[],
                 assignees=[],
@@ -157,7 +157,7 @@ class TestGetProjectPrs:
             GitHubPullRequest(
                 number=2,
                 state="open",
-                head_ref_name="claude-step-my-refactor-f7c4d3e2",
+                head_ref_name="claude-chain-my-refactor-f7c4d3e2",
                 title="Task 2",
                 labels=[],
                 assignees=[],
@@ -167,7 +167,7 @@ class TestGetProjectPrs:
             GitHubPullRequest(
                 number=3,
                 state="open",
-                head_ref_name="claude-step-other-project-de789012",
+                head_ref_name="claude-chain-other-project-de789012",
                 title="Other project",
                 labels=[],
                 assignees=[],
@@ -190,18 +190,18 @@ class TestGetProjectPrs:
         mock_list_prs.assert_called_once_with(
             repo="owner/repo",
             state="open",
-            label="claudestep",
+            label="claudechain",
             limit=100
         )
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_all_prs(self, mock_list_prs):
         """Should fetch all PRs regardless of state"""
         mock_prs = [
             GitHubPullRequest(
                 number=1,
                 state="merged",
-                head_ref_name="claude-step-my-refactor-a3f2b891",
+                head_ref_name="claude-chain-my-refactor-a3f2b891",
                 title="Task 1",
                 labels=[],
                 assignees=[],
@@ -211,7 +211,7 @@ class TestGetProjectPrs:
             GitHubPullRequest(
                 number=2,
                 state="open",
-                head_ref_name="claude-step-my-refactor-f7c4d3e2",
+                head_ref_name="claude-chain-my-refactor-f7c4d3e2",
                 title="Task 2",
                 labels=[],
                 assignees=[],
@@ -226,14 +226,14 @@ class TestGetProjectPrs:
 
         assert len(result) == 2
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_merged_prs(self, mock_list_prs):
         """Should fetch only merged PRs"""
         mock_prs = [
             GitHubPullRequest(
                 number=1,
                 state="merged",
-                head_ref_name="claude-step-my-refactor-a3f2b891",
+                head_ref_name="claude-chain-my-refactor-a3f2b891",
                 title="Task 1",
                 labels=[],
                 assignees=[],
@@ -249,13 +249,13 @@ class TestGetProjectPrs:
         assert len(result) == 1
         assert result[0].state == "merged"
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_filter_by_branch_prefix(self, mock_list_prs):
         """Should only return PRs with matching branch prefix"""
         mock_prs = [
             GitHubPullRequest(
                 number=1,
-                head_ref_name="claude-step-my-refactor-a3f2b891",
+                head_ref_name="claude-chain-my-refactor-a3f2b891",
                 title="Match 1",
                 state="open",
                 labels=[],
@@ -265,7 +265,7 @@ class TestGetProjectPrs:
             ),
             GitHubPullRequest(
                 number=2,
-                head_ref_name="claude-step-my-refactor-f7c4d3e2",
+                head_ref_name="claude-chain-my-refactor-f7c4d3e2",
                 title="Match 2",
                 state="open",
                 labels=[],
@@ -275,7 +275,7 @@ class TestGetProjectPrs:
             ),
             GitHubPullRequest(
                 number=3,
-                head_ref_name="claude-step-other-project-de789012",
+                head_ref_name="claude-chain-other-project-de789012",
                 title="No match",
                 state="open",
                 labels=[],
@@ -302,7 +302,7 @@ class TestGetProjectPrs:
         assert len(result) == 2
         assert all("my-refactor" in pr.head_ref_name for pr in result)
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_custom_label(self, mock_list_prs):
         """Should use custom label when provided"""
         mock_list_prs.return_value = []
@@ -318,7 +318,7 @@ class TestGetProjectPrs:
             limit=100
         )
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_handle_empty_response(self, mock_list_prs):
         """Should handle empty PR list gracefully"""
         mock_list_prs.return_value = []
@@ -328,10 +328,10 @@ class TestGetProjectPrs:
 
         assert result == []
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_handle_api_error(self, mock_list_prs):
         """Should handle GitHub API errors gracefully"""
-        from claudestep.domain.exceptions import GitHubAPIError
+        from claudechain.domain.exceptions import GitHubAPIError
 
         mock_list_prs.side_effect = GitHubAPIError("API failed")
 
@@ -345,14 +345,14 @@ class TestGetProjectPrs:
 class TestGetOpenPrsForProject:
     """Tests for get_open_prs_for_project convenience method"""
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_open_prs_for_project(self, mock_list_prs):
         """Should call get_project_prs with state='open'"""
         mock_prs = [
             GitHubPullRequest(
                 number=1,
                 state="open",
-                head_ref_name="claude-step-my-refactor-a3f2b891",
+                head_ref_name="claude-chain-my-refactor-a3f2b891",
                 title="Task 1",
                 labels=[],
                 assignees=[],
@@ -373,11 +373,11 @@ class TestGetOpenPrsForProject:
         mock_list_prs.assert_called_once_with(
             repo="owner/repo",
             state="open",
-            label="claudestep",
+            label="claudechain",
             limit=100
         )
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_open_prs_with_custom_label(self, mock_list_prs):
         """Should use custom label when provided"""
         mock_list_prs.return_value = []
@@ -393,7 +393,7 @@ class TestGetOpenPrsForProject:
             limit=100
         )
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_open_prs_empty_result(self, mock_list_prs):
         """Should handle empty results gracefully"""
         mock_list_prs.return_value = []
@@ -407,14 +407,14 @@ class TestGetOpenPrsForProject:
 class TestGetAllPrs:
     """Tests for get_all_prs method"""
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_all_prs_default_params(self, mock_list_prs):
         """Should fetch all PRs with default parameters"""
         mock_prs = [
             GitHubPullRequest(
                 number=1,
                 state="open",
-                head_ref_name="claude-step-my-refactor-a3f2b891",
+                head_ref_name="claude-chain-my-refactor-a3f2b891",
                 title="Task 1",
                 labels=[],
                 assignees=[],
@@ -424,7 +424,7 @@ class TestGetAllPrs:
             GitHubPullRequest(
                 number=2,
                 state="merged",
-                head_ref_name="claude-step-my-refactor-f7c4d3e2",
+                head_ref_name="claude-chain-my-refactor-f7c4d3e2",
                 title="Task 2",
                 labels=[],
                 assignees=[],
@@ -444,11 +444,11 @@ class TestGetAllPrs:
         mock_list_prs.assert_called_once_with(
             repo="owner/repo",
             state="all",
-            label="claudestep",
+            label="claudechain",
             limit=500
         )
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_all_prs_custom_label(self, mock_list_prs):
         """Should use custom label when provided"""
         mock_list_prs.return_value = []
@@ -464,7 +464,7 @@ class TestGetAllPrs:
             limit=500
         )
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_all_prs_custom_state(self, mock_list_prs):
         """Should use custom state when provided"""
         mock_list_prs.return_value = []
@@ -476,11 +476,11 @@ class TestGetAllPrs:
         mock_list_prs.assert_called_once_with(
             repo="owner/repo",
             state="open",
-            label="claudestep",
+            label="claudechain",
             limit=500
         )
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_all_prs_custom_limit(self, mock_list_prs):
         """Should use custom limit when provided"""
         mock_list_prs.return_value = []
@@ -492,18 +492,18 @@ class TestGetAllPrs:
         mock_list_prs.assert_called_once_with(
             repo="owner/repo",
             state="all",
-            label="claudestep",
+            label="claudechain",
             limit=100
         )
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_all_prs_returns_domain_models(self, mock_list_prs):
         """Should return typed GitHubPullRequest domain models"""
         mock_prs = [
             GitHubPullRequest(
                 number=1,
                 state="open",
-                head_ref_name="claude-step-my-refactor-a3f2b891",
+                head_ref_name="claude-chain-my-refactor-a3f2b891",
                 title="Task 1",
                 labels=[],
                 assignees=[],
@@ -523,14 +523,14 @@ class TestGetAllPrs:
 class TestGetUniqueProjects:
     """Tests for get_unique_projects method"""
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_unique_projects(self, mock_list_prs):
         """Should extract unique project names from PRs"""
         mock_prs = [
             GitHubPullRequest(
                 number=1,
                 state="open",
-                head_ref_name="claude-step-my-refactor-a3f2b891",
+                head_ref_name="claude-chain-my-refactor-a3f2b891",
                 title="Task 1",
                 labels=[],
                 assignees=[],
@@ -540,7 +540,7 @@ class TestGetUniqueProjects:
             GitHubPullRequest(
                 number=2,
                 state="open",
-                head_ref_name="claude-step-my-refactor-f7c4d3e2",
+                head_ref_name="claude-chain-my-refactor-f7c4d3e2",
                 title="Task 2",
                 labels=[],
                 assignees=[],
@@ -550,7 +550,7 @@ class TestGetUniqueProjects:
             GitHubPullRequest(
                 number=3,
                 state="open",
-                head_ref_name="claude-step-other-project-de789012",
+                head_ref_name="claude-chain-other-project-de789012",
                 title="Other project",
                 labels=[],
                 assignees=[],
@@ -566,14 +566,14 @@ class TestGetUniqueProjects:
         # Should return unique project names
         assert result == {"my-refactor", "other-project"}
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_unique_projects_handles_invalid_branches(self, mock_list_prs):
         """Should ignore PRs with invalid branch names"""
         mock_prs = [
             GitHubPullRequest(
                 number=1,
                 state="open",
-                head_ref_name="claude-step-my-refactor-a3f2b891",
+                head_ref_name="claude-chain-my-refactor-a3f2b891",
                 title="Task 1",
                 labels=[],
                 assignees=[],
@@ -593,7 +593,7 @@ class TestGetUniqueProjects:
             GitHubPullRequest(
                 number=3,
                 state="open",
-                head_ref_name="claude-step-no-index",
+                head_ref_name="claude-chain-no-index",
                 title="No index",
                 labels=[],
                 assignees=[],
@@ -609,7 +609,7 @@ class TestGetUniqueProjects:
         # Should only return valid project
         assert result == {"my-refactor"}
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_unique_projects_empty_result(self, mock_list_prs):
         """Should return empty set when no projects found"""
         mock_list_prs.return_value = []
@@ -619,7 +619,7 @@ class TestGetUniqueProjects:
 
         assert result == set()
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_unique_projects_custom_label(self, mock_list_prs):
         """Should use custom label when provided"""
         mock_list_prs.return_value = []
@@ -635,14 +635,14 @@ class TestGetUniqueProjects:
             limit=500
         )
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_unique_projects_handles_none_branch_names(self, mock_list_prs):
         """Should handle PRs with None as branch name"""
         mock_prs = [
             GitHubPullRequest(
                 number=1,
                 state="open",
-                head_ref_name="claude-step-my-refactor-a3f2b891",
+                head_ref_name="claude-chain-my-refactor-a3f2b891",
                 title="Task 1",
                 labels=[],
                 assignees=[],
@@ -668,14 +668,14 @@ class TestGetUniqueProjects:
         # Should only return valid project, skipping None
         assert result == {"my-refactor"}
 
-    @patch("claudestep.services.core.pr_service.list_pull_requests")
+    @patch("claudechain.services.core.pr_service.list_pull_requests")
     def test_get_unique_projects_deduplicates(self, mock_list_prs):
         """Should deduplicate project names from multiple PRs"""
         mock_prs = [
             GitHubPullRequest(
                 number=1,
                 state="open",
-                head_ref_name="claude-step-my-refactor-a3f2b891",
+                head_ref_name="claude-chain-my-refactor-a3f2b891",
                 title="Task 1",
                 labels=[],
                 assignees=[],
@@ -685,7 +685,7 @@ class TestGetUniqueProjects:
             GitHubPullRequest(
                 number=2,
                 state="open",
-                head_ref_name="claude-step-my-refactor-f7c4d3e2",
+                head_ref_name="claude-chain-my-refactor-f7c4d3e2",
                 title="Task 2",
                 labels=[],
                 assignees=[],
@@ -695,7 +695,7 @@ class TestGetUniqueProjects:
             GitHubPullRequest(
                 number=3,
                 state="open",
-                head_ref_name="claude-step-my-refactor-3",
+                head_ref_name="claude-chain-my-refactor-3",
                 title="Task 3",
                 labels=[],
                 assignees=[],

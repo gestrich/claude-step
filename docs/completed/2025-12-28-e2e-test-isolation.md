@@ -3,7 +3,7 @@
 ## Problem
 
 E2E tests pollute the main branch by:
-- Creating test projects in `claude-step/` directory on main
+- Creating test projects in `claude-chain/` directory on main
 - Test-specific workflows (statistics, merge triggers) exist on main but only used for tests
 - Causing git push conflicts during concurrent test runs
 - Leaving test artifacts in repository history
@@ -23,8 +23,8 @@ Use an **ephemeral `e2e-test` branch** that is deleted and recreated fresh for e
 ### What Lives on Ephemeral Test Branch
 
 **Test execution happens on isolated branch** (created fresh each run):
-- `claude-step/` - Test projects created during test execution
-- `.github/workflows/claudestep-test.yml` - Workflow triggered by tests (written dynamically)
+- `claude-chain/` - Test projects created during test execution
+- `.github/workflows/claudechain-test.yml` - Workflow triggered by tests (written dynamically)
 - `.github/workflows/statistics/` - Statistics workflow triggered on PR merge (written dynamically)
 - Test-specific workflows that trigger on git events (push, merge, etc.)
 
@@ -42,7 +42,7 @@ Use an **ephemeral `e2e-test` branch** that is deleted and recreated fresh for e
 **What was done:**
 - Identified cheapest model: Claude 3 Haiku (`claude-3-haiku-20240307`) at $0.25 input / $1.25 output per MTok
 - Model support already existed via `claude_model` input parameter in action.yml
-- Updated `.github/workflows/claudestep-test.yml` to specify `claude_model: 'claude-3-haiku-20240307'`
+- Updated `.github/workflows/claudechain-test.yml` to specify `claude_model: 'claude-3-haiku-20240307'`
 - Verified YAML syntax and Python imports
 
 **Technical notes:**
@@ -54,16 +54,16 @@ Use an **ephemeral `e2e-test` branch** that is deleted and recreated fresh for e
 - [x] **Phase 1: Clean Main Branch** ✅ COMPLETED
 
 **What was done:**
-- Removed `claude-step/` directory from main (contained 4 test projects)
-- Removed `.github/workflows/claudestep-test.yml` (test-specific workflow)
-- Verified `claudestep-statistics.yml` is an example workflow and should remain on main
+- Removed `claude-chain/` directory from main (contained 4 test projects)
+- Removed `.github/workflows/claudechain-test.yml` (test-specific workflow)
+- Verified `claudechain-statistics.yml` is an example workflow and should remain on main
 - Verified `e2e-test.yml` and `test.yml` should remain on main (test orchestration, not test-specific)
 - Validated action.yml YAML syntax
 - Verified Python imports work correctly
 
 **Technical notes:**
-- Only `claudestep-test.yml` was test-specific and needed removal
-- `claudestep-statistics.yml` is an example workflow showing how users can use the statistics feature with Slack
+- Only `claudechain-test.yml` was test-specific and needed removal
+- `claudechain-statistics.yml` is an example workflow showing how users can use the statistics feature with Slack
 - `e2e-test.yml` orchestrates E2E tests and will be updated in Phase 3 to manage the ephemeral branch
 - Main branch is now clean of test execution artifacts
 
@@ -74,8 +74,8 @@ Use an **ephemeral `e2e-test` branch** that is deleted and recreated fresh for e
 - Implemented `setup_test_branch()` - orchestrates complete test branch setup
 - Implemented `delete_remote_branch()` - safely deletes remote branch if it exists
 - Implemented `create_fresh_branch()` - creates new e2e-test branch from main
-- Implemented `create_test_workflows()` - writes claudestep-test.yml to the branch
-- Implemented `create_test_workspace()` - creates claude-step/ directory with README
+- Implemented `create_test_workflows()` - writes claudechain-test.yml to the branch
+- Implemented `create_test_workspace()` - creates claude-chain/ directory with README
 - Implemented `push_test_branch()` - pushes the prepared branch to remote
 - Implemented `cleanup_test_branch()` - deletes branch after tests complete
 - Added `claude_model: 'claude-3-haiku-20240307'` to the workflow template for cost savings
@@ -105,7 +105,7 @@ Use an **ephemeral `e2e-test` branch** that is deleted and recreated fresh for e
 - Uses inline Python with heredoc to call TestBranchManager without additional scripts
 - Maintains all existing permissions (contents: write, pull-requests: write, actions: write)
 - Test branch manager handles all git operations (delete old branch, create fresh, push workflows)
-- The claudestep-test.yml workflow is written to the ephemeral branch by TestBranchManager
+- The claudechain-test.yml workflow is written to the ephemeral branch by TestBranchManager
 
 - [x] **Phase 4: Update Test Code** ✅ COMPLETED
 
@@ -125,7 +125,7 @@ Use an **ephemeral `e2e-test` branch** that is deleted and recreated fresh for e
 - [x] **Phase 5: Test and Document** ✅ COMPLETED
 
 **What was done:**
-- Verified main branch is clean: no `claude-step/` directory and no `claudestep-test.yml` workflow
+- Verified main branch is clean: no `claude-chain/` directory and no `claudechain-test.yml` workflow
 - Updated `docs/architecture/e2e-testing.md` with comprehensive ephemeral branch documentation
 - Added "Test Isolation Architecture" section explaining branch isolation model
 - Documented test branch lifecycle (setup, execution, cleanup)
@@ -147,16 +147,16 @@ Use an **ephemeral `e2e-test` branch** that is deleted and recreated fresh for e
 ### Phase 1: Clean Main Branch
 
 **Remove from main**:
-- `claude-step/` directory (entire)
-- `.github/workflows/claudestep-test.yml` (test-only workflow)
+- `claude-chain/` directory (entire)
+- `.github/workflows/claudechain-test.yml` (test-only workflow)
 - `.github/workflows/statistics/action.yml` if it's test-specific
 
 **Commands**:
 ```bash
 git checkout main
 git pull origin main
-git rm -rf claude-step/
-git rm .github/workflows/claudestep-test.yml
+git rm -rf claude-chain/
+git rm .github/workflows/claudechain-test.yml
 # Remove other test-specific workflows if any
 git commit -m "Remove E2E test infrastructure from main - moving to ephemeral test branches"
 git push origin main
@@ -223,9 +223,9 @@ class TestBranchManager:
         """Write test-specific workflows to the test branch."""
         workflows_dir = self.repo_root / ".github" / "workflows"
 
-        # Create claudestep-test.yml
-        claudestep_test = workflows_dir / "claudestep-test.yml"
-        claudestep_test.write_text(self._get_claudestep_test_workflow())
+        # Create claudechain-test.yml
+        claudechain_test = workflows_dir / "claudechain-test.yml"
+        claudechain_test.write_text(self._get_claudechain_test_workflow())
 
         # Create statistics workflow if needed
         # ... add other test-specific workflows
@@ -241,8 +241,8 @@ class TestBranchManager:
         )
 
     def create_test_workspace(self) -> None:
-        """Create claude-step/ directory for test projects."""
-        workspace = self.repo_root / "claude-step"
+        """Create claude-chain/ directory for test projects."""
+        workspace = self.repo_root / "claude-chain"
         workspace.mkdir(exist_ok=True)
 
         readme = workspace / "README.md"
@@ -255,7 +255,7 @@ Test projects are created here during test runs and cleaned up afterwards.
 """)
 
         subprocess.run(
-            ["git", "add", "claude-step/"],
+            ["git", "add", "claude-chain/"],
             cwd=self.repo_root, check=True
         )
         subprocess.run(
@@ -290,15 +290,15 @@ Test projects are created here during test runs and cleaned up afterwards.
         )
         print(f"✓ Cleaned up test branch '{self.test_branch}'")
 
-    def _get_claudestep_test_workflow(self) -> str:
-        """Return claudestep-test.yml workflow content."""
-        return """name: ClaudeStep Test
+    def _get_claudechain_test_workflow(self) -> str:
+        """Return claudechain-test.yml workflow content."""
+        return """name: ClaudeChain Test
 
 on:
   workflow_dispatch:
     inputs:
       project_name:
-        description: 'Project name in claude-step directory'
+        description: 'Project name in claude-chain directory'
         required: true
       base_branch:
         description: 'Base branch for pull requests'
@@ -306,7 +306,7 @@ on:
         default: 'e2e-test'
 
 jobs:
-  run-claudestep:
+  run-claudechain:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -314,7 +314,7 @@ jobs:
         with:
           ref: e2e-test
 
-      - name: Run ClaudeStep action
+      - name: Run ClaudeChain action
         uses: ./
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -356,8 +356,8 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config --global user.name 'ClaudeStep E2E Tests'
-          git config --global user.email 'claudestep-e2e@users.noreply.github.com'
+          git config --global user.name 'ClaudeChain E2E Tests'
+          git config --global user.email 'claudechain-e2e@users.noreply.github.com'
 
       - name: Set up ephemeral test branch
         env:
@@ -423,7 +423,7 @@ def test_branch():
 
 **Test-specific workflows to be written during setup**:
 
-1. **claudestep-test.yml** - Manual trigger for ClaudeStep on test projects
+1. **claudechain-test.yml** - Manual trigger for ClaudeChain on test projects
 2. **statistics.yml** - PR merge trigger for statistics collection (if needed)
 
 These are **not on main**, only created on the ephemeral e2e-test branch.
@@ -442,7 +442,7 @@ These are **not on main**, only created on the ephemeral e2e-test branch.
 2. Deletes old e2e-test branch (if exists)
 3. Creates fresh e2e-test branch from main
 4. Writes test-specific workflows to e2e-test branch
-5. Creates claude-step/ workspace
+5. Creates claude-chain/ workspace
 6. Pushes e2e-test branch
 7. Runs E2E tests (which trigger test workflows on e2e-test branch)
 8. On success: Deletes e2e-test branch

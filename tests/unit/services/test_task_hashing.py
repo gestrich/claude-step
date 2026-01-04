@@ -4,10 +4,10 @@ import pytest
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone
 
-from claudestep.domain.project import Project
-from claudestep.domain.spec_content import SpecTask, SpecContent, generate_task_hash
-from claudestep.domain.github_models import GitHubPullRequest
-from claudestep.services.core.task_service import TaskService
+from claudechain.domain.project import Project
+from claudechain.domain.spec_content import SpecTask, SpecContent, generate_task_hash
+from claudechain.domain.github_models import GitHubPullRequest
+from claudechain.services.core.task_service import TaskService
 
 
 class TestGenerateTaskHash:
@@ -213,7 +213,7 @@ class TestOrphanedPRDetection:
         orphaned_pr = GitHubPullRequest(
             number=1,
             state="open",
-            head_ref_name=f"claude-step-my-project-{orphaned_hash}",
+            head_ref_name=f"claude-chain-my-project-{orphaned_hash}",
             title="Orphaned task",
             labels=[],
             assignees=[],
@@ -225,7 +225,7 @@ class TestOrphanedPRDetection:
         valid_pr = GitHubPullRequest(
             number=2,
             state="open",
-            head_ref_name=f"claude-step-my-project-{valid_hash_1}",
+            head_ref_name=f"claude-chain-my-project-{valid_hash_1}",
             title="Valid task",
             labels=[],
             assignees=[],
@@ -239,7 +239,7 @@ class TestOrphanedPRDetection:
 
         # Create service and detect orphaned PRs
         service = TaskService("owner/repo", mock_pr_service)
-        orphaned_prs = service.detect_orphaned_prs("claudestep", "my-project", spec)
+        orphaned_prs = service.detect_orphaned_prs("claudechain", "my-project", spec)
 
         # Should detect only the orphaned PR
         assert len(orphaned_prs) == 1
@@ -259,7 +259,7 @@ class TestOrphanedPRDetection:
         pr1 = GitHubPullRequest(
             number=1,
             state="open",
-            head_ref_name=f"claude-step-my-project-{hash_1}",
+            head_ref_name=f"claude-chain-my-project-{hash_1}",
             title="Task 1",
             labels=[],
             assignees=[],
@@ -273,7 +273,7 @@ class TestOrphanedPRDetection:
 
         # Create service and detect orphaned PRs
         service = TaskService("owner/repo", mock_pr_service)
-        orphaned_prs = service.detect_orphaned_prs("claudestep", "my-project", spec)
+        orphaned_prs = service.detect_orphaned_prs("claudechain", "my-project", spec)
 
         # Should find no orphaned PRs
         assert len(orphaned_prs) == 0
@@ -296,7 +296,7 @@ class TestGetInProgressTasks:
         pr1 = GitHubPullRequest(
             number=1,
             state="open",
-            head_ref_name=f"claude-step-my-project-{hash_1}",
+            head_ref_name=f"claude-chain-my-project-{hash_1}",
             title="Task 1",
             labels=[],
             assignees=[],
@@ -307,7 +307,7 @@ class TestGetInProgressTasks:
         pr2 = GitHubPullRequest(
             number=2,
             state="open",
-            head_ref_name=f"claude-step-my-project-{hash_2}",
+            head_ref_name=f"claude-chain-my-project-{hash_2}",
             title="Task 2",
             labels=[],
             assignees=[],
@@ -321,7 +321,7 @@ class TestGetInProgressTasks:
 
         # Create service and get in-progress tasks
         service = TaskService("owner/repo", mock_pr_service)
-        hashes = service.get_in_progress_tasks("claudestep", "my-project")
+        hashes = service.get_in_progress_tasks("claudechain", "my-project")
 
         # Should return both hashes
         assert hashes == {hash_1, hash_2}

@@ -1,6 +1,6 @@
 # Test Coverage Improvement Plan - Phase 2
 
-This document outlines the remaining work to further enhance the testing infrastructure for ClaudeStep. All core testing work is complete (493 tests, 85% coverage). These are optional enhancements.
+This document outlines the remaining work to further enhance the testing infrastructure for ClaudeChain. All core testing work is complete (493 tests, 85% coverage). These are optional enhancements.
 
 ## Current State
 
@@ -18,7 +18,7 @@ The following phases outline optional enhancements to the testing infrastructure
 
 - [x] **Create `docs/architecture/tests.md`** with comprehensive testing architecture documentation
 
-**Purpose:** Provide architectural guidance for testing in the ClaudeStep codebase.
+**Purpose:** Provide architectural guidance for testing in the ClaudeChain codebase.
 
 **Implementation Notes (Completed 2025-12-27):**
 
@@ -92,11 +92,11 @@ Integrated Codecov for automatic coverage badge updates:
 
 2. **README Updates**:
    - Replaced static badge `![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen)`
-   - With dynamic Codecov badge: `[![codecov](https://codecov.io/gh/gestrich/claude-step/branch/main/graph/badge.svg)](https://codecov.io/gh/gestrich/claude-step)`
+   - With dynamic Codecov badge: `[![codecov](https://codecov.io/gh/gestrich/claude-chain/branch/main/graph/badge.svg)](https://codecov.io/gh/gestrich/claude-chain)`
    - Badge will auto-update on each commit once CODECOV_TOKEN is set
 
 3. **Next Steps for Repo Owner**:
-   - Sign up at codecov.io and link the gestrich/claude-step repository
+   - Sign up at codecov.io and link the gestrich/claude-chain repository
    - Add `CODECOV_TOKEN` secret to GitHub repository settings
    - Configure Codecov project settings with 70% minimum threshold
    - Badge will start updating automatically once token is configured

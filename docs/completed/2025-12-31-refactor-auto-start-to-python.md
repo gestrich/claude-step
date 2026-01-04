@@ -2,16 +2,16 @@
 
 ## Background
 
-The ClaudeStep auto-start workflow (`.github/workflows/claudestep-auto-start.yml`) currently contains significant business logic implemented in bash scripts within the YAML file. This violates ClaudeStep's **Python-first architecture** principle, which states that GitHub Actions YAML files should be lightweight wrappers that invoke Python commands.
+The ClaudeChain auto-start workflow (`.github/workflows/claudechain-auto-start.yml`) currently contains significant business logic implemented in bash scripts within the YAML file. This violates ClaudeChain's **Python-first architecture** principle, which states that GitHub Actions YAML files should be lightweight wrappers that invoke Python commands.
 
 According to the architecture documentation (docs/architecture/architecture.md):
 
 > **Convention: Minimal YAML, Maximal Python**
 >
-> ClaudeStep follows a **Python-first architecture** where:
+> ClaudeChain follows a **Python-first architecture** where:
 > - **GitHub Actions YAML files** are lightweight wrappers
 > - **Python code** contains all business logic
-> - **Actions invoke Python** via `python3 -m claudestep <command>`
+> - **Actions invoke Python** via `python3 -m claudechain <command>`
 
 Currently, the auto-start workflow includes ~130 lines of bash logic for:
 1. Detecting changed spec files (`git diff` parsing)
@@ -26,18 +26,18 @@ This logic should live in Python service layers, with the YAML workflow acting o
 
 - [x] Phase 1: Create domain models for auto-start detection ✅
 
-Create domain models in `src/claudestep/domain/` to represent:
+Create domain models in `src/claudechain/domain/` to represent:
 - `AutoStartProject` - Represents a project detected for potential auto-start
 - `ProjectChangeType` enum - Added, Modified, Deleted
 - `AutoStartDecision` - Whether to trigger, with reason
 
 Files to create:
-- `src/claudestep/domain/auto_start.py`
+- `src/claudechain/domain/auto_start.py`
 
 Follow patterns from existing domain models like `domain/project.py` and `domain/spec_content.py`.
 
 **Technical Notes:**
-- Created `src/claudestep/domain/auto_start.py` with three models:
+- Created `src/claudechain/domain/auto_start.py` with three models:
   - `ProjectChangeType`: Enum with ADDED, MODIFIED, DELETED values
   - `AutoStartProject`: Dataclass with name, change_type, and spec_path attributes
   - `AutoStartDecision`: Dataclass with project, should_trigger, and reason attributes
@@ -48,28 +48,28 @@ Follow patterns from existing domain models like `domain/project.py` and `domain
 
 - [x] Phase 2: Add git diff operations to infrastructure layer ✅
 
-Extend existing `src/claudestep/infrastructure/git/operations.py` with new functions:
+Extend existing `src/claudechain/infrastructure/git/operations.py` with new functions:
 - `detect_changed_files(ref_before: str, ref_after: str, pattern: str) -> List[str]` - Wrapper around `git diff --name-only --diff-filter=AM`
 - `detect_deleted_files(ref_before: str, ref_after: str, pattern: str) -> List[str]` - Wrapper around `git diff --name-only --diff-filter=D`
-- `parse_spec_path_to_project(path: str) -> Optional[str]` - Extract project name from `claude-step/*/spec.md` paths
+- `parse_spec_path_to_project(path: str) -> Optional[str]` - Extract project name from `claude-chain/*/spec.md` paths
 
 Use existing `run_git_command()` helper for consistent error handling. Follow patterns from the existing functions in this module.
 
 **Technical Notes:**
-- Added three new functions to `src/claudestep/infrastructure/git/operations.py`:
+- Added three new functions to `src/claudechain/infrastructure/git/operations.py`:
   - `detect_changed_files()`: Detects added or modified files using `git diff --name-only --diff-filter=AM`
   - `detect_deleted_files()`: Detects deleted files using `git diff --name-only --diff-filter=D`
-  - `parse_spec_path_to_project()`: Parses `claude-step/{project}/spec.md` paths to extract project names
+  - `parse_spec_path_to_project()`: Parses `claude-chain/{project}/spec.md` paths to extract project names
 - All functions use the existing `run_git_command()` helper for consistent error handling
 - Added `Optional` type import for the parse function return type
 - Included comprehensive docstrings with Args, Returns, Raises, and Examples sections
 - Functions handle empty git output gracefully by returning empty lists
-- Parse function validates path format strictly (must be exactly 3 parts: claude-step/project/spec.md)
+- Parse function validates path format strictly (must be exactly 3 parts: claude-chain/project/spec.md)
 - Build passes successfully and all functions import and execute correctly
 
 - [x] Phase 3: Create composite service for auto-start orchestration ✅
 
-Create composite service in `src/claudestep/services/composite/auto_start_service.py`:
+Create composite service in `src/claudechain/services/composite/auto_start_service.py`:
 - `AutoStartService` class with dependency injection
 - `detect_changed_projects()` - Identify projects with spec.md changes
 - `determine_new_projects()` - Check which projects have no existing PRs
@@ -95,7 +95,7 @@ class AutoStartService:
 ```
 
 **Technical Notes:**
-- Created `src/claudestep/services/composite/auto_start_service.py` with three methods:
+- Created `src/claudechain/services/composite/auto_start_service.py` with three methods:
   - `detect_changed_projects()`: Detects changed spec files using git operations and returns list of AutoStartProject domain models
   - `determine_new_projects()`: Filters projects to only those with no existing PRs using PRService
   - `should_auto_trigger()`: Returns AutoStartDecision based on business logic (deleted projects → skip, new projects → trigger, existing projects → skip)
@@ -107,13 +107,13 @@ class AutoStartService:
 - Uses existing `detect_changed_files()` and `detect_deleted_files()` from Phase 2
 - Uses existing `parse_spec_path_to_project()` to extract project names from file paths
 - Uses `PRService.get_project_prs()` to check for existing PRs (not `count_project_prs()` as that method doesn't exist)
-- Updated `src/claudestep/services/composite/__init__.py` to export `AutoStartService`
+- Updated `src/claudechain/services/composite/__init__.py` to export `AutoStartService`
 - Module imports successfully and instantiates correctly
 - Build passes with new service included in coverage report
 
 - [x] Phase 4: Create CLI command for auto-start detection ✅
 
-Create CLI command in `src/claudestep/cli/commands/auto_start.py`:
+Create CLI command in `src/claudechain/cli/commands/auto_start.py`:
 - `cmd_auto_start(gh, repo, base_branch, ref_before, ref_after)` function
 - Instantiate services with dependencies
 - Call service methods to detect projects
@@ -129,7 +129,7 @@ Environment variables to read in `__main__.py` adapter layer:
 - `GITHUB_SHA_BEFORE` (before commit, from `github.event.before`)
 
 **Technical Notes:**
-- Created `src/claudestep/cli/commands/auto_start.py` with `cmd_auto_start()` function
+- Created `src/claudechain/cli/commands/auto_start.py` with `cmd_auto_start()` function
 - Follows Service Layer pattern from `prepare.py` - CLI acts as thin orchestration layer
 - Function signature: `cmd_auto_start(gh, repo, base_branch, ref_before, ref_after) -> int`
 - Three-step workflow:
@@ -142,13 +142,13 @@ Environment variables to read in `__main__.py` adapter layer:
 - Instantiates `PRService` and `AutoStartService` with dependency injection
 - Comprehensive error handling with traceback on exceptions
 - Returns exit code 0 for success (even when no projects to trigger), non-zero for errors
-- Updated `src/claudestep/cli/commands/__init__.py` to export `cmd_auto_start`
+- Updated `src/claudechain/cli/commands/__init__.py` to export `cmd_auto_start`
 - Module imports successfully and syntax check passes
 - Ready for Phase 5 integration with `__main__.py` dispatcher
 
 - [x] Phase 5: Wire up command in __main__.py dispatcher ✅
 
-Add command registration in `src/claudestep/__main__.py`:
+Add command registration in `src/claudechain/__main__.py`:
 - Add `auto-start` subparser
 - Add arguments: `--repo`, `--base-branch`, `--ref-before`, `--ref-after`
 - Map to `cmd_auto_start()` in dispatcher
@@ -157,41 +157,41 @@ Add command registration in `src/claudestep/__main__.py`:
 Follow pattern from existing commands like `statistics` and `discover`.
 
 **Technical Notes:**
-- Added `auto-start` subparser to `src/claudestep/cli/parser.py` with four arguments:
+- Added `auto-start` subparser to `src/claudechain/cli/parser.py` with four arguments:
   - `--repo`: GitHub repository (owner/name)
   - `--base-branch`: Base branch to fetch specs from (default: main)
   - `--ref-before`: Git ref before the push
   - `--ref-after`: Git ref after the push
-- Added import for `cmd_auto_start` in `src/claudestep/__main__.py`
+- Added import for `cmd_auto_start` in `src/claudechain/__main__.py`
 - Wired up command dispatcher following the pattern from `statistics` command:
   - Reads arguments from CLI args with fallback to environment variables
   - Maps `GITHUB_REPOSITORY` → `repo`, `BASE_BRANCH` → `base_branch`, `REF_BEFORE` → `ref_before`, `REF_AFTER` → `ref_after`
   - Passes `gh` (GitHubActionsHelper) and explicit parameters to `cmd_auto_start()`
-- Command is now accessible via `python3 -m claudestep auto-start`
+- Command is now accessible via `python3 -m claudechain auto-start`
 - Build passes successfully and command help shows correctly
 - All 641 tests collect without import errors
 
 - [x] Phase 6: Create workflow trigger service for GitHub workflow dispatch ✅
 
-Create composite service in `src/claudestep/services/composite/workflow_service.py`:
+Create composite service in `src/claudechain/services/composite/workflow_service.py`:
 - `WorkflowService` class
-- `trigger_claudestep_workflow()` - Wrapper around `gh workflow run`
+- `trigger_claudechain_workflow()` - Wrapper around `gh workflow run`
 - Error handling for workflow trigger failures
 - Batch triggering for multiple projects
 
 Use infrastructure layer for `gh` command execution.
 
 **Technical Notes:**
-- Created `src/claudestep/services/composite/workflow_service.py` with `WorkflowService` class
+- Created `src/claudechain/services/composite/workflow_service.py` with `WorkflowService` class
 - Implemented two methods:
-  - `trigger_claudestep_workflow()`: Triggers workflow for a single project using `gh workflow run claudestep.yml`
-  - `batch_trigger_claudestep_workflows()`: Triggers workflows for multiple projects, collecting successes and failures
+  - `trigger_claudechain_workflow()`: Triggers workflow for a single project using `gh workflow run claudechain.yml`
+  - `batch_trigger_claudechain_workflows()`: Triggers workflows for multiple projects, collecting successes and failures
 - Uses existing `run_gh_command()` from `infrastructure.github.operations` for consistent error handling
 - Passes workflow inputs via `-f` flags: `project_name`, `base_branch`, `checkout_ref`
 - Batch triggering returns tuple of (successful_projects, failed_projects) for caller to handle
 - Individual failures in batch mode don't stop processing - all projects attempted
 - Raises `GitHubAPIError` for single trigger failures with clear error messages
-- Updated `src/claudestep/services/composite/__init__.py` to export `WorkflowService`
+- Updated `src/claudechain/services/composite/__init__.py` to export `WorkflowService`
 - Module imports successfully and syntax check passes
 - Build passes with 641 tests collecting correctly
 - Ready for Phase 7 integration with `cmd_auto_start()`
@@ -210,8 +210,8 @@ Update GitHub Actions outputs to include:
 - `trigger_count` - Number of successful triggers
 
 **Technical Notes:**
-- Extended `cmd_auto_start()` in `src/claudestep/cli/commands/auto_start.py` to add workflow triggering as Step 4
-- Integrated `WorkflowService.batch_trigger_claudestep_workflows()` to trigger workflows for all approved projects
+- Extended `cmd_auto_start()` in `src/claudechain/cli/commands/auto_start.py` to add workflow triggering as Step 4
+- Integrated `WorkflowService.batch_trigger_claudechain_workflows()` to trigger workflows for all approved projects
 - Added three new GitHub Actions outputs:
   - `triggered_projects`: Space-separated list of successfully triggered projects
   - `trigger_count`: Number of successful triggers
@@ -230,7 +230,7 @@ Update GitHub Actions outputs to include:
 
 - [x] Phase 8: Refactor YAML workflow to use Python command ✅
 
-Simplify `.github/workflows/claudestep-auto-start.yml`:
+Simplify `.github/workflows/claudechain-auto-start.yml`:
 
 **Before** (current):
 ```yaml
@@ -245,7 +245,7 @@ steps:
     run: |
       # 40+ lines of bash logic
 
-  - name: Trigger ClaudeStep
+  - name: Trigger ClaudeChain
     run: |
       # 20+ lines of bash logic
 ```
@@ -260,7 +260,7 @@ steps:
 
   - name: Detect and trigger auto-start
     id: auto_start
-    run: python3 -m claudestep auto-start
+    run: python3 -m claudechain auto-start
     env:
       GITHUB_REPOSITORY: ${{ github.repository }}
       BASE_BRANCH: main
@@ -270,7 +270,7 @@ steps:
 
   - name: Generate summary
     if: always()
-    run: python3 -m claudestep auto-start-summary
+    run: python3 -m claudechain auto-start-summary
     env:
       TRIGGERED_PROJECTS: ${{ steps.auto_start.outputs.triggered_projects }}
       FAILED_PROJECTS: ${{ steps.auto_start.outputs.failed_projects }}
@@ -282,11 +282,11 @@ Move all bash logic to Python. YAML only:
 - Passes parameters via environment variables
 
 **Technical Notes:**
-- Refactored `.github/workflows/claudestep-auto-start.yml` to use Python-first architecture
+- Refactored `.github/workflows/claudechain-auto-start.yml` to use Python-first architecture
 - Replaced ~130 lines of bash logic across 3 steps with single Python command invocation
 - Added Python setup step using `actions/setup-python@v5` with Python 3.11
-- Added ClaudeStep installation step: `pip install -e .`
-- Consolidated detection, checking, and triggering into single `python3 -m claudestep auto-start` command
+- Added ClaudeChain installation step: `pip install -e .`
+- Consolidated detection, checking, and triggering into single `python3 -m claudechain auto-start` command
 - Command reads environment variables: `GITHUB_REPOSITORY`, `BASE_BRANCH`, `REF_BEFORE`, `REF_AFTER`, `GH_TOKEN`
 - Simplified summary generation to use GitHub Actions outputs from Python command:
   - `triggered_projects`: Successfully triggered projects
@@ -295,13 +295,13 @@ Move all bash logic to Python. YAML only:
 - Summary now handles three scenarios: successful triggers, failed triggers, and no projects detected
 - Removed auto-start enabled/disabled check (will be added in Phase 10)
 - Build passes successfully with 641 tests collecting correctly
-- Workflow now follows same Python-first pattern as other ClaudeStep workflows
+- Workflow now follows same Python-first pattern as other ClaudeChain workflows
 - YAML file reduced from 163 lines to 82 lines (50% reduction)
 - All business logic now lives in testable Python service layer
 
 - [x] Phase 9: Add auto-start summary command ✅
 
-Create `cmd_auto_start_summary()` in `src/claudestep/cli/commands/auto_start.py`:
+Create `cmd_auto_start_summary()` in `src/claudechain/cli/commands/auto_start.py`:
 - Read outputs from auto-start step
 - Generate GitHub Actions step summary
 - Format markdown summary showing:
@@ -313,7 +313,7 @@ Create `cmd_auto_start_summary()` in `src/claudestep/cli/commands/auto_start.py`
 Keep summary generation in Python, not bash.
 
 **Technical Notes:**
-- Created `cmd_auto_start_summary()` function in `src/claudestep/cli/commands/auto_start.py`
+- Created `cmd_auto_start_summary()` function in `src/claudechain/cli/commands/auto_start.py`
 - Function signature: `cmd_auto_start_summary(gh, triggered_projects, failed_projects) -> int`
 - Reads space-separated project lists from environment variables or CLI arguments
 - Generates formatted markdown summary using `gh.write_step_summary()`:
@@ -322,14 +322,14 @@ Keep summary generation in Python, not bash.
   - ❌ All failed: Shows all failed projects
   - ℹ️ No projects: Informational message when no projects detected
 - Includes helpful "What happens next?" section with context-appropriate guidance
-- Added `auto-start-summary` subparser to `src/claudestep/cli/parser.py` with two arguments:
+- Added `auto-start-summary` subparser to `src/claudechain/cli/parser.py` with two arguments:
   - `--triggered-projects`: Successfully triggered projects
   - `--failed-projects`: Projects that failed to trigger
-- Wired up command dispatcher in `src/claudestep/__main__.py`:
+- Wired up command dispatcher in `src/claudechain/__main__.py`:
   - Reads from CLI arguments with fallback to environment variables
   - Maps `TRIGGERED_PROJECTS` and `FAILED_PROJECTS` environment variables
-- Updated `src/claudestep/cli/commands/__init__.py` to export `cmd_auto_start_summary`
-- Command is now accessible via `python3 -m claudestep auto-start-summary`
+- Updated `src/claudechain/cli/commands/__init__.py` to export `cmd_auto_start_summary`
+- Command is now accessible via `python3 -m claudechain auto-start-summary`
 - Tested all scenarios: all successful, partial success, all failed, no projects
 - All 641 tests collect successfully
 - Build passes with command functioning correctly
@@ -337,14 +337,14 @@ Keep summary generation in Python, not bash.
 - [x] Phase 10: Add configuration option to disable auto-start ✅
 
 Add check in `AutoStartService.should_auto_trigger()`:
-- Read repository variable `CLAUDESTEP_AUTO_START_ENABLED`
+- Read repository variable `CLAUDECHAIN_AUTO_START_ENABLED`
 - Default to `true` if not set
 - Return early with reason if disabled
 
 Update workflow to pass environment variable:
 ```yaml
 env:
-  AUTO_START_ENABLED: ${{ vars.CLAUDESTEP_AUTO_START_ENABLED != 'false' }}
+  AUTO_START_ENABLED: ${{ vars.CLAUDECHAIN_AUTO_START_ENABLED != 'false' }}
 ```
 
 Document in README.md how to disable via repository variables.
@@ -355,8 +355,8 @@ Document in README.md how to disable via repository variables.
 - Updated `cmd_auto_start()` to accept `auto_start_enabled` parameter and pass it to `AutoStartService` constructor
 - Added `--auto-start-enabled` CLI argument to parser with custom type converter that treats string 'false' as boolean False
 - Updated `__main__.py` dispatcher to parse `auto_start_enabled` from CLI argument or environment variable `AUTO_START_ENABLED`, defaulting to true
-- Updated `.github/workflows/claudestep-auto-start.yml` to pass `AUTO_START_ENABLED` environment variable using GitHub repository variable `vars.CLAUDESTEP_AUTO_START_ENABLED`
-- Environment variable logic: `${{ vars.CLAUDESTEP_AUTO_START_ENABLED != 'false' }}` evaluates to true unless explicitly set to 'false'
+- Updated `.github/workflows/claudechain-auto-start.yml` to pass `AUTO_START_ENABLED` environment variable using GitHub repository variable `vars.CLAUDECHAIN_AUTO_START_ENABLED`
+- Environment variable logic: `${{ vars.CLAUDECHAIN_AUTO_START_ENABLED != 'false' }}` evaluates to true unless explicitly set to 'false'
 - Tested functionality: auto-start can be disabled by setting `auto_start_enabled=False`, which prevents all projects from auto-triggering
 - Build passes successfully with 641 tests collecting correctly
 - All changes follow Python-first architecture with configuration passed explicitly through layers
@@ -440,7 +440,7 @@ Add to "Available Commands" table:
   - Documented Python service layer responsibilities (docs/architecture/architecture.md:1110-1118)
   - Updated detection flow diagram to show service orchestration (docs/architecture/architecture.md:1122-1166)
 - Added comprehensive documentation for disabling auto-start (docs/architecture/architecture.md:1224-1250):
-  - Instructions for using `CLAUDESTEP_AUTO_START_ENABLED` repository variable
+  - Instructions for using `CLAUDECHAIN_AUTO_START_ENABLED` repository variable
   - Explanation of configuration flow through service layers
   - Alternative disabling methods
 - All 685 tests collect successfully, confirming documentation changes don't break anything
@@ -449,7 +449,7 @@ Add to "Available Commands" table:
 - [x] Phase 14: Validation - E2E testing ✅
 
 Test the refactored auto-start workflow end-to-end:
-1. Create test project in `claude-step/test-auto-start-refactor/`
+1. Create test project in `claude-chain/test-auto-start-refactor/`
 2. Push spec.md to main branch
 3. Verify auto-start workflow runs successfully
 4. Verify first task PR is created
@@ -479,7 +479,7 @@ Run existing E2E tests to ensure no regressions:
 
 ### Service Layer Architecture
 
-Following ClaudeStep's layered architecture:
+Following ClaudeChain's layered architecture:
 
 **Infrastructure Layer** (`infrastructure/git/operations.py`):
 - Extends existing git operations module with diff detection functions
@@ -513,7 +513,7 @@ Moving logic to Python provides:
 3. **Maintainability** - Easier to read and refactor than bash
 4. **Reusability** - Services can be used by other commands
 5. **Local Development** - Run and debug without GitHub Actions
-6. **Consistency** - Follows same patterns as other ClaudeStep commands
+6. **Consistency** - Follows same patterns as other ClaudeChain commands
 
 ### Backward Compatibility
 
@@ -592,5 +592,5 @@ class AutoStartService:
 
 - **Architecture**: `docs/architecture/architecture.md` - Python-first approach, service layer pattern
 - **Code Style**: `docs/architecture/python-code-style.md` - Configuration flow, dependency injection
-- **Auto-Start**: Current implementation in `.github/workflows/claudestep-auto-start.yml`
+- **Auto-Start**: Current implementation in `.github/workflows/claudechain-auto-start.yml`
 - **Similar Refactoring**: `docs/completed/refactor-statistics-service-architecture.md` - Example of YAML→Python migration

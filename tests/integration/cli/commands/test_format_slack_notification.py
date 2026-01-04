@@ -7,8 +7,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from claudestep.cli.commands.format_slack_notification import cmd_format_slack_notification, format_pr_notification
-from claudestep.domain.cost_breakdown import CostBreakdown, ModelUsage
+from claudechain.cli.commands.format_slack_notification import cmd_format_slack_notification, format_pr_notification
+from claudechain.domain.cost_breakdown import CostBreakdown, ModelUsage
 
 
 def make_cost_breakdown_json(
@@ -448,7 +448,7 @@ class TestCmdFormatSlackNotification:
     def test_cmd_format_slack_notification_handles_unexpected_exception(self, mock_gh_actions, default_params):
         """Should catch and report unexpected exceptions"""
         # Arrange
-        with patch('claudestep.cli.commands.format_slack_notification.format_pr_notification') as mock_format:
+        with patch('claudechain.cli.commands.format_slack_notification.format_pr_notification') as mock_format:
             # Simulate unexpected error during formatting
             mock_format.side_effect = RuntimeError("Unexpected error")
 
@@ -466,7 +466,7 @@ class TestCmdFormatSlackNotification:
     def test_cmd_format_slack_notification_writes_has_pr_false_on_exception(self, mock_gh_actions, default_params):
         """Should write has_pr=false when exception occurs"""
         # Arrange
-        with patch('claudestep.cli.commands.format_slack_notification.format_pr_notification') as mock_format:
+        with patch('claudechain.cli.commands.format_slack_notification.format_pr_notification') as mock_format:
             mock_format.side_effect = Exception("Test error")
 
             # Act

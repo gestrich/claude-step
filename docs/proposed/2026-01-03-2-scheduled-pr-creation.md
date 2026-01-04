@@ -2,9 +2,9 @@
 
 ## Background
 
-Currently, ClaudeStep relies on two triggers to create PRs:
+Currently, ClaudeChain relies on two triggers to create PRs:
 1. **Manual trigger** - User runs workflow via `workflow_dispatch`
-2. **Merge trigger** - PR merge with `claudestep` label triggers next task
+2. **Merge trigger** - PR merge with `claudechain` label triggers next task
 
 This works well for continuous chains, but has gaps:
 - First PR requires manual trigger (no previous PR to merge)
@@ -31,7 +31,7 @@ Before implementing, identify existing code that can be reused or extended. The 
 1. **Project discovery**
    - Check `StatisticsService.collect_all_statistics()` - already discovers projects
    - Check `ProjectRepository` for existing discovery methods
-   - Look for GitHub API calls that list `claude-step/` directory contents
+   - Look for GitHub API calls that list `claude-chain/` directory contents
 
 2. **Capacity checking**
    - Check `ReviewerService` for existing capacity logic
@@ -48,12 +48,12 @@ Before implementing, identify existing code that can be reused or extended. The 
    - Look at how spec.md is parsed to find pending tasks
 
 **Files to examine:**
-- [src/claudestep/services/composite/statistics_service.py](src/claudestep/services/composite/statistics_service.py) - Project discovery in multi-project mode
-- [src/claudestep/services/core/reviewer_service.py](src/claudestep/services/core/reviewer_service.py) - Capacity checking
-- [src/claudestep/services/core/task_service.py](src/claudestep/services/core/task_service.py) - Task identification
-- [src/claudestep/services/core/pr_service.py](src/claudestep/services/core/pr_service.py) - PR operations
-- [src/claudestep/infrastructure/repositories/project_repository.py](src/claudestep/infrastructure/repositories/project_repository.py) - Project loading
-- [src/claudestep/cli/commands/prepare.py](src/claudestep/cli/commands/prepare.py) - Existing PR preparation flow
+- [src/claudechain/services/composite/statistics_service.py](src/claudechain/services/composite/statistics_service.py) - Project discovery in multi-project mode
+- [src/claudechain/services/core/reviewer_service.py](src/claudechain/services/core/reviewer_service.py) - Capacity checking
+- [src/claudechain/services/core/task_service.py](src/claudechain/services/core/task_service.py) - Task identification
+- [src/claudechain/services/core/pr_service.py](src/claudechain/services/core/pr_service.py) - PR operations
+- [src/claudechain/infrastructure/repositories/project_repository.py](src/claudechain/infrastructure/repositories/project_repository.py) - Project loading
+- [src/claudechain/cli/commands/prepare.py](src/claudechain/cli/commands/prepare.py) - Existing PR preparation flow
 
 **Output of this phase:**
 - Document which existing methods can be reused directly
@@ -66,12 +66,12 @@ Before implementing, identify existing code that can be reused or extended. The 
 Create a new CLI command that loops through all projects and opens PRs for those with available capacity.
 
 **Files to create/modify:**
-- [src/claudestep/cli/commands/open_prs.py](src/claudestep/cli/commands/open_prs.py) - New command file
-- [src/claudestep/cli/main.py](src/claudestep/cli/main.py) - Register new command
+- [src/claudechain/cli/commands/open_prs.py](src/claudechain/cli/commands/open_prs.py) - New command file
+- [src/claudechain/cli/main.py](src/claudechain/cli/main.py) - Register new command
 
 **Command signature:**
 ```bash
-python -m claudestep open-prs \
+python -m claudechain open-prs \
   --repo "owner/repo" \
   --base-branch main \
   --dry-run  # Optional: show what would be created without creating
@@ -116,7 +116,7 @@ Summary: Opened 2 PRs, skipped 1 project (at capacity)
 Create a service that orchestrates project discovery and PR creation.
 
 **Files to create:**
-- [src/claudestep/services/composite/open_prs_service.py](src/claudestep/services/composite/open_prs_service.py)
+- [src/claudechain/services/composite/open_prs_service.py](src/claudechain/services/composite/open_prs_service.py)
 
 **Service design:**
 ```python
@@ -180,14 +180,14 @@ Use existing infrastructure to discover all projects.
 
 **Implementation approach:**
 - Use `ProjectRepository.discover_projects()` if it exists, or create it
-- Alternative: Scan for `claude-step/*/spec.md` files via GitHub API
+- Alternative: Scan for `claude-chain/*/spec.md` files via GitHub API
 - Return list of `ProjectConfiguration` objects
 
 **Files to modify:**
-- [src/claudestep/infrastructure/repositories/project_repository.py](src/claudestep/infrastructure/repositories/project_repository.py) - Add `discover_projects()` method if needed
+- [src/claudechain/infrastructure/repositories/project_repository.py](src/claudechain/infrastructure/repositories/project_repository.py) - Add `discover_projects()` method if needed
 
 **Discovery logic:**
-1. List contents of `claude-step/` directory via GitHub API
+1. List contents of `claude-chain/` directory via GitHub API
 2. For each subdirectory, check if `spec.md` exists
 3. Load configuration for each discovered project
 4. Return list of project configurations
@@ -261,7 +261,7 @@ Create a composite action that wraps the `open-prs` command.
 
 **Action definition:**
 ```yaml
-name: 'ClaudeStep Open PRs'
+name: 'ClaudeChain Open PRs'
 description: 'Open PRs for all projects with available capacity'
 
 inputs:
@@ -299,7 +299,7 @@ runs:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
       run: |
-        python -m claudestep open-prs \
+        python -m claudechain open-prs \
           --repo "${{ github.repository }}" \
           --base-branch "${{ inputs.base_branch }}" \
           ${{ inputs.dry_run == 'true' && '--dry-run' || '' }}
@@ -321,7 +321,7 @@ Document the new scheduled PR creation feature.
 
 **Example workflow for users:**
 ```yaml
-name: ClaudeStep Open PRs
+name: ClaudeChain Open PRs
 
 on:
   schedule:
@@ -341,7 +341,7 @@ jobs:
   open-prs:
     runs-on: ubuntu-latest
     steps:
-      - uses: gestrich/claude-step/open-prs@v2
+      - uses: gestrich/claude-chain/open-prs@v2
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -379,11 +379,11 @@ python3 -m pytest tests/unit/services/test_open_prs_service.py -v
 python3 -m pytest tests/unit/cli/test_open_prs.py -v
 
 # Dry run test
-source .venv/bin/activate && python -m claudestep open-prs \
-  --repo "gestrich/claude-step" \
+source .venv/bin/activate && python -m claudechain open-prs \
+  --repo "gestrich/claude-chain" \
   --dry-run
 
 # Integration test (creates real PRs - use with caution)
-source .venv/bin/activate && python -m claudestep open-prs \
-  --repo "gestrich/claude-step"
+source .venv/bin/activate && python -m claudechain open-prs \
+  --repo "gestrich/claude-chain"
 ```

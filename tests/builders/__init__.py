@@ -1,4 +1,4 @@
-"""Test data builders for ClaudeStep tests
+"""Test data builders for ClaudeChain tests
 
 This module provides builder pattern helpers for creating complex test data.
 Builders simplify test setup and improve readability by providing fluent interfaces
