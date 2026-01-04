@@ -54,7 +54,9 @@ on:
   pull_request:
     types: [closed]
     branches:
-      - main # Branch your PRs merge into
+      - main  # Branch your PRs merge into
+    paths:
+      - 'claude-chain/**'
 
 permissions:
   contents: write

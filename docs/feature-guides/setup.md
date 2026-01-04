@@ -46,6 +46,8 @@ on:
     types: [closed]
     branches:
       - main  # Branch your PRs merge into
+    paths:
+      - 'claude-chain/**'
 
 permissions:
   contents: write
@@ -86,6 +88,8 @@ name: ClaudeChain
 on:
   pull_request:
     types: [closed]
+    paths:
+      - 'claude-chain/**'
   workflow_dispatch:
 
 permissions:
