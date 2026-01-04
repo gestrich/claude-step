@@ -42,10 +42,13 @@ on:
         description: 'Project name (folder under claude-chain/)'
         required: true
         type: string
+      base_branch:
+        description: 'Base branch where spec file lives'
+        required: true
+        type: string
+        default: 'main'
   pull_request:
     types: [closed]
-    branches:
-      - main  # Branch your PRs merge into
     paths:
       - 'claude-chain/**'
 
@@ -65,18 +68,19 @@ jobs:
           github_event: ${{ toJson(github.event) }}
           event_name: ${{ github.event_name }}
           project_name: ${{ github.event.inputs.project_name || '' }}
+          default_base_branch: ${{ github.event.inputs.base_branch || 'main' }}
           claude_allowed_tools: 'Read,Write,Edit,Bash(git add:*),Bash(git commit:*)'  # Configure as needed
-          default_base_branch: 'main'  # Branch your PRs merge into
           # slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
 ```
 
 **What this does:**
-- `workflow_dispatch` - Allows manual triggering with project name input
+- `workflow_dispatch` - Allows manual triggering with project name and base branch inputs
 - `pull_request: types: [closed]` - Triggers when PRs are merged (for auto-continuation)
+- `paths: ['claude-chain/**']` - Only triggers when files under claude-chain/ change
 - `github_event` / `event_name` - Passes event context so the action can detect projects automatically
-- `project_name` - Used for manual triggers; auto-detected for PR events
+- `project_name` - Used for manual triggers; auto-detected for PR events from changed spec.md files
+- `default_base_branch` - The branch PRs will target; validated against project config if set
 - `claude_allowed_tools` - Controls which tools Claude can use (see [Tool Permissions](#tool-permissions))
-- `default_base_branch` - The branch PRs will target (must match the `branches` filter above)
 
 ### Standard Workflow (Alternative)
 
@@ -119,10 +123,12 @@ jobs:
 
 | Trigger | Purpose |
 |---------|---------|
-| `workflow_dispatch` | Manual trigger for starting new projects |
-| `pull_request: types: [closed]` | Auto-continuation when PRs are merged |
+| `workflow_dispatch` | Manual trigger with project name and base branch |
+| `pull_request: types: [closed]` | Auto-trigger when PRs changing spec.md are merged |
 
-**Note:** The first task for a new project requires either a manual trigger or merging a PR with the `claudechain` label. Subsequent tasks auto-trigger on merge.
+**Note:** ClaudeChain automatically detects projects from changed spec.md files. When you merge a PR that adds or modifies a spec.md file, ClaudeChain triggers automatically. No labels are required for initial triggering—just merge your spec PR and the first task starts.
+
+**Base branch validation:** ClaudeChain validates that the merge target matches the project's configured `baseBranch` (in configuration.yml). If your project uses a non-main base branch, set it in configuration.yml to ensure PRs only process when merged to the correct branch.
 
 ---
 
@@ -171,7 +177,7 @@ For PR creation notifications:
 
 Before running ClaudeChain, you need at least one project. See the [Projects Guide](./projects.md) for creating `spec.md` and `configuration.yml`.
 
-### Option 1: Labeled PR (Recommended)
+### Option 1: Merge a Spec PR (Recommended)
 
 1. Create a branch and add your project files:
    ```bash
@@ -183,17 +189,16 @@ Before running ClaudeChain, you need at least one project. See the [Projects Gui
    git push origin add-my-project-spec
    ```
 2. Create a PR from your branch
-3. Add the `claudechain` label to the PR
-4. Merge the PR
+3. Merge the PR
 
-ClaudeChain detects the merge and automatically creates the first task PR.
+ClaudeChain detects the spec.md change and automatically creates the first task PR. No labels required!
 
 ### Option 2: Manual Trigger
 
 1. Push your project files directly to main
 2. Go to **Actions** → **ClaudeChain** → **Run workflow**
-3. Select your branch (usually `main`)
-4. Enter your project name (e.g., `my-project`)
+3. Enter your project name (e.g., `my-project`)
+4. Enter the base branch (e.g., `main`)
 5. Click **Run workflow**
 
 The workflow runs and creates a PR for the first task.

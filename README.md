@@ -51,10 +51,13 @@ on:
         description: 'Project name (folder under claude-chain/)'
         required: true
         type: string
+      base_branch:
+        description: 'Base branch for PR'
+        required: true
+        type: string
+        default: 'main'  # Default branch PRs target
   pull_request:
     types: [closed]
-    branches:
-      - main  # Branch your PRs merge into
     paths:
       - 'claude-chain/**'
 
@@ -74,9 +77,12 @@ jobs:
           github_event: ${{ toJson(github.event) }}
           event_name: ${{ github.event_name }}
           project_name: ${{ github.event.inputs.project_name || '' }}
-          claude_allowed_tools: 'Read,Write,Edit,Bash(git add:*),Bash(git commit:*)'  # Configure as needed
-          default_base_branch: 'main'  # Branch your PRs merge into
-          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}  # Optional
+          # Default branch PRs target - shoudl be same as 
+          # base_branch.default above
+          default_base_branch: ${{ github.event.inputs.base_branch || 'main' }}  # Per-project override in configuration.yml
+          # Configure cladue tools as needed
+          claude_allowed_tools: 'Read,Write,Edit,Bash(git add:*),Bash(git commit:*)'
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
 ```
 
 **Statistics workflow** (`.github/workflows/claudechain-statistics.yml`) - optional, for weekly progress reports:
@@ -137,8 +143,8 @@ Tasks can be organized however you like—grouped under headings, separated by b
 ### 4. Start ClaudeChain
 
 Push your project to main, then either:
-- Create a PR with the `claudechain` label and merge it, or
-- Manual trigger: Actions → ClaudeChain → Run workflow
+- Create a PR that adds/modifies your spec.md and merge it (triggers automatically), or
+- Manual trigger: Actions → ClaudeChain → Run workflow (requires project name and base branch)
 
 → **[Full guide: Setup](docs/feature-guides/setup.md)**
 
@@ -176,11 +182,13 @@ Enable Slack by adding `slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}` to 
 
 ## Troubleshooting
 
-**First task not starting?** The first task requires manual trigger or a labeled PR merge.
+**First task not starting?** Either merge a PR that changes spec.md (triggers automatically) or use manual trigger from Actions tab.
 
-**PR merge doesn't trigger next task?** Check that the PR has the `claudechain` label and was merged (not just closed).
+**PR merge doesn't trigger next task?** Check that the PR was merged (not just closed) and that it changed files under `claude-chain/`.
 
 **Spec file not found?** Ensure `spec.md` is committed and pushed to your base branch.
+
+**Base branch mismatch?** If your project uses a non-main base branch, set `baseBranch` in configuration.yml to match.
 
 → **[Full guide: Troubleshooting](docs/feature-guides/troubleshooting.md)**
 

@@ -13,6 +13,7 @@ This guide covers common issues and solutions when using ClaudeChain to keep you
 - [Orphaned PR Warnings](#orphaned-pr-warnings)
 - [PR Already Open for Project](#pr-already-open-for-project)
 - [Workflow Runs But No PR Created](#workflow-runs-but-no-pr-created)
+- [Base Branch Mismatch](#base-branch-mismatch)
 
 ---
 
@@ -20,23 +21,22 @@ This guide covers common issues and solutions when using ClaudeChain to keep you
 
 **Symptom:** You added a project but no PR was created.
 
-**Cause:** The first task for a new project cannot auto-trigger—there's no previous PR to merge.
+**Cause:** The spec.md file may not be committed, or the merge didn't trigger the workflow.
 
 ### Solution
 
-**Option 1: Use a labeled PR (Recommended)**
+**Option 1: Merge a Spec PR (Recommended)**
 
-1. Create a PR that adds your spec files
-2. Add the `claudechain` label to the PR
-3. Merge the PR
+1. Create a PR that adds your spec.md file
+2. Merge the PR
 
-ClaudeChain detects the merge and creates the first task PR.
+ClaudeChain automatically detects the spec.md change and creates the first task PR. No labels required!
 
 **Option 2: Manual trigger**
 
 1. Go to **Actions** → **ClaudeChain** → **Run workflow**
-2. Select your branch (usually `main`)
-3. Enter your project name (e.g., `my-refactor`)
+2. Enter your project name (e.g., `my-refactor`)
+3. Enter the base branch (e.g., `main`)
 4. Click **Run workflow**
 
 Subsequent tasks will auto-trigger when you merge PRs.
@@ -47,14 +47,7 @@ Subsequent tasks will auto-trigger when you merge PRs.
 
 **Symptom:** You merged a ClaudeChain PR but no new PR was created.
 
-### Check 1: Verify the Label
-
-The PR must have the `claudechain` label. PRs created by ClaudeChain get this automatically, but if someone removed it:
-
-1. Check the merged PR for the `claudechain` label
-2. If missing, use manual trigger for the next task
-
-### Check 2: Verify It Was Merged
+### Check 1: Verify It Was Merged
 
 The PR must be **merged**, not just closed:
 
@@ -63,16 +56,24 @@ The PR must be **merged**, not just closed:
 
 Check the PR page—it should say "merged" with a purple icon, not "closed" with a red icon.
 
-### Check 3: Check Workflow Logs
+### Check 2: Check Changed Files
+
+The PR must change files under `claude-chain/`. If the PR doesn't include any changes to spec.md or other files in that directory, the workflow won't trigger.
+
+### Check 3: Verify Base Branch Match
+
+If your project uses a non-main base branch (configured in `configuration.yml`), ensure the PR was merged into that branch. ClaudeChain validates that the merge target matches the project's configured `baseBranch`.
+
+### Check 4: Check Workflow Logs
 
 1. Go to **Actions** → **ClaudeChain**
 2. Find the run triggered by your merge
 3. Look for skip reasons or errors:
-   - "PR does not have claudechain label"
+   - "Base branch mismatch" - PR merged to wrong branch
    - "PR was closed without merging"
    - "No tasks remaining"
 
-### Check 4: Verify Tasks Remain
+### Check 5: Verify Tasks Remain
 
 If all tasks are complete (`- [x]`), there's nothing left to do:
 
@@ -293,13 +294,33 @@ If you can't resolve an issue:
 
 ---
 
+## Base Branch Mismatch
+
+**Symptom:** Workflow skips with "base branch mismatch" message.
+
+**Cause:** The PR was merged into a branch that doesn't match the project's configured `baseBranch`.
+
+### Solution
+
+1. Check your project's `configuration.yml` for the `baseBranch` setting
+2. Ensure PRs target the correct branch
+3. For manual triggers, specify the correct base branch
+
+**Example configuration.yml:**
+```yaml
+baseBranch: develop  # PRs must merge into 'develop'
+```
+
+---
+
 ## Quick Reference
 
 | Symptom | Likely Cause | Quick Fix |
 |---------|--------------|-----------|
-| First task not starting | Manual trigger needed | Actions → Run workflow |
-| Merge doesn't trigger | Missing label or closed without merge | Check label, verify merged |
+| First task not starting | Spec PR not merged | Merge PR with spec.md changes |
+| Merge doesn't trigger | Wrong base branch or closed without merge | Verify merged to correct branch |
 | Spec not found | Not pushed to base branch | `git push origin main` |
+| Base branch mismatch | Config baseBranch differs from merge target | Update configuration.yml |
 | Can't create PRs | Permissions not enabled | Settings → Actions → Allow PRs |
 | App not installed | Claude Code GitHub App missing | `/install-github-app` |
 | Rate limit | Too many API calls | Wait 1 hour |

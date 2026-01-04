@@ -62,9 +62,10 @@ def get_reviewer_prs_for_project(username: str, project: str, label: str = "clau
 def get_reviewer_pr_count(username: str, project: str, label: str = "claudechain") -> int
 ```
 
-**Discover unique projects**:
+**Discover unique projects with base branches**:
 ```python
-def get_unique_projects(label: str = "claudechain") -> Set[str]
+def get_unique_projects(label: str = "claudechain") -> Dict[str, str]
+    # Returns: {project_name: base_branch} mapping
 ```
 
 ### Branch Name Operations

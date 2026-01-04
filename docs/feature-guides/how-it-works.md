@@ -136,13 +136,14 @@ Runs in GitHub Actions (via `anthropics/claude-code-action`). Does the actual wo
 
 ## Automatic Continuation
 
-When you merge a ClaudeChain PR, the next task automatically starts. Here's how:
+When you merge a PR that changes files under `claude-chain/`, the next task automatically starts. Here's how:
 
 ### Requirements for Auto-Continuation
 
-1. **PR has the `claudechain` label** - Added automatically when ClaudeChain creates the PR
+1. **PR changes claude-chain/ files** - Detected from changed spec.md files
 2. **PR is merged** - Not just closed (closing without merging won't trigger)
-3. **Tasks remain** - At least one unchecked task exists in `spec.md`
+3. **Base branch matches** - PR merge target matches project's configured `baseBranch`
+4. **Tasks remain** - At least one unchecked task exists in `spec.md`
 
 ### The Flow
 
@@ -151,9 +152,9 @@ When you merge a ClaudeChain PR, the next task automatically starts. Here's how:
          ↓
 2. GitHub fires `pull_request: types: [closed]` event
          ↓
-3. ClaudeChain workflow runs
+3. ClaudeChain workflow runs (paths filter matches claude-chain/**)
          ↓
-4. Checks: Has 'claudechain' label? Was merged?
+4. Checks: Was merged? Does base branch match config?
          ↓
 5. If yes: Finds next task, creates PR #2
          ↓
@@ -162,12 +163,12 @@ When you merge a ClaudeChain PR, the next task automatically starts. Here's how:
    (cycle repeats)
 ```
 
-### First Task Exception
+### Starting the First Task
 
-The first task for a new project cannot auto-trigger (there's no previous PR to merge). Start it by either:
+Start your first task by either:
 
-1. **Creating a PR with `claudechain` label that adds your spec files, then merging it** (recommended)
-2. **Manual trigger:** Actions → ClaudeChain → Run workflow → Enter project name
+1. **Creating a PR that adds your spec.md file, then merging it** (recommended) - ClaudeChain automatically detects the new spec and creates the first task PR
+2. **Manual trigger:** Actions → ClaudeChain → Run workflow → Enter project name and base branch
 
 ---
 
@@ -228,7 +229,7 @@ To resolve:
 | **PR Chain** | One task → one PR → merge → next task |
 | **Task Identification** | Hash of description, not position |
 | **Branch Naming** | `claude-chain-{project}-{hash}` |
-| **Auto-Continuation** | Requires `claudechain` label + merge |
+| **Auto-Continuation** | Triggered by spec.md changes + merge + base branch match |
 | **Orphaned PRs** | Occur when task descriptions change |
 
 Understanding these concepts helps you work effectively with ClaudeChain. For setup instructions, see [Setup Guide](./setup.md). For project configuration, see [Projects Guide](./projects.md).
