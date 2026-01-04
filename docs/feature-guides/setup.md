@@ -26,6 +26,8 @@ Before setting up ClaudeChain, you need:
 
 Create `.github/workflows/claudechain.yml` in your repository.
 
+**Important:** Commit this workflow file to your default branch (usually `main`). GitHub Actions requires workflow files to exist on the default branch for manual triggers (`workflow_dispatch`) to appear in the Actions UI.
+
 ### Simplified Workflow (Recommended)
 
 This format handles project detection and event routing automatically:
