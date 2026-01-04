@@ -13,9 +13,9 @@
 echo "E2E tests temporarily disabled - see run_test.sh for details"
 exit 0
 
-# End-to-End Test Runner for ClaudeStep
+# End-to-End Test Runner for ClaudeChain
 #
-# This script triggers the E2E integration tests for ClaudeStep remotely on GitHub.
+# This script triggers the E2E integration tests for ClaudeChain remotely on GitHub.
 # All test execution happens on GitHub's infrastructure, avoiding local git mutations.
 #
 # Prerequisites:
@@ -48,7 +48,7 @@ NC='\033[0m' # No Color
 E2E_BRANCH="main-e2e"
 
 echo "========================================"
-echo "ClaudeStep E2E Test Runner"
+echo "ClaudeChain E2E Test Runner"
 echo "========================================"
 echo ""
 
