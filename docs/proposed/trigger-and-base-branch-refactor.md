@@ -202,7 +202,7 @@ The goal is to create a robust trigger system that:
 
 ---
 
-- [ ] Phase 3: Update workflow triggers to use changed files
+- [x] Phase 3: Update workflow triggers to use changed files
 
 **Goal**: Trigger on any PR merge that changes files in `claude-chain/` directory, regardless of labels or branch naming.
 
