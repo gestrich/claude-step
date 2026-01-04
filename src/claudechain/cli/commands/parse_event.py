@@ -130,24 +130,23 @@ def cmd_parse_event(
             gh.write_output("skip_reason", reason)
             return 0
 
-        # Determine base branch (and checkout ref - they should always match)
-        # If user configured default_base_branch, use it for everything
-        # Otherwise derive from event context
-        if default_base_branch:
-            base_branch = default_base_branch
-        else:
-            try:
-                base_branch = context.get_checkout_ref()
-            except ValueError as e:
-                reason = f"Could not determine base branch: {e}"
-                print(f"\n⏭️  Skipping: {reason}")
-                gh.write_output("skip", "true")
-                gh.write_output("skip_reason", reason)
-                return 0
+        # Determine what to checkout based on the event type
+        # - PR merge: checkout base_ref (branch the PR merged INTO) - this has the merged changes
+        # - push: checkout ref_name (branch that was pushed to)
+        # - workflow_dispatch: checkout ref_name (branch user selected)
+        try:
+            checkout_ref = context.get_checkout_ref()
+        except ValueError as e:
+            reason = f"Could not determine checkout ref: {e}"
+            print(f"\n⏭️  Skipping: {reason}")
+            gh.write_output("skip", "true")
+            gh.write_output("skip_reason", reason)
+            return 0
 
-        # Always checkout the base branch - the triggering event is just a trigger,
-        # all actual work should happen on the configured base branch
-        checkout_ref = base_branch
+        # base_branch is used for PR creation target
+        # Use default_base_branch if provided, otherwise same as checkout_ref
+        # Note: Project config may override this (checked in prepare.py after checkout)
+        base_branch = default_base_branch if default_base_branch else checkout_ref
 
         # Output results
         print(f"\n✓ Event parsing complete")
