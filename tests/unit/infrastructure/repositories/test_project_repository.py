@@ -535,3 +535,282 @@ Ensure backward compatibility with existing sessions.
         assert project_b.name == "project-b"
         assert config_b.assignee == "bob"
         assert spec_b.total_tasks == 2
+
+
+class TestProjectRepositoryLoadLocalConfiguration:
+    """Test suite for ProjectRepository.load_local_configuration method"""
+
+    def test_load_local_configuration_success(self, tmp_path):
+        """Should load and parse configuration from local filesystem"""
+        # Arrange
+        repo = ProjectRepository("owner/repo")
+        project_dir = tmp_path / "claude-chain" / "my-project"
+        project_dir.mkdir(parents=True)
+
+        config_content = """
+assignee: alice
+baseBranch: develop
+allowedTools: Read,Write,Edit
+"""
+        config_file = project_dir / "configuration.yml"
+        config_file.write_text(config_content)
+
+        # Create project with the tmp_path base
+        project = Project("my-project", base_path=str(project_dir))
+
+        # Act
+        config = repo.load_local_configuration(project)
+
+        # Assert
+        assert config is not None
+        assert isinstance(config, ProjectConfiguration)
+        assert config.project == project
+        assert config.assignee == "alice"
+        assert config.base_branch == "develop"
+        assert config.allowed_tools == "Read,Write,Edit"
+
+    def test_load_local_configuration_returns_default_when_file_not_found(self, tmp_path):
+        """Should return default config when configuration file doesn't exist"""
+        # Arrange
+        repo = ProjectRepository("owner/repo")
+        project_dir = tmp_path / "claude-chain" / "my-project"
+        project_dir.mkdir(parents=True)
+        # No config file created
+
+        project = Project("my-project", base_path=str(project_dir))
+
+        # Act
+        config = repo.load_local_configuration(project)
+
+        # Assert - returns default config, not None
+        assert config is not None
+        assert config.project == project
+        assert config.assignee is None
+        assert config.base_branch is None
+        assert config.allowed_tools is None
+
+    def test_load_local_configuration_handles_empty_config(self, tmp_path):
+        """Should handle configuration without optional fields"""
+        # Arrange
+        repo = ProjectRepository("owner/repo")
+        project_dir = tmp_path / "claude-chain" / "my-project"
+        project_dir.mkdir(parents=True)
+
+        config_content = "baseBranch: main"
+        config_file = project_dir / "configuration.yml"
+        config_file.write_text(config_content)
+
+        project = Project("my-project", base_path=str(project_dir))
+
+        # Act
+        config = repo.load_local_configuration(project)
+
+        # Assert
+        assert config is not None
+        assert config.assignee is None
+        assert config.base_branch == "main"
+
+    def test_load_local_configuration_with_stale_pr_days(self, tmp_path):
+        """Should parse stalePRDays from configuration"""
+        # Arrange
+        repo = ProjectRepository("owner/repo")
+        project_dir = tmp_path / "claude-chain" / "my-project"
+        project_dir.mkdir(parents=True)
+
+        config_content = """
+assignee: bob
+stalePRDays: 14
+"""
+        config_file = project_dir / "configuration.yml"
+        config_file.write_text(config_content)
+
+        project = Project("my-project", base_path=str(project_dir))
+
+        # Act
+        config = repo.load_local_configuration(project)
+
+        # Assert
+        assert config.stale_pr_days == 14
+
+
+class TestProjectRepositoryLoadLocalSpec:
+    """Test suite for ProjectRepository.load_local_spec method"""
+
+    def test_load_local_spec_success(self, tmp_path):
+        """Should load and parse spec.md from local filesystem"""
+        # Arrange
+        repo = ProjectRepository("owner/repo")
+        project_dir = tmp_path / "claude-chain" / "my-project"
+        project_dir.mkdir(parents=True)
+
+        spec_content = """# Project Spec
+- [ ] Task 1
+- [ ] Task 2
+- [x] Task 3"""
+        spec_file = project_dir / "spec.md"
+        spec_file.write_text(spec_content)
+
+        project = Project("my-project", base_path=str(project_dir))
+
+        # Act
+        spec = repo.load_local_spec(project)
+
+        # Assert
+        assert spec is not None
+        assert isinstance(spec, SpecContent)
+        assert spec.project == project
+        assert spec.total_tasks == 3
+        assert spec.completed_tasks == 1
+
+    def test_load_local_spec_returns_none_when_file_not_found(self, tmp_path):
+        """Should return None when spec file doesn't exist"""
+        # Arrange
+        repo = ProjectRepository("owner/repo")
+        project_dir = tmp_path / "claude-chain" / "my-project"
+        project_dir.mkdir(parents=True)
+        # No spec file created
+
+        project = Project("my-project", base_path=str(project_dir))
+
+        # Act
+        spec = repo.load_local_spec(project)
+
+        # Assert
+        assert spec is None
+
+    def test_load_local_spec_returns_none_for_empty_content(self, tmp_path):
+        """Should return None for empty spec content"""
+        # Arrange
+        repo = ProjectRepository("owner/repo")
+        project_dir = tmp_path / "claude-chain" / "my-project"
+        project_dir.mkdir(parents=True)
+
+        spec_file = project_dir / "spec.md"
+        spec_file.write_text("")
+
+        project = Project("my-project", base_path=str(project_dir))
+
+        # Act
+        spec = repo.load_local_spec(project)
+
+        # Assert
+        assert spec is None
+
+    def test_load_local_spec_with_no_tasks(self, tmp_path):
+        """Should handle spec with no task items"""
+        # Arrange
+        repo = ProjectRepository("owner/repo")
+        project_dir = tmp_path / "claude-chain" / "my-project"
+        project_dir.mkdir(parents=True)
+
+        spec_content = """# Project Spec
+
+This is just documentation without tasks.
+
+## Notes
+More text here."""
+        spec_file = project_dir / "spec.md"
+        spec_file.write_text(spec_content)
+
+        project = Project("my-project", base_path=str(project_dir))
+
+        # Act
+        spec = repo.load_local_spec(project)
+
+        # Assert
+        assert spec is not None
+        assert spec.total_tasks == 0
+
+
+class TestProjectRepositoryLocalIntegration:
+    """Integration tests for local filesystem loading with realistic scenarios"""
+
+    def test_full_local_workflow_with_realistic_data(self, tmp_path):
+        """Should handle complete local workflow with realistic project data"""
+        # Arrange
+        repo = ProjectRepository("acme/web-app")
+        project_dir = tmp_path / "claude-chain" / "auth-refactor"
+        project_dir.mkdir(parents=True)
+
+        realistic_config = """
+assignee: dev1
+baseBranch: develop
+allowedTools: Read,Write,Edit,Bash
+stalePRDays: 14
+"""
+        config_file = project_dir / "configuration.yml"
+        config_file.write_text(realistic_config)
+
+        realistic_spec = """# Web Application Refactoring
+
+## Overview
+This project refactors the authentication system.
+
+## Tasks
+
+- [x] Analyze current authentication flow
+- [x] Design new architecture
+- [ ] Implement OAuth2 provider
+- [ ] Add JWT token management
+- [ ] Create user session service
+- [ ] Write integration tests
+- [ ] Update documentation
+
+## Notes
+Ensure backward compatibility with existing sessions.
+"""
+        spec_file = project_dir / "spec.md"
+        spec_file.write_text(realistic_spec)
+
+        project = Project("auth-refactor", base_path=str(project_dir))
+
+        # Act
+        config = repo.load_local_configuration(project)
+        spec = repo.load_local_spec(project)
+
+        # Assert - Verify complete structure
+        assert config is not None
+        assert spec is not None
+
+        # Config assertions
+        assert config.assignee == "dev1"
+        assert config.base_branch == "develop"
+        assert config.allowed_tools == "Read,Write,Edit,Bash"
+        assert config.stale_pr_days == 14
+
+        # Spec assertions
+        assert spec.total_tasks == 7
+        assert spec.completed_tasks == 2
+        assert spec.pending_tasks == 5
+
+        next_task = spec.get_next_available_task()
+        assert next_task.description == "Implement OAuth2 provider"
+        assert next_task.index == 3
+
+    def test_local_loading_without_config_file(self, tmp_path):
+        """Should work with just spec.md (no configuration file)"""
+        # Arrange
+        repo = ProjectRepository("owner/repo")
+        project_dir = tmp_path / "claude-chain" / "simple-project"
+        project_dir.mkdir(parents=True)
+
+        spec_content = """# Simple Project
+- [ ] Task 1
+- [ ] Task 2
+"""
+        spec_file = project_dir / "spec.md"
+        spec_file.write_text(spec_content)
+
+        project = Project("simple-project", base_path=str(project_dir))
+
+        # Act
+        config = repo.load_local_configuration(project)
+        spec = repo.load_local_spec(project)
+
+        # Assert
+        assert config is not None
+        assert config.assignee is None  # Default config
+        assert config.base_branch is None
+
+        assert spec is not None
+        assert spec.total_tasks == 2

@@ -1,5 +1,6 @@
-"""Repository for loading project data from GitHub"""
+"""Repository for loading project data from GitHub or local filesystem"""
 
+import os
 from typing import Optional, Tuple
 
 from claudechain.domain.project import Project
@@ -8,7 +9,7 @@ from claudechain.domain.spec_content import SpecContent
 
 
 class ProjectRepository:
-    """Infrastructure repository for loading project data from GitHub"""
+    """Infrastructure repository for loading project data from GitHub or local filesystem"""
 
     def __init__(self, repo: str):
         """Initialize repository
@@ -17,6 +18,64 @@ class ProjectRepository:
             repo: GitHub repository in format 'owner/name'
         """
         self.repo = repo
+
+    # ============================================================
+    # Local Filesystem Methods (post-checkout)
+    # ============================================================
+
+    def load_local_configuration(self, project: Project) -> ProjectConfiguration:
+        """Load and parse project configuration from local filesystem.
+
+        Use this method after checkout when the project files are available locally.
+        This is more efficient than making GitHub API calls and is preferred for
+        merge event handling.
+
+        If configuration.yml doesn't exist, returns default configuration
+        (no assignee, no base branch override). This allows projects to work
+        with sensible defaults without requiring a configuration file.
+
+        Args:
+            project: Project domain model
+
+        Returns:
+            Parsed ProjectConfiguration or default configuration if not found
+
+        Raises:
+            ConfigurationError: If configuration file exists but is invalid
+        """
+        if not os.path.exists(project.config_path):
+            return ProjectConfiguration.default(project)
+
+        with open(project.config_path, 'r', encoding='utf-8') as f:
+            config_content = f.read()
+
+        return ProjectConfiguration.from_yaml_string(project, config_content)
+
+    def load_local_spec(self, project: Project) -> Optional[SpecContent]:
+        """Load and parse spec.md from local filesystem.
+
+        Use this method after checkout when the project files are available locally.
+
+        Args:
+            project: Project domain model
+
+        Returns:
+            Parsed SpecContent or None if not found
+        """
+        if not os.path.exists(project.spec_path):
+            return None
+
+        with open(project.spec_path, 'r', encoding='utf-8') as f:
+            spec_content = f.read()
+
+        if not spec_content:
+            return None
+
+        return SpecContent(project, spec_content)
+
+    # ============================================================
+    # GitHub API Methods (remote fetch)
+    # ============================================================
 
     def load_configuration(
         self, project: Project, base_branch: str = "main"

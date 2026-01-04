@@ -8,13 +8,13 @@ does not implement business logic directly.
 import argparse
 import os
 
-from claudechain.domain.config import load_config, load_config_from_string, validate_spec_format, validate_spec_format_from_string
+from claudechain.domain.config import validate_spec_format_from_string
 from claudechain.domain.constants import DEFAULT_BASE_BRANCH
 from claudechain.domain.exceptions import ConfigurationError, FileNotFoundError, GitError, GitHubAPIError
 from claudechain.domain.project import Project
 from claudechain.infrastructure.git.operations import run_git_command
 from claudechain.infrastructure.github.actions import GitHubActionsHelper
-from claudechain.infrastructure.github.operations import ensure_label_exists, file_exists_in_branch, get_file_from_branch
+from claudechain.infrastructure.github.operations import ensure_label_exists
 from claudechain.infrastructure.repositories.project_repository import ProjectRepository
 from claudechain.services.core.pr_service import PRService
 from claudechain.services.core.project_service import ProjectService
@@ -88,9 +88,9 @@ def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper, default_allow
         # === STEP 2: Load Configuration and Resolve Base Branch ===
         print("\n=== Step 2/6: Loading configuration ===")
 
-        # First, try to load configuration from the default branch to check for overrides
-        # Config might specify a different base branch where the actual spec lives
-        config = project_repository.load_configuration(project, default_base_branch)
+        # Load configuration from local filesystem (after checkout)
+        # This is more efficient than GitHub API and works for all trigger types
+        config = project_repository.load_local_configuration(project)
 
         # Resolve actual base branch (config override or default)
         base_branch = config.get_base_branch(default_base_branch)
@@ -112,26 +112,20 @@ def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper, default_allow
         # Ensure label exists
         ensure_label_exists(label, gh)
 
-        # Validate spec exists in the resolved base branch
-        print(f"Validating spec files exist in branch '{base_branch}'...")
-        spec_exists = file_exists_in_branch(repo, base_branch, project.spec_path)
+        # Load spec from local filesystem (after checkout)
+        print(f"Loading spec from local filesystem...")
+        spec = project_repository.load_local_spec(project)
 
-        if not spec_exists:
-            error_msg = f"""Error: spec.md not found in branch '{base_branch}'
+        if not spec:
+            error_msg = f"""Error: spec.md not found at '{project.spec_path}'
 Required file:
   - {project.spec_path}
 
-Please merge your spec.md file to the '{base_branch}' branch before running ClaudeChain."""
+Please ensure your spec.md file exists and the checkout was successful."""
             gh.set_error(error_msg)
             return 1
 
-        print(f"✅ spec.md validated in branch '{base_branch}'")
-
-        # Load and validate spec from the resolved base branch
-        spec = project_repository.load_spec(project, base_branch)
-        if not spec:
-            gh.set_error(f"Failed to load spec file from branch '{base_branch}'")
-            return 1
+        print(f"✅ spec.md loaded from local filesystem")
 
         validate_spec_format_from_string(spec.content, project.spec_path)
 
