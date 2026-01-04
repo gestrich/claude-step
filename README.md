@@ -33,9 +33,11 @@ Each task is identified by a hash of its description, so you can freely reorder,
 
 **Prerequisite:** [Anthropic API key](https://console.anthropic.com)
 
-### 1. Add the Workflow
+### 1. Add the Workflows
 
-Create `.github/workflows/claudechain.yml` and **commit it to your default branch** (required for manual triggers to appear in the Actions UI):
+Create these workflow files and **commit them to your default branch** (required for manual triggers to appear in the Actions UI).
+
+**Main workflow** (`.github/workflows/claudechain.yml`):
 
 ```yaml
 name: ClaudeChain
@@ -70,6 +72,32 @@ jobs:
           project_name: ${{ github.event.inputs.project_name || '' }}
           claude_allowed_tools: 'Read,Write,Edit,Bash(git add:*),Bash(git commit:*)'  # Configure as needed
           base_branch: 'main'  # Branch your PRs merge into
+```
+
+**Statistics workflow** (`.github/workflows/claudechain-statistics.yml`) - optional, for weekly progress reports:
+
+```yaml
+name: ClaudeChain Statistics
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9 AM UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+jobs:
+  statistics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gestrich/claude-chain/statistics@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
 ```
 
 ### 2. Configure GitHub
@@ -134,35 +162,9 @@ allowedTools: Read,Write,Edit,Bash  # Optional: override tool permissions
 |---------|---------|---------|
 | Slack notifications | Alert team when PRs are created | Disabled |
 | PR summaries | AI-generated explanation on each PR | Enabled |
-| Statistics reports | Weekly team progress and activity | Manual setup |
+| Statistics reports | Weekly team progress and activity | Optional (see Quick Start) |
 
 Enable Slack by adding `slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}` to your workflow.
-
-**Statistics workflow:** Create `.github/workflows/claudechain-statistics.yml` for weekly progress reports:
-
-```yaml
-name: ClaudeChain Statistics
-
-on:
-  schedule:
-    - cron: '0 9 * * 1'  # Every Monday at 9 AM UTC
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  actions: read
-  pull-requests: read
-
-jobs:
-  statistics:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: gestrich/claude-chain/statistics@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-```
 
 → **[Full guide: Notifications](docs/feature-guides/notifications.md)**
 
