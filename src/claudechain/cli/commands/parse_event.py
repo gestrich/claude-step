@@ -138,15 +138,28 @@ def cmd_parse_event(
         # Determine what to checkout based on the event type
         # - PR merge: checkout base_ref (branch the PR merged INTO) - this has the merged changes
         # - push: checkout ref_name (branch that was pushed to)
-        # - workflow_dispatch: checkout ref_name (branch user selected)
-        try:
-            checkout_ref = context.get_checkout_ref()
-        except ValueError as e:
-            reason = f"Could not determine checkout ref: {e}"
-            print(f"\n⏭️  Skipping: {reason}")
-            gh.write_output("skip", "true")
-            gh.write_output("skip_reason", reason)
-            return 0
+        # - workflow_dispatch: checkout default_base_branch (where the spec file lives)
+        if context.event_name == "workflow_dispatch":
+            # For workflow_dispatch, checkout the configured base branch, not the trigger branch
+            # The trigger branch (ref_name) is just where the user clicked "Run workflow"
+            # but we need to checkout the branch where the spec file and code live
+            if default_base_branch:
+                checkout_ref = default_base_branch
+            else:
+                reason = "workflow_dispatch requires default_base_branch to be set"
+                print(f"\n⏭️  Skipping: {reason}")
+                gh.write_output("skip", "true")
+                gh.write_output("skip_reason", reason)
+                return 0
+        else:
+            try:
+                checkout_ref = context.get_checkout_ref()
+            except ValueError as e:
+                reason = f"Could not determine checkout ref: {e}"
+                print(f"\n⏭️  Skipping: {reason}")
+                gh.write_output("skip", "true")
+                gh.write_output("skip_reason", reason)
+                return 0
 
         # base_branch is used for PR creation target
         # Use default_base_branch if provided, otherwise same as checkout_ref

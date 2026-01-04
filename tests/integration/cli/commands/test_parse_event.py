@@ -395,25 +395,25 @@ class TestCmdParseEvent:
         mock_github_helper.write_output.assert_any_call("checkout_ref", "develop")
         mock_github_helper.write_output.assert_any_call("base_branch", "develop")
 
-    def test_workflow_dispatch_uses_trigger_branch_for_checkout_but_configured_for_pr_target(
+    def test_workflow_dispatch_uses_configured_base_branch_for_checkout(
         self, mock_github_helper, capsys
     ):
-        """Should checkout the trigger branch but target PRs at configured base branch.
+        """Should checkout the configured base branch, not the trigger branch.
 
         For workflow_dispatch:
-        - checkout_ref: The branch the workflow was triggered on (from event.ref)
-        - base_branch: The configured default_base_branch (for PR targeting)
+        - checkout_ref: The configured default_base_branch (where spec file lives)
+        - base_branch: Same as checkout_ref (for PR targeting)
 
-        This allows users to trigger the workflow from any branch while PRs
-        still target the correct branch.
+        The trigger branch (event.ref) is just where the user clicked "Run workflow"
+        but we need to checkout where the spec file and code actually live.
         """
-        # Workflow triggered from 'main' branch
+        # Workflow triggered from 'main' branch (where user clicked Run workflow)
         event = json.dumps({
             "ref": "refs/heads/main",
             "inputs": {}
         })
 
-        # User configured default_base_branch to 'feature-branch' for PR targeting
+        # User configured default_base_branch to 'feature-branch' - this is where the spec lives
         result = cmd_parse_event(
             gh=mock_github_helper,
             event_name="workflow_dispatch",
@@ -423,9 +423,8 @@ class TestCmdParseEvent:
         )
 
         assert result == 0
-        # checkout_ref is the trigger branch (for checkout action)
-        mock_github_helper.write_output.assert_any_call("checkout_ref", "main")
-        # base_branch is the configured branch (for PR creation)
+        # Both checkout_ref and base_branch should use the configured branch
+        mock_github_helper.write_output.assert_any_call("checkout_ref", "feature-branch")
         mock_github_helper.write_output.assert_any_call("base_branch", "feature-branch")
 
     # =============================================================================
@@ -577,7 +576,11 @@ class TestCmdParseEvent:
     def test_workflow_dispatch_empty_json_with_project_succeeds(
         self, mock_github_helper, capsys
     ):
-        """Should handle workflow_dispatch with empty JSON when project provided"""
+        """Should handle workflow_dispatch with empty JSON when project and base_branch provided.
+
+        Even with empty event JSON, workflow_dispatch uses default_base_branch for checkout,
+        so it succeeds as long as both project_name and default_base_branch are provided.
+        """
         result = cmd_parse_event(
             gh=mock_github_helper,
             event_name="workflow_dispatch",
@@ -586,12 +589,11 @@ class TestCmdParseEvent:
             default_base_branch="main"
         )
 
-        # Empty JSON means no ref, should skip
+        # Should succeed - we use default_base_branch for checkout, not event.ref
         assert result == 0
-        mock_github_helper.write_output.assert_any_call("skip", "true")
-        mock_github_helper.write_output.assert_any_call(
-            "skip_reason", "Could not determine checkout ref: Workflow dispatch event missing ref"
-        )
+        mock_github_helper.write_output.assert_any_call("skip", "false")
+        mock_github_helper.write_output.assert_any_call("checkout_ref", "main")
+        mock_github_helper.write_output.assert_any_call("base_branch", "main")
 
     # =============================================================================
     # Tests for output consistency
