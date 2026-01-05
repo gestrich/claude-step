@@ -407,6 +407,13 @@ Create `claude-chain/{project}/pr-template.md`:
 |----------|---------------|
 | `{{TASK_DESCRIPTION}}` | The task text from spec.md |
 
+For example, if your spec.md contains:
+```markdown
+- [ ] Add input validation to login endpoint
+```
+
+Then `{{TASK_DESCRIPTION}}` becomes `Add input validation to login endpoint` in the PR body.
+
 ### Default Template
 
 If no template exists, ClaudeChain uses a simple default with just the task description.
