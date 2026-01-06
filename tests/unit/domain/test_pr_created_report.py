@@ -112,10 +112,10 @@ class TestBuildNotificationElements:
         assert "<https://github.com/owner/repo/pull/123|#123>" in result
 
     def test_contains_project_name(self, report):
-        """Test notification contains project name in code format."""
+        """Test notification contains project name."""
         result = report.build_notification_elements()
         assert "*Project:*" in result
-        assert "`my-project`" in result
+        assert "my-project" in result
 
     def test_contains_task(self, report):
         """Test notification contains task."""
@@ -137,7 +137,7 @@ class TestBuildNotificationElements:
             "🎉 *New PR Created*\n"
             "\n"
             "*PR:* <https://github.com/owner/repo/pull/123|#123>\n"
-            "*Project:* `my-project`\n"
+            "*Project:* my-project\n"
             "*Task:* Fix the login bug\n"
             "\n"
             "*💰 Cost:* $0.20"

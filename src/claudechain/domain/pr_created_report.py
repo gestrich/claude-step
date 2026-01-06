@@ -84,9 +84,7 @@ class PullRequestCreatedReport:
             formatter.format_labeled_value(
                 LabeledValue("PR", Link(f"#{self.pr_number}", self.pr_url))
             ),
-            formatter.format_labeled_value(
-                LabeledValue("Project", TextBlock(self.project_name, style="code"))
-            ),
+            formatter.format_labeled_value(LabeledValue("Project", self.project_name)),
             formatter.format_labeled_value(LabeledValue("Task", self.task)),
             "",
             formatter.format_labeled_value(
