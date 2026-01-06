@@ -18,7 +18,6 @@ from claudechain.infrastructure.github.actions import GitHubActionsHelper
 from claudechain.infrastructure.github.operations import add_label_to_pr, ensure_label_exists
 from claudechain.infrastructure.repositories.project_repository import ProjectRepository
 from claudechain.services.core.pr_service import PRService
-from claudechain.services.core.project_service import ProjectService
 from claudechain.services.core.assignee_service import AssigneeService
 from claudechain.services.core.task_service import TaskService
 
@@ -49,7 +48,6 @@ def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper, default_allow
 
         # Initialize services
         pr_service = PRService(repo)
-        project_service = ProjectService(repo)
         task_service = TaskService(repo, pr_service)
         assignee_service = AssigneeService(repo, pr_service)
 
@@ -58,33 +56,19 @@ def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper, default_allow
         project_name = os.environ.get("PROJECT_NAME", "")
         merged_pr_number = os.environ.get("MERGED_PR_NUMBER", "")
 
-        detected_project = None
-
-        # Prefer project_name if already provided (e.g., from parse_event detection)
-        if project_name:
-            detected_project = project_name
-            if merged_pr_number:
-                print(f"Processing merged PR #{merged_pr_number} for project '{detected_project}'")
-                print("Proceeding to prepare next task...")
-            else:
-                print(f"Using provided project name: {detected_project}")
-
-        # Fallback: detect project from PR if no project name provided
-        elif merged_pr_number:
-            detected_project = project_service.detect_project_from_pr(merged_pr_number)
-            if not detected_project:
-                gh.set_error(f"No refactor project found with matching label for PR #{merged_pr_number}")
-                return 1
-
-            print(f"Processing merged PR #{merged_pr_number} for project '{detected_project}'")
-            print("Proceeding to prepare next task...")
-
-        else:
-            gh.set_error("project_name must be provided (use discovery action to find projects)")
+        # project_name is always provided by parse_event (for PR merges) or workflow input (for manual triggers)
+        if not project_name:
+            gh.set_error("PROJECT_NAME must be provided (set by parse_event or workflow_dispatch input)")
             return 1
 
+        if merged_pr_number:
+            print(f"Processing merged PR #{merged_pr_number} for project '{project_name}'")
+            print("Proceeding to prepare next task...")
+        else:
+            print(f"Using provided project name: {project_name}")
+
         # Create Project domain model
-        project = Project(detected_project)
+        project = Project(project_name)
 
         # Get default base branch from environment (workflow provides this)
         # Use env var if set and non-empty, otherwise fall back to constant
@@ -110,14 +94,14 @@ def cmd_prepare(args: argparse.Namespace, gh: GitHubActionsHelper, default_allow
         if merge_target_branch:
             # PR merge event
             result = _validate_base_branch_for_pr_merge(
-                gh, detected_project, base_branch, merge_target_branch
+                gh, project_name, base_branch, merge_target_branch
             )
             if result is not None:
                 return result
         else:
             # workflow_dispatch event
             result = _validate_base_branch_for_workflow_dispatch(
-                gh, detected_project, config.base_branch, default_base_branch
+                gh, project_name, config.base_branch, default_base_branch
             )
             if result is not None:
                 return result
@@ -160,7 +144,7 @@ Please ensure your spec.md file exists and the checkout was successful."""
         # === STEP 3: Check Capacity ===
         print("\n=== Step 3/6: Checking capacity ===")
 
-        capacity_result = assignee_service.check_capacity(config, label, detected_project)
+        capacity_result = assignee_service.check_capacity(config, label, project_name)
 
         summary = capacity_result.format_summary()
         gh.write_step_summary(summary)
@@ -184,7 +168,7 @@ Please ensure your spec.md file exists and the checkout was successful."""
         print("\n=== Step 4/6: Finding next task ===")
 
         # Detect orphaned PRs (PRs for tasks that have been modified or removed)
-        orphaned_prs = task_service.detect_orphaned_prs(label, detected_project, spec)
+        orphaned_prs = task_service.detect_orphaned_prs(label, project_name, spec)
         if orphaned_prs:
             print(f"\n⚠️  Warning: Found {len(orphaned_prs)} orphaned PR(s):")
 
@@ -224,7 +208,7 @@ Please ensure your spec.md file exists and the checkout was successful."""
                 gh.write_step_summary(summary)
 
         # Get in-progress tasks
-        in_progress_hashes = task_service.get_in_progress_tasks(label, detected_project)
+        in_progress_hashes = task_service.get_in_progress_tasks(label, project_name)
 
         if in_progress_hashes:
             print(f"Found in-progress tasks: {sorted(in_progress_hashes)}")
@@ -244,7 +228,7 @@ Please ensure your spec.md file exists and the checkout was successful."""
         # === STEP 5: Create Branch ===
         print("\n=== Step 5/6: Creating branch ===")
         # Use standard ClaudeChain branch format: claude-chain-{project}-{task_hash}
-        branch_name = pr_service.format_branch_name(detected_project, task_hash)
+        branch_name = pr_service.format_branch_name(project_name, task_hash)
 
         try:
             run_git_command(["checkout", "-b", branch_name])
@@ -278,7 +262,7 @@ Now complete the task '{task}' following all the details and instructions in the
                 print(f"✅ Added '{label}' label to merged PR #{merged_pr_number}")
 
         # === Write All Outputs ===
-        gh.write_output("project_name", detected_project)
+        gh.write_output("project_name", project_name)
         gh.write_output("project_path", project.base_path)
         gh.write_output("config_path", project.config_path)
         gh.write_output("spec_path", project.spec_path)

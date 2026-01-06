@@ -71,7 +71,6 @@ class TestPrepareMergeTargetValidation:
 
         with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
              patch("claudechain.cli.commands.prepare.PRService"), \
-             patch("claudechain.cli.commands.prepare.ProjectService"), \
              patch("claudechain.cli.commands.prepare.TaskService"), \
              patch("claudechain.cli.commands.prepare.AssigneeService"), \
              patch("claudechain.cli.commands.prepare.ensure_label_exists"):
@@ -116,7 +115,6 @@ class TestPrepareMergeTargetValidation:
 
         with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
              patch("claudechain.cli.commands.prepare.PRService") as mock_pr_service_class, \
-             patch("claudechain.cli.commands.prepare.ProjectService"), \
              patch("claudechain.cli.commands.prepare.TaskService") as mock_task_service_class, \
              patch("claudechain.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
              patch("claudechain.cli.commands.prepare.ensure_label_exists"), \
@@ -175,7 +173,6 @@ class TestPrepareMergeTargetValidation:
 
         with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
              patch("claudechain.cli.commands.prepare.PRService") as mock_pr_service_class, \
-             patch("claudechain.cli.commands.prepare.ProjectService"), \
              patch("claudechain.cli.commands.prepare.TaskService") as mock_task_service_class, \
              patch("claudechain.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
              patch("claudechain.cli.commands.prepare.ensure_label_exists"), \
@@ -229,7 +226,6 @@ class TestPrepareMergeTargetValidation:
 
         with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
              patch("claudechain.cli.commands.prepare.PRService"), \
-             patch("claudechain.cli.commands.prepare.ProjectService"), \
              patch("claudechain.cli.commands.prepare.TaskService"), \
              patch("claudechain.cli.commands.prepare.AssigneeService"), \
              patch("claudechain.cli.commands.prepare.ensure_label_exists"):
@@ -313,7 +309,6 @@ class TestPrepareBaseBranchResolution:
 
         with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
              patch("claudechain.cli.commands.prepare.PRService") as mock_pr_service_class, \
-             patch("claudechain.cli.commands.prepare.ProjectService"), \
              patch("claudechain.cli.commands.prepare.TaskService") as mock_task_service_class, \
              patch("claudechain.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
              patch("claudechain.cli.commands.prepare.ensure_label_exists"), \
@@ -371,7 +366,6 @@ class TestPrepareBaseBranchResolution:
 
         with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
              patch("claudechain.cli.commands.prepare.PRService") as mock_pr_service_class, \
-             patch("claudechain.cli.commands.prepare.ProjectService"), \
              patch("claudechain.cli.commands.prepare.TaskService") as mock_task_service_class, \
              patch("claudechain.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
              patch("claudechain.cli.commands.prepare.ensure_label_exists"), \
@@ -430,7 +424,6 @@ class TestPrepareBaseBranchResolution:
 
         with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
              patch("claudechain.cli.commands.prepare.PRService") as mock_pr_service_class, \
-             patch("claudechain.cli.commands.prepare.ProjectService"), \
              patch("claudechain.cli.commands.prepare.TaskService") as mock_task_service_class, \
              patch("claudechain.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
              patch("claudechain.cli.commands.prepare.ensure_label_exists"), \
@@ -489,7 +482,6 @@ class TestPrepareBaseBranchResolution:
 
         with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
              patch("claudechain.cli.commands.prepare.PRService") as mock_pr_service_class, \
-             patch("claudechain.cli.commands.prepare.ProjectService"), \
              patch("claudechain.cli.commands.prepare.TaskService") as mock_task_service_class, \
              patch("claudechain.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
              patch("claudechain.cli.commands.prepare.ensure_label_exists"), \
@@ -595,7 +587,6 @@ class TestPrepareAllowedToolsResolution:
 
         with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
              patch("claudechain.cli.commands.prepare.PRService") as mock_pr_service_class, \
-             patch("claudechain.cli.commands.prepare.ProjectService"), \
              patch("claudechain.cli.commands.prepare.TaskService") as mock_task_service_class, \
              patch("claudechain.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
              patch("claudechain.cli.commands.prepare.ensure_label_exists"), \
@@ -653,7 +644,6 @@ class TestPrepareAllowedToolsResolution:
 
         with patch("claudechain.cli.commands.prepare.ProjectRepository") as mock_repo_class, \
              patch("claudechain.cli.commands.prepare.PRService") as mock_pr_service_class, \
-             patch("claudechain.cli.commands.prepare.ProjectService"), \
              patch("claudechain.cli.commands.prepare.TaskService") as mock_task_service_class, \
              patch("claudechain.cli.commands.prepare.AssigneeService") as mock_assignee_service_class, \
              patch("claudechain.cli.commands.prepare.ensure_label_exists"), \
