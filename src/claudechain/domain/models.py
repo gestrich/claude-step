@@ -487,11 +487,10 @@ class ProjectStats:
 class StatisticsReport:
     """Aggregated statistics report for all projects and team members"""
 
-    def __init__(self, base_branch: Optional[str] = None, repo: Optional[str] = None):
+    def __init__(self, repo: Optional[str] = None):
         self.team_stats = {}      # username -> TeamMemberStats
         self.project_stats = {}   # project_name -> ProjectStats
         self.generated_at = None  # datetime
-        self.base_branch = base_branch  # Branch used to fetch specs
         self.repo = repo  # GitHub repository (owner/name)
         self.generation_time_seconds: Optional[float] = None  # Time to generate report
 
@@ -538,8 +537,6 @@ class StatisticsReport:
         metadata_parts = []
         if self.repo:
             metadata_parts.append(self.repo)
-        if self.base_branch:
-            metadata_parts.append(f"Branch: {self.base_branch}")
 
         if metadata_parts:
             section.add(TextBlock(" · ".join(metadata_parts), style="italic"))
@@ -870,11 +867,6 @@ class StatisticsReport:
         """Brief summary for PR notifications"""
         lines = []
 
-        # Include branch context if available
-        if self.base_branch:
-            lines.append(f"*Branch: {self.base_branch}*")
-            lines.append("")
-
         # Only include project progress, not full team stats
         if self.project_stats:
             # If single project, show details
@@ -925,7 +917,7 @@ class StatisticsReport:
 
         data = {
             "generated_at": self.generated_at.isoformat() if self.generated_at else None,
-            "base_branch": self.base_branch,
+            "repo": self.repo,
             "projects": {},
             "team_members": {}
         }

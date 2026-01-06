@@ -496,9 +496,9 @@ class TestStatisticsReport:
         assert "alice" in slack_msg_with_reviewers
         assert "Merged" in slack_msg_with_reviewers  # Leaderboard header
 
-    def test_format_for_slack_includes_base_branch(self):
-        """Test Slack formatting includes base branch when set on report"""
-        report = StatisticsReport(base_branch="dev")
+    def test_format_for_slack_includes_repo(self):
+        """Test Slack formatting includes repo when set on report"""
+        report = StatisticsReport(repo="owner/repo-name")
         report.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
         # Add a project
@@ -507,9 +507,9 @@ class TestStatisticsReport:
         project.completed_tasks = 5
         report.add_project(project)
 
-        # With base_branch set on report
+        # With repo set on report
         slack_msg = report.format_for_slack()
-        assert "Branch: dev" in slack_msg
+        assert "owner/repo-name" in slack_msg
 
     def test_format_for_slack_orphaned_prs_in_warnings(self):
         """Test that orphaned PRs appear in the warnings section"""
@@ -594,23 +594,6 @@ class TestStatisticsReport:
         assert "project-a" in comment
         assert "project-b" in comment
 
-    def test_format_for_pr_comment_includes_base_branch(self):
-        """Test PR comment formatting includes base branch when set"""
-        report = StatisticsReport(base_branch="dev")
-        project = ProjectStats("my-project", "/path/spec.md")
-        project.total_tasks = 10
-        project.completed_tasks = 8
-        report.add_project(project)
-
-        comment = report.format_for_pr_comment()
-        assert "Branch: dev" in comment
-
-        # Without base_branch
-        report_no_branch = StatisticsReport()
-        report_no_branch.add_project(project)
-        comment_no_branch = report_no_branch.format_for_pr_comment()
-        assert "Branch:" not in comment_no_branch
-
     def test_to_json(self):
         """Test JSON serialization"""
         report = StatisticsReport()
@@ -645,23 +628,23 @@ class TestStatisticsReport:
         assert data["team_members"]["alice"]["merged_count"] == 1
         assert data["team_members"]["alice"]["open_count"] == 0
 
-    def test_to_json_includes_base_branch(self):
-        """Test JSON serialization includes base branch"""
-        report = StatisticsReport(base_branch="dev")
+    def test_to_json_includes_repo(self):
+        """Test JSON serialization includes repo"""
+        report = StatisticsReport(repo="owner/repo-name")
         report.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
         json_str = report.to_json()
         data = json.loads(json_str)
 
-        assert "base_branch" in data
-        assert data["base_branch"] == "dev"
+        assert "repo" in data
+        assert data["repo"] == "owner/repo-name"
 
-        # Without base_branch
-        report_no_branch = StatisticsReport()
-        report_no_branch.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-        json_str_no_branch = report_no_branch.to_json()
-        data_no_branch = json.loads(json_str_no_branch)
-        assert data_no_branch["base_branch"] is None
+        # Without repo
+        report_no_repo = StatisticsReport()
+        report_no_repo.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        json_str_no_repo = report_no_repo.to_json()
+        data_no_repo = json.loads(json_str_no_repo)
+        assert data_no_repo["repo"] is None
 
     def test_team_stats_sorting(self):
         """Test that team stats are sorted by activity when enabled"""
