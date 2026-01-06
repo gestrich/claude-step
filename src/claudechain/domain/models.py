@@ -430,7 +430,7 @@ class ProjectStats:
         if self.total_tasks == 0:
             return "░" * width + " 0%"
 
-        filled = round((self.completion_percentage / 100) * width)
+        filled = int((self.completion_percentage / 100) * width)
         empty = width - filled
         bar = "█" * filled + "░" * empty
         return f"{bar} {self.completion_percentage:.0f}%"
