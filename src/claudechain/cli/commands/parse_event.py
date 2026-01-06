@@ -98,7 +98,7 @@ def cmd_parse_event(
                 gh.write_output("skip_reason", reason)
                 return 0
 
-            # Detect projects from PR files (more reliable than branch comparison)
+            # Detect projects from PR files
             if repo and context.pr_number:
                 detected_projects = _detect_projects_from_pr_files(context.pr_number, repo)
                 resolved_project = _select_project_and_output_all(gh, detected_projects)

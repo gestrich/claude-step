@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-action.json
 name: 'ClaudeChain'
 description: 'Automate code refactoring with AI using Claude Code. Creates incremental PRs for systematic codebase improvements.'
 author: 'gestrich'
