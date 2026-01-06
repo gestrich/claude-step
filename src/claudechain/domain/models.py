@@ -522,6 +522,19 @@ class StatisticsReport:
                 needing_attention.append(stats)
         return sorted(needing_attention, key=lambda s: s.project_name)
 
+    def _build_pr_url(self, pr_number: int) -> Optional[str]:
+        """Construct GitHub PR URL from repo and PR number.
+
+        Args:
+            pr_number: The pull request number
+
+        Returns:
+            Full GitHub PR URL, or None if repo is not set
+        """
+        if not self.repo:
+            return None
+        return f"https://github.com/{self.repo}/pull/{pr_number}"
+
     def to_header_section(self) -> Section:
         """Build report header section with metadata.
 
@@ -669,14 +682,13 @@ class StatisticsReport:
                 if indicators:
                     status_parts.extend(indicators)
 
-                # Store PR info as a tuple (number, url, status_text)
                 status_text = ", ".join(status_parts)
-                if pr.url:
+                url = pr.url or self._build_pr_url(pr.number)
+                if url:
                     project_items.append(ListItem(
-                        Link(f"#{pr.number}", pr.url),
+                        Link(f"#{pr.number} ({status_text})", url),
                         bullet="•"
                     ))
-                    # Note: We need to include status_text - will handle in formatter
                 else:
                     project_items.append(ListItem(
                         f"#{pr.number} ({status_text})",
@@ -686,14 +698,16 @@ class StatisticsReport:
             # Add open orphaned PRs
             for pr in stats.orphaned_prs:
                 if pr.is_open():
-                    if pr.url:
+                    url = pr.url or self._build_pr_url(pr.number)
+                    status_text = f"{pr.days_open}d, orphaned"
+                    if url:
                         project_items.append(ListItem(
-                            Link(f"#{pr.number}", pr.url),
+                            Link(f"#{pr.number} ({status_text})", url),
                             bullet="•"
                         ))
                     else:
                         project_items.append(ListItem(
-                            f"#{pr.number} ({pr.days_open}d, orphaned)",
+                            f"#{pr.number} ({status_text})",
                             bullet="•"
                         ))
 
