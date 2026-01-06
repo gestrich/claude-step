@@ -81,6 +81,22 @@ class MarkdownReportFormatter(ReportFormatter):
             content = self.format_text_block(content)
         return f"{item.bullet} {content}"
 
+    def _format_cell(self, cell) -> str:
+        """Format a table cell, handling different element types.
+
+        Args:
+            cell: Cell content (str, Link, or other element)
+
+        Returns:
+            Formatted string for the cell
+        """
+        if isinstance(cell, str):
+            return cell
+        elif isinstance(cell, Link):
+            return self.format_link(cell)
+        else:
+            return str(cell)
+
     def format_table(self, table: Table) -> str:
         """Format table using GitHub-flavored markdown table syntax.
 
@@ -111,7 +127,8 @@ class MarkdownReportFormatter(ReportFormatter):
 
         # Data rows
         for row in table.rows:
-            lines.append("| " + " | ".join(row.cells) + " |")
+            formatted_cells = [self._format_cell(cell) for cell in row.cells]
+            lines.append("| " + " | ".join(formatted_cells) + " |")
 
         return "\n".join(lines)
 

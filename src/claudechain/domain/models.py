@@ -761,12 +761,18 @@ class StatisticsReport:
 
                     if task.has_pr:
                         pr = task.pr
+                        pr_url = pr.url or self._build_pr_url(pr.number)
                         if pr.is_merged():
-                            pr_info = f"#{pr.number} (Merged)"
+                            state = "Merged"
                         elif pr.is_open():
-                            pr_info = f"#{pr.number} (Open, {pr.days_open}d)"
+                            state = f"Open, {pr.days_open}d"
                         else:
-                            pr_info = f"#{pr.number} (Closed)"
+                            state = "Closed"
+                        # Use Link element - formatter handles rendering
+                        if pr_url:
+                            pr_info = Link(f"#{pr.number} ({state})", pr_url)
+                        else:
+                            pr_info = f"#{pr.number} ({state})"
                     else:
                         pr_info = "-"
 
