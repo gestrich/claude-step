@@ -193,7 +193,7 @@ def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             # Build PR creation command (assignee is optional)
             pr_create_args = [
                 "pr", "create",
-                "--title", f"[{project}] {task}",
+                "--title", f"ClaudeChain: [{project}] {task}",
                 "--body-file", pr_body_file,
                 "--label", label,
                 "--head", branch_name,
