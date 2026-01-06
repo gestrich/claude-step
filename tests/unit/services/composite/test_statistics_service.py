@@ -461,7 +461,7 @@ class TestStatisticsReport:
         report.generated_at = datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
         slack_msg = report.format_for_slack()
-        assert "ClaudeChain Statistics Report" in slack_msg
+        assert "Project Progress" in slack_msg
         assert "No projects found" in slack_msg
         # Empty report doesn't show leaderboard section
 
@@ -484,13 +484,12 @@ class TestStatisticsReport:
 
         # Without show_assignee_stats, leaderboard is hidden
         slack_msg = report.format_for_slack()
-        assert "ClaudeChain Statistics Report" in slack_msg
+        assert "Project Progress" in slack_msg
         assert "test-project" in slack_msg
         assert "alice" not in slack_msg  # Hidden by default
         assert "Leaderboard" not in slack_msg  # Hidden by default
         assert "```" in slack_msg  # Code block for table
         assert "Total" in slack_msg  # Table header
-        assert "2025-01-01" in slack_msg
 
         # With show_assignee_stats=True, leaderboard appears
         slack_msg_with_reviewers = report.format_for_slack(show_assignee_stats=True)
@@ -511,7 +510,6 @@ class TestStatisticsReport:
         # With base_branch set on report
         slack_msg = report.format_for_slack()
         assert "Branch: dev" in slack_msg
-        assert "2025-01-01" in slack_msg  # Timestamp still present
 
     def test_format_for_slack_orphaned_prs_in_warnings(self):
         """Test that orphaned PRs appear in the warnings section"""

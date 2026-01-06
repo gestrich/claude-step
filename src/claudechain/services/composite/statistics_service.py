@@ -63,8 +63,9 @@ class StatisticsService:
         Returns:
             Complete StatisticsReport
         """
+        start_time = datetime.now(timezone.utc)
         report = StatisticsReport()
-        report.generated_at = datetime.now(timezone.utc)
+        report.generated_at = start_time
 
         if not self.repo:
             print("Warning: GITHUB_REPOSITORY not set")
@@ -119,6 +120,10 @@ class StatisticsService:
                 print("No assignees configured - skipping team member statistics")
         else:
             print("Team member statistics disabled - skipping collection")
+
+        # Calculate generation time
+        end_time = datetime.now(timezone.utc)
+        report.generation_time_seconds = (end_time - start_time).total_seconds()
 
         return report
 

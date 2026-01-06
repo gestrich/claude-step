@@ -488,6 +488,7 @@ class StatisticsReport:
         self.project_stats = {}   # project_name -> ProjectStats
         self.generated_at = None  # datetime
         self.base_branch = base_branch  # Branch used to fetch specs
+        self.generation_time_seconds: Optional[float] = None  # Time to generate report
 
     def add_team_member(self, stats: TeamMemberStats):
         """Add team member statistics"""
@@ -518,24 +519,19 @@ class StatisticsReport:
         return sorted(needing_attention, key=lambda s: s.project_name)
 
     def to_header_section(self) -> Section:
-        """Build report header section with title and metadata.
+        """Build report header section with metadata.
+
+        Note: The main title "ClaudeChain Statistics" is handled by the Slack
+        notification title, so we don't duplicate it here.
 
         Returns:
-            Section containing the report header and metadata
+            Section containing branch metadata (if any)
         """
         section = Section()
-        section.add(Header("🤖 ClaudeChain Statistics Report", level=1))
 
-        # Build metadata text
-        metadata_parts = []
-        if self.generated_at:
-            timestamp = self.generated_at.strftime("%Y-%m-%d %H:%M UTC")
-            metadata_parts.append(f"Generated: {timestamp}")
+        # Only show branch if specified (skip Generated timestamp as it's redundant)
         if self.base_branch:
-            metadata_parts.append(f"Branch: {self.base_branch}")
-
-        if metadata_parts:
-            section.add(TextBlock(" • ".join(metadata_parts), style="italic"))
+            section.add(TextBlock(f"Branch: {self.base_branch}", style="italic"))
 
         return section
 
@@ -831,8 +827,10 @@ class StatisticsReport:
         formatter = SlackReportFormatter()
         sections = []
 
-        # Header section
-        sections.append(formatter.format_section(self.to_header_section()))
+        # Header section (branch info if specified)
+        header = self.to_header_section()
+        if not header.is_empty():
+            sections.append(formatter.format_section(header))
 
         # Leaderboard section (only if enabled)
         if show_assignee_stats:
@@ -847,6 +845,10 @@ class StatisticsReport:
         warnings = self.to_warnings_section(stale_pr_days)
         if not warnings.is_empty():
             sections.append(formatter.format_section(warnings))
+
+        # Generation time footer
+        if self.generation_time_seconds is not None:
+            sections.append(f"_Elapsed time: {self.generation_time_seconds:.1f}s_")
 
         return "\n\n".join(sections)
 
