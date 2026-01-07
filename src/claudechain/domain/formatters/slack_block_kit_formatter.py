@@ -132,7 +132,9 @@ class SlackBlockKitFormatter:
         if open_prs:
             pr_lines = []
             for pr in open_prs:
-                url = pr.get("url") or self._build_pr_url(pr["number"])
+                url = pr.get("url")
+                if not url and self.repo:
+                    url = self._build_pr_url(pr["number"])
                 title = pr.get("title", "")
                 age_days = pr.get("age_days", 0)
 
