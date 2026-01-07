@@ -79,10 +79,45 @@ def cmd_statistics(
 
         # Generate outputs based on format
         if format_type == "slack":
+            # DEBUG: Print project data before formatting
+            print("=== DEBUG: Project Data Before Formatting ===")
+            for project_name, stats in report.project_stats.items():
+                print(f"Project: {project_name}")
+                print(f"  - completed_tasks: {stats.completed_tasks}")
+                print(f"  - total_tasks: {stats.total_tasks}")
+                print(f"  - total_cost_usd: {stats.total_cost_usd}")
+                print(f"  - open_prs count: {len(stats.open_prs)}")
+                for i, pr in enumerate(stats.open_prs):
+                    print(f"  - open_pr[{i}]:")
+                    print(f"      number: {pr.number}")
+                    print(f"      title: {pr.title}")
+                    print(f"      task_description: {pr.task_description}")
+                    print(f"      url: {pr.url}")
+                    print(f"      days_open: {pr.days_open}")
+            print()
+
             # Generate Block Kit JSON for Slack webhook
             slack_payload = report.format_for_slack_blocks(
                 show_assignee_stats=show_assignee_stats,
             )
+
+            # DEBUG: Print the blocks array to verify formatting
+            print("=== DEBUG: Generated Blocks ===")
+            for i, block in enumerate(slack_payload.get("blocks", [])):
+                block_type = block.get("type", "unknown")
+                if block_type == "section":
+                    text_obj = block.get("text", {})
+                    text_content = text_obj.get("text", "")
+                    print(f"Block[{i}] type=section: {repr(text_content[:100])}")
+                elif block_type == "context":
+                    elements = block.get("elements", [])
+                    if elements:
+                        text_content = elements[0].get("text", "")
+                        print(f"Block[{i}] type=context: {repr(text_content[:100])}")
+                else:
+                    print(f"Block[{i}] type={block_type}")
+            print()
+
             slack_json = json.dumps(slack_payload)
             gh.write_output("slack_message", slack_json)
             gh.write_output("has_statistics", "true")
