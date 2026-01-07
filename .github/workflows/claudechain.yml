@@ -1,7 +1,7 @@
 # ClaudeChain Workflow
 #
-# This workflow handles all event types automatically by passing the GitHub
-# event context to the action. The action determines:
+# This workflow triggers the ClaudeChain action which automatically reads
+# the GitHub event context. The action determines:
 # - Whether to execute or skip (based on merged state and spec.md changes)
 # - Which ref to checkout
 # - The project name (from changed files, branch pattern, or input)
@@ -50,13 +50,10 @@ jobs:
   run-claudechain:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
       - uses: ./
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          github_event: ${{ toJson(github.event) }}
-          event_name: ${{ github.event_name }}
           project_name: ${{ github.event.inputs.project_name || '' }}
           default_base_branch: ${{ github.event.inputs.base_branch || '' }}
           claude_model: 'claude-3-haiku-20240307'
