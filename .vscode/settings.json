@@ -16,5 +16,7 @@
     "**/build": true,
     "**/dist": true,
     "**/.venv": true
-  }
+  },
+  "python-envs.defaultEnvManager": "ms-python.python:system",
+  "python-envs.pythonProjects": []
 }
