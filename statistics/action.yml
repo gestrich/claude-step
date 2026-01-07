@@ -88,35 +88,4 @@ runs:
       with:
         webhook: ${{ steps.stats.outputs.slack_webhook_url }}
         webhook-type: incoming-webhook
-        payload: |
-          {
-            "text": "ClaudeChain Statistics",
-            "blocks": [
-              {
-                "type": "header",
-                "text": {
-                  "type": "plain_text",
-                  "text": "ClaudeChain Statistics"
-                }
-              },
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": ${{ toJson(steps.stats.outputs.slack_message) }}
-                }
-              },
-              {
-                "type": "divider"
-              },
-              {
-                "type": "context",
-                "elements": [
-                  {
-                    "type": "mrkdwn",
-                    "text": "See details in <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|ClaudeChain Statistics>"
-                  }
-                ]
-              }
-            ]
-          }
+        payload: ${{ steps.stats.outputs.slack_message }}
