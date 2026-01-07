@@ -111,7 +111,7 @@ class SlackBlockKitFormatter:
         else:
             status = "⚠️"
 
-        name = f"*{project_name}*"
+        name = f"Project: *{project_name}*"
         progress_bar = _generate_progress_bar(percent_complete)
 
         blocks.append(section_block(f"{name}\n{progress_bar}"))
