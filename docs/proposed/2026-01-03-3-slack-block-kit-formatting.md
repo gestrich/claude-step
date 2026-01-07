@@ -21,6 +21,21 @@ Based on research into Slack's Incoming Webhook capabilities, the best solution 
 
 **Recommended approach**: Start with an experiment to test whether the Table Block works with incoming webhooks. If it does, use it for clean tabular data. If not, fall back to Section fields approach.
 
+## First Implementation Attempt (Reverted)
+
+An initial implementation was completed through all phases but had to be reverted. During initial experimentation with the Slack Block Kit Builder UI, the blocks rendered correctly with proper formatting (bold text, progress bars, clickable links). However, when integrated into the actual statistics command, the output displayed as raw JSON instead of rendered blocks:
+
+```json
+{"text": "ClaudeChain Statistics", "blocks": [{"type": "header", "text": {"type": "plain_text", "text": "ClaudeChain Statistics", "emoji": true}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "📅 2026-01-07"}]}, {"type": "divider"}, {"type": "section", "text": {"type": "mrkdwn", "text": "cleanup ✅\n██████████ 100%"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "9/9 merged  •  💰 $1.66"}]}, {"type": "divider"}, {"type": "section", "text": {"type": "mrkdwn", "text": "*remove-dead-files*\n█████░░░░░ 52%"}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "11/21 merged  •  💰 $2.56"}]}, {"type": "section", "text": {"type": "mrkdwn", "text": "• #35 [remove-dead-files] Sources/Pages/Examples/LinkExamples.swift (0d)"}}, {"type": "divider"}, {"type": "context", "elements": [{"type": "mrkdwn", "text": "Elapsed time: 30.6s"}]}]}
+```
+
+Issues observed:
+- Project name "cleanup" was missing asterisks (should be `*cleanup*` for bold)
+- PR links were missing URLs (showed `• #35 [title]` instead of `<url|#35 title>`)
+- Multiple fix attempts did not resolve the underlying issue
+
+The root cause appears to be something in how the implementation integrated with the statistics command versus the standalone experiments. The commits were reverted to preserve a working state while this is investigated further.
+
 ## Phases
 
 - [ ] Phase 1: Experiment with Table Block in webhooks
