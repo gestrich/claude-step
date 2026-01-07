@@ -51,7 +51,7 @@ Options:
 
 **Recommended approach**: Option A - Always run parse-event. Review existing workflows to confirm this doesn't break anything. The parse-event step already handles various event types gracefully.
 
-- [ ] Phase 3: Update claudechain.yml workflow
+- [x] Phase 3: Update claudechain.yml workflow
 
 Update the repository's own workflow to use the simplified interface:
 
