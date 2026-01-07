@@ -130,7 +130,7 @@ class SlackBlockKitFormatter:
         blocks.append(context_block(f"{merged}/{total} merged  •  💰 {cost_str}"))
 
         if open_prs:
-            pr_lines = []
+            pr_lines = ["🔄 *Open:*"]
             for pr in open_prs:
                 url = pr.get("url")
                 if not url and self.repo:
