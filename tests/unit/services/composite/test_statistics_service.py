@@ -2185,9 +2185,9 @@ class TestFormatProjectDetails:
         assert "### Orphaned PRs" in result
         assert "> **Note:** Orphaned PRs are pull requests" in result
         assert "may need manual review" in result
-        assert "PR #25 (Merged)" in result
+        assert "PR #25 (Merged, 5d)" in result  # Duration is 5 days (created 10d ago, merged 5d ago)
         assert "Task removed from spec" in result
-        assert "PR #28 (Open" in result
+        assert "PR #28 (Open, 5d)" in result  # Duration with appropriate units
 
     def test_format_project_with_merged_pr(self):
         """Should show Merged state for merged PRs in table format"""

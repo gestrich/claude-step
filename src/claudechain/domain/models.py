@@ -535,6 +535,32 @@ class StatisticsReport:
             return None
         return f"https://github.com/{self.repo}/pull/{pr_number}"
 
+    def _format_pr_duration(self, pr) -> str:
+        """Format how long a PR was/is open with appropriate units.
+
+        Uses days if ≥1 day, hours if ≥1 hour, otherwise minutes.
+
+        Args:
+            pr: GitHubPullRequest to get duration for
+
+        Returns:
+            Formatted duration string like "2d", "5h", or "30m"
+        """
+        if pr.state == "open":
+            end_time = datetime.now(timezone.utc)
+        else:
+            end_time = pr.merged_at if pr.merged_at else datetime.now(timezone.utc)
+
+        delta = end_time - pr.created_at
+        total_minutes = int(delta.total_seconds() / 60)
+
+        if delta.days >= 1:
+            return f"{delta.days}d"
+        elif total_minutes >= 60:
+            return f"{total_minutes // 60}h"
+        else:
+            return f"{max(1, total_minutes)}m"
+
     def to_header_section(self) -> Section:
         """Build report header section with metadata.
 
@@ -678,7 +704,7 @@ class StatisticsReport:
                     indicators.append("stale")
                 assignee = pr.first_assignee or "unassigned"
 
-                status_parts = [f"{pr.days_open}d", assignee]
+                status_parts = [self._format_pr_duration(pr), assignee]
                 if indicators:
                     status_parts.extend(indicators)
 
@@ -699,7 +725,7 @@ class StatisticsReport:
             for pr in stats.orphaned_prs:
                 if pr.is_open():
                     url = pr.url or self._build_pr_url(pr.number)
-                    status_text = f"{pr.days_open}d, orphaned"
+                    status_text = f"{self._format_pr_duration(pr)}, orphaned"
                     if url:
                         project_items.append(ListItem(
                             Link(f"#{pr.number} ({status_text})", url),
@@ -763,10 +789,11 @@ class StatisticsReport:
                     if task.has_pr:
                         pr = task.pr
                         pr_url = pr.url or self._build_pr_url(pr.number)
+                        duration = self._format_pr_duration(pr)
                         if pr.is_merged():
-                            status = "Merged"
+                            status = f"Merged ({duration})"
                         elif pr.is_open():
-                            status = f"Open ({pr.days_open}d)"
+                            status = f"Open ({duration})"
                         else:
                             status = "Closed"
                         # PR link in its own column, status separate
@@ -793,10 +820,11 @@ class StatisticsReport:
             if stats.orphaned_prs:
                 orphan_items = []
                 for pr in stats.orphaned_prs:
+                    duration = self._format_pr_duration(pr)
                     if pr.is_merged():
-                        state = "Merged"
+                        state = f"Merged, {duration}"
                     elif pr.is_open():
-                        state = f"Open, {pr.days_open}d"
+                        state = f"Open, {duration}"
                     else:
                         state = "Closed"
                     orphan_items.append(ListItem(f"PR #{pr.number} ({state}) - Task removed from spec"))
