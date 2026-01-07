@@ -114,7 +114,7 @@ class TestClaudeChainWorkflowYAML:
         assert "jobs" in workflow_data, "Workflow should have jobs"
 
     def test_workflow_uses_simplified_pattern(self):
-        """Verify the workflow uses the simplified pattern with github_event."""
+        """Verify the workflow uses the simplified pattern without explicit event inputs."""
         import yaml
 
         workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudechain.yml"
@@ -136,10 +136,11 @@ class TestClaudeChainWorkflowYAML:
 
         assert action_step is not None, "Should have a step that uses the local action"
 
-        # Verify simplified inputs
+        # Verify simplified pattern - action reads GitHub context directly
+        # so github_event and event_name inputs are NOT needed
         with_block = action_step.get("with", {})
-        assert "github_event" in with_block, "Should pass github_event to action"
-        assert "event_name" in with_block, "Should pass event_name to action"
+        assert "github_event" not in with_block, "Should NOT pass github_event (action reads context directly)"
+        assert "event_name" not in with_block, "Should NOT pass event_name (action reads context directly)"
 
     def test_workflow_has_no_complex_bash_steps(self):
         """Verify the workflow doesn't have complex bash logic (simplified)."""
@@ -317,12 +318,12 @@ class TestClaudeChainBranchNameEdgeCases:
 class TestSimplifiedWorkflowEventHandling:
     """Tests for simplified workflow event handling.
 
-    The simplified workflow passes github_event and event_name to the action,
-    which handles all event parsing logic internally.
+    The simplified workflow lets the action read GitHub context directly
+    via built-in environment variables (GITHUB_EVENT_NAME, GITHUB_EVENT_PATH).
     """
 
-    def test_workflow_passes_event_context_to_action(self):
-        """Verify workflow passes github event context to the action."""
+    def test_workflow_does_not_pass_event_context_explicitly(self):
+        """Verify workflow does NOT pass github_event/event_name (action reads them directly)."""
         import yaml
 
         workflow_path = Path(__file__).parent.parent.parent / ".github/workflows/claudechain.yml"
@@ -343,15 +344,11 @@ class TestSimplifiedWorkflowEventHandling:
 
         with_block = action_step.get("with", {})
 
-        # Should pass github_event
-        assert "github_event" in with_block, "Should pass github_event"
-        assert "toJson(github.event)" in with_block["github_event"], \
-            "Should pass github.event as JSON"
-
-        # Should pass event_name
-        assert "event_name" in with_block, "Should pass event_name"
-        assert "github.event_name" in with_block["event_name"], \
-            "Should pass github.event_name"
+        # Should NOT pass github_event or event_name - action reads context directly
+        assert "github_event" not in with_block, \
+            "Should NOT pass github_event (action reads GITHUB_EVENT_PATH directly)"
+        assert "event_name" not in with_block, \
+            "Should NOT pass event_name (action reads GITHUB_EVENT_NAME directly)"
 
     def test_workflow_dispatch_passes_project_name(self):
         """Verify workflow_dispatch input for project_name is passed to action."""
