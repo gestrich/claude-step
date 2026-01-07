@@ -924,6 +924,7 @@ class StatisticsReport:
         self,
         show_assignee_stats: bool = False,
         stale_pr_days: int = 7,
+        run_url: Optional[str] = None,
     ) -> Dict:
         """Complete report as Slack Block Kit JSON structure.
 
@@ -933,6 +934,7 @@ class StatisticsReport:
         Args:
             show_assignee_stats: Whether to include the assignee leaderboard (default: False)
             stale_pr_days: Threshold for stale PR warnings (default: 7 days)
+            run_url: Optional URL to GitHub Actions run for "See details" footer
 
         Returns:
             Dict with 'text' and 'blocks' keys for Slack webhook payload
@@ -971,6 +973,7 @@ class StatisticsReport:
                     "title": pr.task_description,
                     "url": pr.url or self._build_pr_url(pr.number),
                     "age_days": pr.days_open,
+                    "age_formatted": self._format_pr_duration(pr),
                 })
 
             blocks.extend(formatter.format_project_blocks(
@@ -1012,6 +1015,11 @@ class StatisticsReport:
         if self.generation_time_seconds is not None:
             from claudechain.domain.formatters.slack_block_kit_formatter import context_block
             blocks.append(context_block(f"_Elapsed time: {self.generation_time_seconds:.1f}s_"))
+
+        # Footer with link to GitHub Actions run
+        if run_url:
+            from claudechain.domain.formatters.slack_block_kit_formatter import context_block
+            blocks.append(context_block(f"_See details in <{run_url}|GitHub Actions>_"))
 
         return formatter.build_message(blocks, fallback_text="ClaudeChain Statistics")
 

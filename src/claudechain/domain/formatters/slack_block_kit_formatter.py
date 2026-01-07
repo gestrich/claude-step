@@ -137,11 +137,12 @@ class SlackBlockKitFormatter:
                     url = self._build_pr_url(pr["number"])
                 title = pr.get("title", "")
                 age_days = pr.get("age_days", 0)
+                age_formatted = pr.get("age_formatted", f"{age_days}d")
 
                 if url:
-                    line = f"• <{url}|#{pr['number']} {title}> ({age_days}d)"
+                    line = f"• <{url}|#{pr['number']} {title}> ({age_formatted})"
                 else:
-                    line = f"• #{pr['number']} {title} ({age_days}d)"
+                    line = f"• #{pr['number']} {title} ({age_formatted})"
 
                 if age_days >= 5:
                     line += " ⚠️"

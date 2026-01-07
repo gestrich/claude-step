@@ -75,6 +75,7 @@ runs:
         ACTION_PATH: ${{ github.action_path }}
         SLACK_WEBHOOK_URL: ${{ inputs.slack_webhook_url }}
         SHOW_REVIEWER_STATS: ${{ inputs.show_reviewer_stats }}
+        GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       run: |
         # ACTION_PATH points to statistics/ subdir, need parent for src/
         ACTION_ROOT=$(dirname "$ACTION_PATH")

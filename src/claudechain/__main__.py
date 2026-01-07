@@ -109,6 +109,7 @@ def main():
             format_type=args.format or os.environ.get("STATS_FORMAT", "slack"),
             slack_webhook_url=os.environ.get("SLACK_WEBHOOK_URL", ""),
             show_assignee_stats=args.show_assignee_stats or os.environ.get("SHOW_ASSIGNEE_STATS", "").lower() == "true",
+            run_url=os.environ.get("GITHUB_RUN_URL", ""),
         )
     elif args.command == "auto-start":
         # Parse auto_start_enabled from argument or environment variable
