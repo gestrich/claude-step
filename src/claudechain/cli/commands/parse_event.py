@@ -191,20 +191,31 @@ def cmd_parse_event(
 def main() -> int:
     """Entry point for parse-event command.
 
-    Reads parameters from environment variables:
-        EVENT_NAME: GitHub event name
-        EVENT_JSON: GitHub event JSON payload
+    Uses GitHub's built-in environment variables:
+        GITHUB_EVENT_NAME: GitHub event name
+        GITHUB_EVENT_PATH: Path to file containing GitHub event JSON payload
+        GITHUB_REPOSITORY: GitHub repository (owner/name) for API calls
+
+    Custom environment variables:
         PROJECT_NAME: Optional project name override
         DEFAULT_BASE_BRANCH: Optional base branch override (if not set, derived from event)
-        GITHUB_REPOSITORY: GitHub repository (owner/name) for API calls
     """
     gh = GitHubActionsHelper()
 
-    event_name = os.environ.get("EVENT_NAME", "")
-    event_json = os.environ.get("EVENT_JSON", "{}")
+    # GitHub built-in env vars
+    event_name = os.environ.get("GITHUB_EVENT_NAME", "")
+    event_path = os.environ.get("GITHUB_EVENT_PATH", "")
+    repo = os.environ.get("GITHUB_REPOSITORY", "") or None
+
+    # Read event JSON from file
+    event_json = "{}"
+    if event_path and os.path.exists(event_path):
+        with open(event_path) as f:
+            event_json = f.read()
+
+    # Custom env vars
     project_name = os.environ.get("PROJECT_NAME", "") or None
     default_base_branch = os.environ.get("DEFAULT_BASE_BRANCH", "") or None
-    repo = os.environ.get("GITHUB_REPOSITORY", "") or None
 
     return cmd_parse_event(
         gh=gh,

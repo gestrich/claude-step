@@ -16,17 +16,9 @@ inputs:
     required: true
     default: ${{ github.token }}
 
-  # Event context inputs (for simplified workflow)
-  github_event:
-    description: 'GitHub event payload JSON. Used for automatic event handling.'
-    required: false
-  event_name:
-    description: 'GitHub event name. Used with github_event for automatic handling.'
-    required: false
-
   # Project configuration
   project_name:
-    description: 'Project folder name under /claude-chain directory. Required if github_event is not provided.'
+    description: 'Project folder name under /claude-chain directory. Falls back to github.event.inputs.project_name for workflow_dispatch.'
     required: false
   default_base_branch:
     # Default defined in src/claudechain/domain/constants.py (DEFAULT_BASE_BRANCH)
@@ -114,27 +106,23 @@ runs:
       shell: bash
       run: pip install PyYAML
 
-    # Event parsing and checkout (simplified workflow)
-    # These steps are only active when github_event is provided
+    # Event parsing and checkout
+    # Parse the GitHub event context to determine how to proceed
     - name: Parse event and determine action
       id: parse
-      if: inputs.github_event != ''
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github_token }}
-        EVENT_NAME: ${{ inputs.event_name }}
-        EVENT_JSON: ${{ inputs.github_event }}
-        PROJECT_NAME: ${{ inputs.project_name }}
+        PROJECT_NAME: ${{ inputs.project_name || github.event.inputs.project_name }}
         DEFAULT_BASE_BRANCH: ${{ inputs.default_base_branch }}
         PR_LABEL: ${{ inputs.pr_label }}
         ACTION_PATH: ${{ github.action_path }}
-        GITHUB_REPOSITORY: ${{ github.repository }}
       run: |
         export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
         python3 -m claudechain parse-event
 
     - name: Log skip reason
-      if: inputs.github_event != '' && steps.parse.outputs.skip == 'true'
+      if: steps.parse.outputs.skip == 'true'
       shell: bash
       run: |
         echo "::notice::Skipping ClaudeChain: ${{ steps.parse.outputs.skip_reason }}"
@@ -143,7 +131,7 @@ runs:
         echo "**Reason:** ${{ steps.parse.outputs.skip_reason }}" >> $GITHUB_STEP_SUMMARY
 
     - name: Checkout repository
-      if: inputs.github_event != '' && steps.parse.outputs.skip != 'true'
+      if: steps.parse.outputs.skip != 'true'
       uses: actions/checkout@v4
       with:
         ref: ${{ steps.parse.outputs.checkout_ref }}
@@ -151,12 +139,11 @@ runs:
 
     - name: Prepare for Claude Code execution
       id: prepare
-      if: inputs.github_event == '' || steps.parse.outputs.skip != 'true'
+      if: steps.parse.outputs.skip != 'true'
       shell: bash
       working-directory: ${{ inputs.working_directory }}
       env:
         GH_TOKEN: ${{ inputs.github_token }}
-        # Use parsed values when available (simplified workflow), otherwise fall back to direct inputs
         PROJECT_NAME: ${{ steps.parse.outputs.project_name || inputs.project_name }}
         MERGED_PR_NUMBER: ${{ steps.parse.outputs.merged_pr_number || inputs.merged_pr_number }}
         GITHUB_REPOSITORY: ${{ github.repository }}
@@ -208,7 +195,7 @@ runs:
 
     - name: Finalize and create PR
       id: finalize
-      if: always() && (inputs.github_event == '' || steps.parse.outputs.skip != 'true')
+      if: always() && steps.parse.outputs.skip != 'true'
       shell: bash
       working-directory: ${{ inputs.working_directory }}
       env:
