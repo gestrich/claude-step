@@ -132,9 +132,9 @@ class SlackBlockKitFormatter:
                 age_formatted = pr.get("age_formatted", f"{age_days}d")
 
                 if url:
-                    line = f"• <{url}|#{pr['number']} {title}> (Open {age_formatted})"
+                    line = f"<{url}|#{pr['number']} {title}> (Open {age_formatted})"
                 else:
-                    line = f"• #{pr['number']} {title} (Open {age_formatted})"
+                    line = f"#{pr['number']} {title} (Open {age_formatted})"
 
                 if age_days >= 5:
                     line += " ⚠️"
