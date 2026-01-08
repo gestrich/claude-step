@@ -983,11 +983,9 @@ class StatisticsReport:
 
         # Footer with link to GitHub Actions run (and elapsed time if available)
         if run_url:
-            from claudechain.domain.formatters.slack_block_kit_formatter import context_block
-            if self.generation_time_seconds is not None:
-                blocks.append(context_block(f"_<{run_url}|See details in GitHub Actions> ({self.generation_time_seconds:.1f}s)_"))
-            else:
-                blocks.append(context_block(f"_<{run_url}|See details in GitHub Actions>_"))
+            from claudechain.domain.formatters.slack_block_kit_formatter import context_block, format_footer_text
+            footer_text = format_footer_text(run_url, self.generation_time_seconds)
+            blocks.append(context_block(footer_text))
 
         return formatter.build_message(blocks, fallback_text="ClaudeChain Stats")
 
