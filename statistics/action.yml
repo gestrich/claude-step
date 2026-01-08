@@ -31,8 +31,8 @@ inputs:
     description: 'Slack webhook URL for statistics notifications (optional)'
     required: false
     default: ''
-  show_reviewer_stats:
-    description: 'Show reviewer leaderboard statistics (default: false)'
+  show_assignee_stats:
+    description: 'Show assignee leaderboard statistics (default: false)'
     required: false
     default: 'false'
 
@@ -75,7 +75,7 @@ runs:
         STATS_FORMAT: 'slack'
         ACTION_PATH: ${{ github.action_path }}
         SLACK_WEBHOOK_URL: ${{ inputs.slack_webhook_url }}
-        SHOW_REVIEWER_STATS: ${{ inputs.show_reviewer_stats }}
+        SHOW_ASSIGNEE_STATS: ${{ inputs.show_assignee_stats }}
         GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       run: |
         # ACTION_PATH points to statistics/ subdir, need parent for src/

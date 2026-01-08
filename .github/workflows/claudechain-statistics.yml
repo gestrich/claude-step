@@ -39,5 +39,4 @@ jobs:
           base_branch: ${{ github.event.inputs.base_branch || env.DEFAULT_BASE_BRANCH }}
           days_back: 30
           slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-        env:
-          SHOW_ASSIGNEE_STATS: 'true'
+          show_assignee_stats: 'true'
