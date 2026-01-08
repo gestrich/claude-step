@@ -309,13 +309,13 @@ runs:
         webhook-type: incoming-webhook
         payload: |
           {
-            "text": "PR Created",
+            "text": "PR Created 🎉",
             "blocks": [
               {
                 "type": "header",
                 "text": {
                   "type": "plain_text",
-                  "text": "PR Created",
+                  "text": "PR Created 🎉",
                   "emoji": true
                 }
               },
