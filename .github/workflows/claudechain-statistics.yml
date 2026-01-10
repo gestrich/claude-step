@@ -38,5 +38,5 @@ jobs:
           # config_path: refactor/my-project/configuration.json # Use for per-project statitics
           base_branch: ${{ github.event.inputs.base_branch || env.DEFAULT_BASE_BRANCH }}
           days_back: 30
-          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack_webhook_url: ${{ secrets.CLAUDE_CHAIN_SLACK_WEBHOOK_URL }}
           show_assignee_stats: 'true'

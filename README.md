@@ -103,12 +103,12 @@ jobs:
     steps:
       - uses: gestrich/claude-chain@main
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CHAIN_ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           project_name: ${{ github.event.inputs.project_name || '' }}
           default_base_branch: ${{ github.event.inputs.base_branch || 'main' }}
           claude_allowed_tools: 'Read,Write,Edit,Bash(git add:*),Bash(git commit:*)'
-          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack_webhook_url: ${{ secrets.CLAUDE_CHAIN_SLACK_WEBHOOK_URL }}
 ```
 
 **Statistics workflow** (`.github/workflows/claudechain-statistics.yml`) - optional, for scheduled progress reports:
@@ -134,13 +134,13 @@ jobs:
       - uses: gestrich/claude-chain/statistics@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack_webhook_url: ${{ secrets.CLAUDE_CHAIN_SLACK_WEBHOOK_URL }}
 ```
 
 ### 2. Configure GitHub
 
-1. **Add secret:** Settings → Secrets & Variables → Actions → Repository Secrets → `ANTHROPIC_API_KEY`
-2. **Add secret (optional):** Same path → `SLACK_WEBHOOK_URL` (for notifications)
+1. **Add secret:** Settings → Secrets & Variables → Actions → Repository Secrets → `CLAUDE_CHAIN_ANTHROPIC_API_KEY`
+2. **Add secret (optional):** Same path → `CLAUDE_CHAIN_SLACK_WEBHOOK_URL` (for notifications)
 3. **Enable PRs:** Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests"
 4. **Install app:** Run `/install-github-app` in Claude Code. (Optional: To use @claude on PRs)
 
@@ -221,7 +221,7 @@ Use `{{TASK_DESCRIPTION}}` as a placeholder—it gets replaced with the task tex
 | PR summaries | AI-generated explanation on each PR | Enabled |
 | Statistics reports | Weekly team progress and activity | Optional (see Quick Start) |
 
-Enable Slack by adding `slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}` to your workflow.
+Enable Slack by adding `slack_webhook_url: ${{ secrets.CLAUDE_CHAIN_SLACK_WEBHOOK_URL }}` to your workflow.
 
 → **[Full guide: Notifications](docs/feature-guides/notifications.md)**
 

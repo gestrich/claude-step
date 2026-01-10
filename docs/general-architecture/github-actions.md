@@ -47,7 +47,7 @@ claude-refactor-chain/
 ```yaml
 - uses: gestrich/claude-chain@v1
   with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    anthropic_api_key: ${{ secrets.CLAUDE_CHAIN_ANTHROPIC_API_KEY }}
     project_name: 'my-refactor'
 ```
 

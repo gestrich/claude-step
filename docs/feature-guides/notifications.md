@@ -39,12 +39,12 @@ Pass the webhook URL to the action:
 ```yaml
 - uses: gestrich/claude-chain@main
   with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    anthropic_api_key: ${{ secrets.CLAUDE_CHAIN_ANTHROPIC_API_KEY }}
     github_token: ${{ secrets.GITHUB_TOKEN }}
     github_event: ${{ toJson(github.event) }}
     event_name: ${{ github.event_name }}
     project_name: ${{ github.event.inputs.project_name || '' }}
-    slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}  # Enable notifications
+    slack_webhook_url: ${{ secrets.CLAUDE_CHAIN_SLACK_WEBHOOK_URL }}  # Enable notifications
 ```
 
 **Important:** You must pass `slack_webhook_url` as an action input. Simply setting the secret without passing it to the action won't enable notifications.
@@ -77,7 +77,7 @@ PR summaries are **enabled by default**. To disable:
 ```yaml
 - uses: gestrich/claude-chain@main
   with:
-    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    anthropic_api_key: ${{ secrets.CLAUDE_CHAIN_ANTHROPIC_API_KEY }}
     github_token: ${{ secrets.GITHUB_TOKEN }}
     add_pr_summary: 'false'  # Disable summaries
 ```
@@ -143,7 +143,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           days_back: 7
-          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack_webhook_url: ${{ secrets.CLAUDE_CHAIN_SLACK_WEBHOOK_URL }}
 ```
 
 ### Statistics Action Inputs

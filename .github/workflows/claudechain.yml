@@ -52,9 +52,9 @@ jobs:
     steps:
       - uses: ./
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CHAIN_ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           project_name: ${{ github.event.inputs.project_name || '' }}
           default_base_branch: ${{ github.event.inputs.base_branch || '' }}
           claude_model: 'claude-3-haiku-20240307'
-          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          slack_webhook_url: ${{ secrets.CLAUDE_CHAIN_SLACK_WEBHOOK_URL }}

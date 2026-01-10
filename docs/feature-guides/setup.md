@@ -63,12 +63,12 @@ jobs:
     steps:
       - uses: gestrich/claude-chain@main
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CHAIN_ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           project_name: ${{ github.event.inputs.project_name || '' }}
           default_base_branch: ${{ github.event.inputs.base_branch || 'main' }}
           claude_allowed_tools: 'Read,Write,Edit,Bash(git add:*),Bash(git commit:*)'  # Configure as needed
-          # slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          # slack_webhook_url: ${{ secrets.CLAUDE_CHAIN_SLACK_WEBHOOK_URL }}
 ```
 
 **What this does:**
@@ -105,10 +105,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: gestrich/claude-chain@main
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_api_key: ${{ secrets.CLAUDE_CHAIN_ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           project_name: 'my-refactor'
-          # slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          # slack_webhook_url: ${{ secrets.CLAUDE_CHAIN_SLACK_WEBHOOK_URL }}
 ```
 
 **Use this when:**
@@ -135,7 +135,7 @@ jobs:
 
 1. Go to **Settings** → **Secrets and variables** → **Actions** → **Repository secrets**
 2. Click **New repository secret**
-3. Name: `ANTHROPIC_API_KEY`
+3. Name: `CLAUDE_CHAIN_ANTHROPIC_API_KEY`
 4. Value: Your API key from [console.anthropic.com](https://console.anthropic.com)
 5. Click **Add secret**
 
