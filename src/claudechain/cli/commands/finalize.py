@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 
 from claudechain.domain.config import substitute_template
 from claudechain.domain.exceptions import ConfigurationError, FileNotFoundError, GitError, GitHubAPIError
-from claudechain.infrastructure.git.operations import run_git_command
+from claudechain.infrastructure.git.operations import run_git_command, ensure_ref_available
 from claudechain.infrastructure.github.actions import GitHubActionsHelper
 from claudechain.infrastructure.github.operations import run_gh_command, get_file_from_branch
 from claudechain.services.core.task_service import TaskService
@@ -153,6 +153,9 @@ def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             print(f"Warning: Failed to update spec.md: {e}")
 
         # Check if there are commits to push (after spec.md update)
+        # Fetch base branch ref for shallow clone compatibility
+        ensure_ref_available(f"origin/{base_branch}")
+
         try:
             commits_ahead = run_git_command(["rev-list", "--count", f"origin/{base_branch}..HEAD"])
             commits_count = int(commits_ahead) if commits_ahead else 0

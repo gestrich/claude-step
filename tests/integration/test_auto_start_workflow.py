@@ -170,8 +170,8 @@ class TestClaudeChainWorkflowYAML:
         with open(workflow_path) as f:
             content = f.read()
 
-        assert "secrets.ANTHROPIC_API_KEY" in content, \
-            "Workflow should use ANTHROPIC_API_KEY secret"
+        assert "secrets.CLAUDE_CHAIN_ANTHROPIC_API_KEY" in content, \
+            "Workflow should use CLAUDE_CHAIN_ANTHROPIC_API_KEY secret"
         assert "secrets.GITHUB_TOKEN" in content, \
             "Workflow should use GITHUB_TOKEN secret"
 

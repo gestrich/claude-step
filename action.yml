@@ -140,7 +140,7 @@ runs:
       uses: actions/checkout@v4
       with:
         ref: ${{ steps.parse.outputs.checkout_ref }}
-        fetch-depth: 0
+        fetch-depth: 1  # Shallow clone for performance; refs fetched on-demand when needed
 
     - name: Prepare for Claude Code execution
       id: prepare

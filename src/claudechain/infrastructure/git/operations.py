@@ -47,6 +47,25 @@ def run_git_command(args: List[str]) -> str:
         raise GitError(f"Git command failed: {' '.join(args)}\n{e.stderr}")
 
 
+def ensure_ref_available(ref: str) -> None:
+    """Ensure a git ref is available locally, fetching if needed.
+
+    For shallow clones, specific refs may not be available. This function
+    checks if the ref exists locally and fetches it on-demand if not.
+
+    Args:
+        ref: Git reference (commit SHA, branch name, etc.)
+
+    Raises:
+        GitError: If ref cannot be fetched
+    """
+    try:
+        run_git_command(["cat-file", "-t", ref])
+    except GitError:
+        print(f"Fetching ref {ref[:12]}...")
+        run_git_command(["fetch", "--depth=1", "origin", ref])
+
+
 def detect_changed_files(ref_before: str, ref_after: str, pattern: str) -> List[str]:
     """Detect added or modified files between two git references
 
@@ -61,6 +80,9 @@ def detect_changed_files(ref_before: str, ref_after: str, pattern: str) -> List[
     Raises:
         GitError: If git command fails
     """
+    ensure_ref_available(ref_before)
+    ensure_ref_available(ref_after)
+
     output = run_git_command([
         "diff",
         "--name-only",
@@ -91,6 +113,9 @@ def detect_deleted_files(ref_before: str, ref_after: str, pattern: str) -> List[
     Raises:
         GitError: If git command fails
     """
+    ensure_ref_available(ref_before)
+    ensure_ref_available(ref_after)
+
     output = run_git_command([
         "diff",
         "--name-only",
