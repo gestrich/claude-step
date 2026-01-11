@@ -252,7 +252,7 @@ Instructions: Read the entire spec.md file below to understand both WHAT to do a
 {spec.content}
 --- END spec.md ---
 
-Now complete the task '{task}' following all the details and instructions in the spec.md file above. When you're done, use git add and git commit to commit your changes."""
+Now complete the task '{task}' following all the details and instructions in the spec.md file above."""
 
         print(f"✅ Prompt prepared ({len(claude_prompt)} characters)")
 

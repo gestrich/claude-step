@@ -171,6 +171,18 @@ runs:
         export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
         python3 -m claudechain prepare
 
+    - name: Run pre-action script
+      id: pre_action
+      if: steps.prepare.outputs.has_capacity == 'true' && steps.prepare.outputs.has_task == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        PROJECT_PATH: ${{ steps.prepare.outputs.project_path }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
+        python3 -m claudechain run-action-script --type pre --project-path "$PROJECT_PATH"
+
     # WORKAROUND: Clean stale Claude Code lock files before installation
     # Issue: https://github.com/anthropics/claude-code-action/issues/709
     # When Claude Code installation times out, it leaves behind a lock file at
@@ -178,14 +190,14 @@ runs:
     # This causes "another process is currently installing Claude" errors.
     # Remove this step when the upstream issue is resolved.
     - name: Clean Claude Code lock files
-      if: steps.prepare.outputs.has_capacity == 'true' && steps.prepare.outputs.has_task == 'true'
+      if: steps.prepare.outputs.has_capacity == 'true' && steps.prepare.outputs.has_task == 'true' && steps.pre_action.outcome != 'failure'
       shell: bash
       run: rm -rf ~/.local/state/claude/locks
       continue-on-error: true
 
     - name: Run Claude Code
       id: claude_code
-      if: steps.prepare.outputs.has_capacity == 'true' && steps.prepare.outputs.has_task == 'true'
+      if: steps.prepare.outputs.has_capacity == 'true' && steps.prepare.outputs.has_task == 'true' && steps.pre_action.outcome != 'failure'
       uses: anthropics/claude-code-action@v1
       with:
         prompt: ${{ steps.prepare.outputs.claude_prompt }}
@@ -218,9 +230,21 @@ runs:
         export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
         python3 -m claudechain parse-claude-result
 
+    - name: Run post-action script
+      id: post_action
+      if: steps.pre_action.outcome != 'failure' && steps.parse_claude_result.outputs.success != 'false'
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        PROJECT_PATH: ${{ steps.prepare.outputs.project_path }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        export PYTHONPATH="$ACTION_PATH/src:$PYTHONPATH"
+        python3 -m claudechain run-action-script --type post --project-path "$PROJECT_PATH"
+
     - name: Finalize and create PR
       id: finalize
-      if: always() && steps.parse.outputs.skip != 'true' && steps.parse_claude_result.outputs.success != 'false'
+      if: always() && steps.parse.outputs.skip != 'true' && steps.parse_claude_result.outputs.success != 'false' && steps.post_action.outcome != 'failure'
       shell: bash
       working-directory: ${{ inputs.working_directory }}
       env:

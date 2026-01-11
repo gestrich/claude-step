@@ -23,6 +23,53 @@ from claudechain.domain.formatting import format_usd
 from claudechain.domain.github_models import GitHubPullRequest, PRState
 
 
+@dataclass
+class ActionResult:
+    """Result of running an action script.
+
+    Attributes:
+        success: Whether the script executed successfully (exit code 0 or script not found)
+        script_path: Path to the script that was executed
+        stdout: Standard output from the script
+        stderr: Standard error from the script
+        exit_code: Exit code from the script (None if script didn't exist)
+        script_exists: Whether the script file existed
+    """
+
+    success: bool
+    script_path: str
+    stdout: str = ""
+    stderr: str = ""
+    exit_code: Optional[int] = None
+    script_exists: bool = False
+
+    @classmethod
+    def script_not_found(cls, script_path: str) -> "ActionResult":
+        """Create result for when script doesn't exist (considered success)."""
+        return cls(
+            success=True,
+            script_path=script_path,
+            stdout="",
+            stderr="",
+            exit_code=None,
+            script_exists=False,
+        )
+
+    @classmethod
+    def from_execution(
+        cls, script_path: str, exit_code: int, stdout: str, stderr: str
+    ) -> "ActionResult":
+        """Create result from script execution."""
+        return cls(
+            success=exit_code == 0,
+            script_path=script_path,
+            stdout=stdout,
+            stderr=stderr,
+            exit_code=exit_code,
+            script_exists=True,
+        )
+
+
 @dataclass(frozen=True)
 class BranchInfo:
     """Parsed ClaudeChain branch information.

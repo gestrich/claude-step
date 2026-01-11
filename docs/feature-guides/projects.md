@@ -8,6 +8,7 @@ This guide explains how to create and configure ClaudeChain projects, including 
 - [spec.md Format](#specmd-format)
 - [configuration.yml Format](#configurationyml-format)
   - [Tool Permissions](#tool-permissions)
+- [Pre/Post Action Scripts](#prepost-action-scripts)
 - [Modifying Tasks](#modifying-tasks)
 - [PR Templates](#pr-templates)
 
@@ -23,7 +24,9 @@ your-repo/
 │   ├── auth-refactor/
 │   │   ├── spec.md              # Required: task list and instructions
 │   │   ├── configuration.yml    # Optional: reviewers and settings
-│   │   └── pr-template.md       # Optional: custom PR description
+│   │   ├── pr-template.md       # Optional: custom PR description
+│   │   ├── pre-action.sh        # Optional: runs before Claude Code
+│   │   └── post-action.sh       # Optional: runs after Claude Code
 │   ├── api-cleanup/
 │   │   └── spec.md
 │   └── docs-update/
@@ -263,6 +266,95 @@ allowedTools: Read,Write,Edit,Bash(git add:*),Bash(git commit:*),Bash(npm test:*
 **Configuration hierarchy:**
 1. Workflow-level `claude_allowed_tools` input (default for all projects)
 2. Project-level `allowedTools` in `configuration.yml` (overrides workflow default)
+
+---
+
+## Pre/Post Action Scripts
+
+ClaudeChain supports optional **pre-action** and **post-action** scripts that run before and after Claude Code execution. These scripts allow you to:
+
+- Run project-specific setup or cleanup
+- Validate the environment before Claude works
+- Post-process results after Claude completes
+- Fail fast if something goes wrong (preventing invalid PRs)
+
+### Script Files
+
+Add these optional files to your project directory:
+
+```
+claude-chain/my-project/
+├── spec.md              # Required: task list and instructions
+├── configuration.yml    # Optional: reviewers and settings
+├── pr-template.md       # Optional: custom PR description
+├── pre-action.sh        # Optional: runs before Claude Code
+└── post-action.sh       # Optional: runs after Claude Code
+```
+
+### Script Behavior
+
+| Script | When It Runs | Failure Behavior |
+|--------|--------------|------------------|
+| `pre-action.sh` | After checkout, before Claude Code | Aborts job, no Claude execution |
+| `post-action.sh` | After Claude Code, before PR creation | Aborts job, no PR created |
+
+**Key points:**
+- Scripts are optional—if a script doesn't exist, execution continues normally
+- Scripts must be executable bash scripts (ClaudeChain will `chmod +x` if needed)
+- Scripts run from the repository's working directory
+- If a script exits with non-zero status, the entire job fails
+
+### Use Cases
+
+**Pre-action examples:**
+```bash
+#!/bin/bash
+# pre-action.sh - Validate environment before Claude works
+
+# Run code generation that Claude depends on
+./scripts/generate-api-types.sh
+
+# Ensure dependencies are installed
+npm install
+
+# Validate required files exist
+if [ ! -f "config/settings.json" ]; then
+    echo "Error: Missing required configuration file"
+    exit 1
+fi
+```
+
+**Post-action examples:**
+```bash
+#!/bin/bash
+# post-action.sh - Validate Claude's changes
+
+# Run linting on changed files
+npm run lint
+
+# Run tests to verify changes work
+npm test
+
+# Run custom validation
+./scripts/validate-changes.sh
+```
+
+### Error Handling
+
+When a script fails:
+1. The job stops immediately
+2. No PR is created
+3. The failure is logged in the GitHub Actions run
+4. If Slack notifications are configured, a failure notification is sent
+
+This "fail fast" behavior prevents invalid PRs from being created when setup scripts fail or when Claude's changes don't pass validation.
+
+### Environment
+
+Scripts have access to:
+- Standard GitHub Actions environment variables (`GITHUB_*`)
+- The current working directory (repository root or configured `working_directory`)
+- Any tools installed in the workflow (npm, python, etc.)
 
 ---
 

@@ -20,6 +20,7 @@ from claudechain.cli.commands.parse_event import main as cmd_parse_event
 from claudechain.cli.commands.post_pr_comment import cmd_post_pr_comment
 from claudechain.cli.commands.prepare import cmd_prepare
 from claudechain.cli.commands.prepare_summary import cmd_prepare_summary
+from claudechain.cli.commands.run_action_script import cmd_run_action_script
 from claudechain.cli.commands.statistics import cmd_statistics
 from claudechain.cli.parser import create_parser
 from claudechain.domain.constants import DEFAULT_ALLOWED_TOOLS, DEFAULT_BASE_BRANCH
@@ -144,6 +145,13 @@ def main():
             gh=gh,
             execution_file=os.environ.get("EXECUTION_FILE", ""),
             result_type=os.environ.get("RESULT_TYPE", "main"),
+        )
+    elif args.command == "run-action-script":
+        return cmd_run_action_script(
+            gh=gh,
+            script_type=args.type,
+            project_path=args.project_path,
+            working_directory=os.getcwd(),
         )
     elif args.command == "parse-event":
         # parse-event reads from environment variables

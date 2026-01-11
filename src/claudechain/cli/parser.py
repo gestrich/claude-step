@@ -125,6 +125,22 @@ def create_parser() -> argparse.ArgumentParser:
         help="Parse Claude Code execution result for success/failure"
     )
 
+    parser_run_action_script = subparsers.add_parser(
+        "run-action-script",
+        help="Run pre or post action script for a project"
+    )
+    parser_run_action_script.add_argument(
+        "--type",
+        required=True,
+        choices=["pre", "post"],
+        help="Type of action script to run"
+    )
+    parser_run_action_script.add_argument(
+        "--project-path",
+        required=True,
+        help="Path to the project directory"
+    )
+
     parser_parse_event = subparsers.add_parser(
         "parse-event",
         help="Parse GitHub event context and output action parameters"

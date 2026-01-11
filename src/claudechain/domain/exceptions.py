@@ -24,3 +24,17 @@ class GitError(ContinuousRefactoringError):
 class GitHubAPIError(ContinuousRefactoringError):
     """GitHub API call failures"""
     pass
+
+
+class ActionScriptError(ContinuousRefactoringError):
+    """Action script execution failures"""
+
+    def __init__(self, script_path: str, exit_code: int, stdout: str = "", stderr: str = ""):
+        self.script_path = script_path
+        self.exit_code = exit_code
+        self.stdout = stdout
+        self.stderr = stderr
+        message = f"Action script '{script_path}' failed with exit code {exit_code}"
+        if stderr:
+            message += f": {stderr[:500]}"
+        super().__init__(message)
