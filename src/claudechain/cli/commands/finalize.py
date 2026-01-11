@@ -205,6 +205,7 @@ def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             ]
             if assignee:
                 pr_create_args.extend(["--assignee", assignee])
+                pr_create_args.extend(["--reviewer", assignee])
 
             pr_url = run_gh_command(pr_create_args)
         finally:
