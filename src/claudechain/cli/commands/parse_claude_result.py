@@ -80,12 +80,12 @@ def cmd_parse_claude_result(
         print(f"✅ Claude Code {result_type} task completed successfully")
         if summary:
             print(f"   Summary: {summary[:100]}..." if len(summary) > 100 else f"   Summary: {summary}")
+        return 0
     else:
         print(f"❌ Claude Code {result_type} task failed")
         if error_message:
             print(f"   Error: {error_message}")
-
-    return 0
+        return 1
 
 
 def _extract_structured_output(execution_data: Any) -> dict[str, Any] | None:

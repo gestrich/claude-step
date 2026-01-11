@@ -297,7 +297,7 @@ runs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*Error:*\n```${{ steps.parse_claude_result.outputs.error_message }}```"
+                  "text": ${{ toJSON(format('*Error:*\n```{0}```', steps.parse_claude_result.outputs.error_message)) }}
                 }
               },
               {

@@ -192,7 +192,7 @@ class TestCmdParseClaudeResult:
         try:
             result = cmd_parse_claude_result(mock_gh, temp_path, "main")
 
-            assert result == 0
+            assert result == 1  # Should return non-zero exit code on failure
             assert mock_gh.outputs["success"] == "false"
             assert mock_gh.outputs["error_message"] == "Something went wrong"
             assert mock_gh.outputs["summary"] == "Failed to complete task"
