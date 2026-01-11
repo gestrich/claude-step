@@ -991,19 +991,6 @@ class StatisticsReport:
         title = f"Chains: {self.repo} 🔗" if self.repo else "Chains 🔗"
         blocks.extend(formatter.format_header_blocks(title=title))
 
-        # Leaderboard blocks (only if enabled)
-        if show_assignee_stats:
-            sorted_members = sorted(
-                self.team_stats.items(),
-                key=lambda x: (-x[1].merged_count, x[0])
-            )
-            active_members = [
-                {"username": username, "merged": stats.merged_count}
-                for username, stats in sorted_members
-                if stats.merged_count > 0
-            ]
-            blocks.extend(formatter.format_leaderboard_blocks(active_members))
-
         # Project progress blocks
         for project_name in sorted(self.project_stats.keys()):
             stats = self.project_stats[project_name]
@@ -1026,6 +1013,19 @@ class StatisticsReport:
                 cost_usd=stats.total_cost_usd,
                 open_prs=open_prs if open_prs else None,
             ))
+
+        # Leaderboard blocks (only if enabled) - after project progress
+        if show_assignee_stats:
+            sorted_members = sorted(
+                self.team_stats.items(),
+                key=lambda x: (-x[1].merged_count, x[0])
+            )
+            active_members = [
+                {"username": username, "merged": stats.merged_count}
+                for username, stats in sorted_members
+                if stats.merged_count > 0
+            ]
+            blocks.extend(formatter.format_leaderboard_blocks(active_members))
 
         # Footer with link to GitHub Actions run (and elapsed time if available)
         if run_url:
