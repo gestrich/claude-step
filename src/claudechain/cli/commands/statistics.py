@@ -19,6 +19,7 @@ from claudechain.services.core.pr_service import PRService
 def cmd_statistics(
     gh: GitHubActionsHelper,
     repo: str,
+    workflow_name: str,
     base_branch: str = "main",
     config_path: Optional[str] = None,
     days_back: int = 30,
@@ -36,6 +37,7 @@ def cmd_statistics(
     Args:
         gh: GitHub Actions helper instance
         repo: GitHub repository (owner/name)
+        workflow_name: Name of the workflow that creates PRs (for artifact discovery)
         base_branch: Base branch for single-project mode (default: "main")
         config_path: Optional path to configuration file (single-project mode)
         days_back: Days to look back for statistics (default: 30)
@@ -55,7 +57,7 @@ def cmd_statistics(
         # Initialize services (dependency injection pattern)
         project_repository = ProjectRepository(repo)
         pr_service = PRService(repo)
-        statistics_service = StatisticsService(repo, project_repository, pr_service)
+        statistics_service = StatisticsService(repo, project_repository, pr_service, workflow_name)
 
         # Discover projects (CLI handles discovery, service handles collection)
         projects = _discover_projects(config_path, base_branch, pr_service)

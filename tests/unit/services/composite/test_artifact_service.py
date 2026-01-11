@@ -347,16 +347,11 @@ class TestFindProjectArtifacts:
     """Test suite for find_project_artifacts function"""
 
     @patch("claudechain.services.composite.artifact_service.gh_api_call")
-    @patch("claudechain.services.core.pr_service.PRService")
-    def test_find_project_artifacts_with_open_prs(
-        self, mock_pr_service_class, mock_gh_api_call
+    def test_find_project_artifacts_queries_specific_workflow(
+        self, mock_gh_api_call
     ):
-        """Should find artifacts for open PRs by querying workflow runs"""
+        """Should query workflow runs for the specific workflow name"""
         # Arrange
-        mock_pr_service = mock_pr_service_class.return_value
-        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-chain-test-1"}]
-
-        # Mock workflow runs response
         mock_gh_api_call.side_effect = [
             {
                 "workflow_runs": [
@@ -378,7 +373,7 @@ class TestFindProjectArtifacts:
         result = find_project_artifacts(
             repo="owner/repo",
             project="test",
-            pr_state="open",
+            workflow_name="Claude Chain",
             download_metadata=False,
         )
 
@@ -388,17 +383,17 @@ class TestFindProjectArtifacts:
         assert result[0].artifact_name == "task-metadata-test-1.json"
         assert result[0].workflow_run_id == 100
         assert result[0].metadata is None
+        # Verify the workflow-specific API was called with URL-encoded name
+        mock_gh_api_call.assert_any_call(
+            "/repos/owner/repo/actions/workflows/Claude%20Chain/runs?status=completed&per_page=50"
+        )
 
     @patch("claudechain.services.composite.artifact_service.gh_api_call")
-    @patch("claudechain.services.core.pr_service.PRService")
     def test_find_project_artifacts_filters_by_project_name(
-        self, mock_pr_service_class, mock_gh_api_call
+        self, mock_gh_api_call
     ):
         """Should only return artifacts matching the project name"""
         # Arrange
-        mock_pr_service = mock_pr_service_class.return_value
-        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-chain-test-1"}]
-
         mock_gh_api_call.side_effect = [
             {"workflow_runs": [{"id": 100, "conclusion": "success"}]},
             {
@@ -412,7 +407,7 @@ class TestFindProjectArtifacts:
 
         # Act
         result = find_project_artifacts(
-            repo="owner/repo", project="test", pr_state="open"
+            repo="owner/repo", project="test", workflow_name="Claude Chain"
         )
 
         # Assert
@@ -422,14 +417,11 @@ class TestFindProjectArtifacts:
 
     @patch("claudechain.services.composite.artifact_service.download_artifact_json")
     @patch("claudechain.services.composite.artifact_service.gh_api_call")
-    @patch("claudechain.services.core.pr_service.PRService")
     def test_find_project_artifacts_downloads_metadata_when_requested(
-        self, mock_pr_service_class, mock_gh_api_call, mock_download
+        self, mock_gh_api_call, mock_download
     ):
         """Should download and parse metadata when download_metadata=True"""
         # Arrange
-        mock_pr_service = mock_pr_service_class.return_value
-        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-chain-test-1"}]
         mock_gh_api_call.side_effect = [
             {"workflow_runs": [{"id": 100, "conclusion": "success"}]},
             {"artifacts": [{"id": 1, "name": "task-metadata-test-1.json"}]},
@@ -449,7 +441,7 @@ class TestFindProjectArtifacts:
         result = find_project_artifacts(
             repo="owner/repo",
             project="test",
-            pr_state="open",
+            workflow_name="Claude Chain",
             download_metadata=True,
         )
 
@@ -461,14 +453,11 @@ class TestFindProjectArtifacts:
         mock_download.assert_called_once_with("owner/repo", 1)
 
     @patch("claudechain.services.composite.artifact_service.gh_api_call")
-    @patch("claudechain.services.core.pr_service.PRService")
     def test_find_project_artifacts_skips_failed_runs(
-        self, mock_pr_service_class, mock_gh_api_call
+        self, mock_gh_api_call
     ):
         """Should only process workflow runs with success conclusion"""
         # Arrange
-        mock_pr_service = mock_pr_service_class.return_value
-        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-chain-test-1"}]
         mock_gh_api_call.return_value = {
             "workflow_runs": [
                 {"id": 100, "conclusion": "failure"},
@@ -479,7 +468,7 @@ class TestFindProjectArtifacts:
 
         # Act
         result = find_project_artifacts(
-            repo="owner/repo", project="test", pr_state="all"
+            repo="owner/repo", project="test", workflow_name="Claude Chain"
         )
 
         # Assert
@@ -493,17 +482,11 @@ class TestFindProjectArtifacts:
     @patch(
         "claudechain.services.composite.artifact_service.gh_api_call"
     )
-    @patch("claudechain.services.core.pr_service.PRService")
     def test_find_project_artifacts_deduplicates_artifacts(
-        self, mock_pr_service_class, mock_gh_api_call, mock_get_artifacts
+        self, mock_gh_api_call, mock_get_artifacts
     ):
         """Should not return duplicate artifacts with same ID"""
         # Arrange
-        mock_pr_service = mock_pr_service_class.return_value
-        mock_pr_service.get_project_prs.return_value = [
-            {"headRefName": "claude-chain-test-1"},
-            {"headRefName": "claude-chain-test-2"},
-        ]
         # Return two workflow runs with same artifacts (to test deduplication)
         mock_gh_api_call.return_value = {
             "workflow_runs": [
@@ -518,7 +501,7 @@ class TestFindProjectArtifacts:
 
         # Act
         result = find_project_artifacts(
-            repo="owner/repo", project="test", pr_state="open"
+            repo="owner/repo", project="test", workflow_name="Claude Chain"
         )
 
         # Assert
@@ -528,14 +511,11 @@ class TestFindProjectArtifacts:
 
     @patch("claudechain.services.composite.artifact_service.download_artifact_json")
     @patch("claudechain.services.composite.artifact_service.gh_api_call")
-    @patch("claudechain.services.core.pr_service.PRService")
     def test_find_project_artifacts_handles_metadata_parsing_errors(
-        self, mock_pr_service_class, mock_gh_api_call, mock_download, capsys
+        self, mock_gh_api_call, mock_download, capsys
     ):
         """Should continue processing when metadata parsing fails"""
         # Arrange
-        mock_pr_service = mock_pr_service_class.return_value
-        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-chain-test-1"}]
         mock_gh_api_call.side_effect = [
             {"workflow_runs": [{"id": 100, "conclusion": "success"}]},
             {"artifacts": [{"id": 1, "name": "task-metadata-test-1.json"}]},
@@ -546,7 +526,7 @@ class TestFindProjectArtifacts:
         result = find_project_artifacts(
             repo="owner/repo",
             project="test",
-            pr_state="open",
+            workflow_name="Claude Chain",
             download_metadata=True,
         )
 
@@ -557,25 +537,42 @@ class TestFindProjectArtifacts:
         assert "Warning: Failed to parse metadata" in captured.out
 
     @patch("claudechain.services.composite.artifact_service.gh_api_call")
-    @patch("claudechain.services.core.pr_service.PRService")
     def test_find_project_artifacts_handles_api_errors(
-        self, mock_pr_service_class, mock_gh_api_call, capsys
+        self, mock_gh_api_call, capsys
     ):
         """Should handle GitHub API errors gracefully"""
         # Arrange
-        mock_pr_service = mock_pr_service_class.return_value
-        mock_pr_service.get_project_prs.return_value = [{"headRefName": "claude-chain-test-1"}]
         mock_gh_api_call.side_effect = GitHubAPIError("API rate limit exceeded")
 
         # Act
         result = find_project_artifacts(
-            repo="owner/repo", project="test", pr_state="open"
+            repo="owner/repo", project="test", workflow_name="Claude Chain"
         )
 
         # Assert
         assert len(result) == 0
         captured = capsys.readouterr()
         assert "Warning: Failed to get workflow runs" in captured.out
+
+    @patch("claudechain.services.composite.artifact_service.gh_api_call")
+    def test_find_project_artifacts_url_encodes_workflow_name_with_special_chars(
+        self, mock_gh_api_call
+    ):
+        """Should URL-encode workflow names with special characters"""
+        # Arrange
+        mock_gh_api_call.return_value = {"workflow_runs": []}
+
+        # Act
+        find_project_artifacts(
+            repo="owner/repo",
+            project="test",
+            workflow_name="My Workflow & Tests",
+        )
+
+        # Assert - verify the workflow name is URL-encoded
+        mock_gh_api_call.assert_called_once_with(
+            "/repos/owner/repo/actions/workflows/My%20Workflow%20%26%20Tests/runs?status=completed&per_page=50"
+        )
 
 
 class TestGetArtifactMetadata:
@@ -662,15 +659,16 @@ class TestFindInProgressTasks:
         ]
 
         # Act
-        result = find_in_progress_tasks(repo="owner/repo", project="test")
+        result = find_in_progress_tasks(
+            repo="owner/repo", project="test", workflow_name="Claude Chain"
+        )
 
         # Assert
         assert result == {1, 5, 10}
         mock_find_artifacts.assert_called_once_with(
             repo="owner/repo",
             project="test",
-            label="claudechain",
-            pr_state="open",
+            workflow_name="Claude Chain",
             download_metadata=False,
         )
 
@@ -692,7 +690,9 @@ class TestFindInProgressTasks:
         ]
 
         # Act
-        result = find_in_progress_tasks(repo="owner/repo", project="test")
+        result = find_in_progress_tasks(
+            repo="owner/repo", project="test", workflow_name="Claude Chain"
+        )
 
         # Assert
         assert result == {1}  # Only valid index
@@ -706,7 +706,9 @@ class TestFindInProgressTasks:
         mock_find_artifacts.return_value = []
 
         # Act
-        result = find_in_progress_tasks(repo="owner/repo", project="test")
+        result = find_in_progress_tasks(
+            repo="owner/repo", project="test", workflow_name="Claude Chain"
+        )
 
         # Assert
         assert result == set()
@@ -755,15 +757,16 @@ class TestGetAssigneeAssignments:
         ]
 
         # Act
-        result = get_assignee_assignments(repo="owner/repo", project="test")
+        result = get_assignee_assignments(
+            repo="owner/repo", project="test", workflow_name="Claude Chain"
+        )
 
         # Assert
         assert result == {10: "alice", 11: "bob"}
         mock_find_artifacts.assert_called_once_with(
             repo="owner/repo",
             project="test",
-            label="claudechain",
-            pr_state="open",
+            workflow_name="Claude Chain",
             download_metadata=True,
         )
 
@@ -798,7 +801,9 @@ class TestGetAssigneeAssignments:
         ]
 
         # Act
-        result = get_assignee_assignments(repo="owner/repo", project="test")
+        result = get_assignee_assignments(
+            repo="owner/repo", project="test", workflow_name="Claude Chain"
+        )
 
         # Assert
         assert result == {10: "alice"}  # Only artifact with metadata
@@ -812,7 +817,9 @@ class TestGetAssigneeAssignments:
         mock_find_artifacts.return_value = []
 
         # Act
-        result = get_assignee_assignments(repo="owner/repo", project="test")
+        result = get_assignee_assignments(
+            repo="owner/repo", project="test", workflow_name="Claude Chain"
+        )
 
         # Assert
         assert result == {}

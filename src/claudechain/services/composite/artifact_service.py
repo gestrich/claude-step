@@ -6,6 +6,7 @@ functions supporting the Service Layer rather than a full service class.
 """
 
 import re
+import urllib.parse
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -40,20 +41,18 @@ class ProjectArtifact:
 def find_project_artifacts(
     repo: str,
     project: str,
-    label: str = "claudechain",
-    pr_state: str = "all",
+    workflow_name: str,
     limit: int = 50,
     download_metadata: bool = False,
 ) -> List[ProjectArtifact]:
-    """Find all artifacts for a project based on PRs with the given label.
+    """Find all artifacts for a project from a specific workflow.
 
     This is the primary API for getting project artifacts.
 
     Args:
         repo: GitHub repository (owner/name)
         project: Project name to filter artifacts
-        label: GitHub label to filter PRs (default: "claudechain")
-        pr_state: PR state filter - "open", "merged", or "all"
+        workflow_name: Name of the workflow that creates PRs (from workflow's name: property)
         limit: Maximum number of workflow runs to check
         download_metadata: Whether to download full metadata JSON
 
@@ -61,35 +60,27 @@ def find_project_artifacts(
         List of ProjectArtifact objects, optionally with metadata populated
 
     Algorithm:
-        1. Query PRs with the given label and state using get_project_prs()
-        2. Get workflow runs for those PRs' branches (or recent runs for "all")
-        3. Query artifacts from successful runs
-        4. Filter artifacts by project name
-        5. Optionally download and parse metadata JSON
+        1. Query workflow runs for the specific workflow by name
+        2. For each successful run, get its artifacts
+        3. Filter artifacts by project name prefix
+        4. Optionally download and parse metadata JSON
     """
-    from claudechain.services.core.pr_service import PRService
-
     result_artifacts = []
     seen_artifact_ids = set()
 
-    # Get PRs for this project
-    pr_service = PRService(repo)
-    prs = pr_service.get_project_prs(project, state=pr_state, label=label)
-    print(f"Found {len(prs)} PR(s) for project '{project}' with state '{pr_state}'")
-
-    # Get recent workflow runs from the repo
-    # Workflows run on the base branch, not the PR's head branch,
-    # so we get all recent runs and filter by project artifacts
+    # Query workflow runs for the specific workflow
+    # URL-encode the workflow name to handle spaces and special characters
+    workflow_name_encoded = urllib.parse.quote(workflow_name)
     try:
         api_response = gh_api_call(
-            f"/repos/{repo}/actions/runs?status=completed&per_page={limit}"
+            f"/repos/{repo}/actions/workflows/{workflow_name_encoded}/runs?status=completed&per_page={limit}"
         )
         runs = api_response.get("workflow_runs", [])
     except GitHubAPIError as e:
-        print(f"Warning: Failed to get workflow runs: {e}")
+        print(f"Warning: Failed to get workflow runs for '{workflow_name}': {e}")
         runs = []
 
-    print(f"Checking {len(runs)} workflow run(s) for artifacts")
+    print(f"Checking {len(runs)} workflow run(s) from '{workflow_name}' for artifacts")
 
     # Process workflow runs and collect artifacts
     for run in runs:
@@ -157,7 +148,7 @@ def get_artifact_metadata(repo: str, artifact_id: int) -> Optional[TaskMetadata]
 
 
 def find_in_progress_tasks(
-    repo: str, project: str, label: str = "claudechain"
+    repo: str, project: str, workflow_name: str
 ) -> set[int]:
     """Get task indices for all in-progress tasks (open PRs).
 
@@ -166,7 +157,7 @@ def find_in_progress_tasks(
     Args:
         repo: GitHub repository
         project: Project name
-        label: GitHub label for filtering
+        workflow_name: Name of the workflow that creates PRs
 
     Returns:
         Set of task indices that are currently in progress
@@ -174,8 +165,7 @@ def find_in_progress_tasks(
     artifacts = find_project_artifacts(
         repo=repo,
         project=project,
-        label=label,
-        pr_state="open",
+        workflow_name=workflow_name,
         download_metadata=False,  # Just need names
     )
 
@@ -183,14 +173,14 @@ def find_in_progress_tasks(
 
 
 def get_assignee_assignments(
-    repo: str, project: str, label: str = "claudechain"
+    repo: str, project: str, workflow_name: str
 ) -> dict[int, str]:
     """Get mapping of PR numbers to assigned assignees.
 
     Args:
         repo: GitHub repository
         project: Project name
-        label: GitHub label for filtering
+        workflow_name: Name of the workflow that creates PRs
 
     Returns:
         Dict mapping PR number -> assignee username
@@ -198,8 +188,7 @@ def get_assignee_assignments(
     artifacts = find_project_artifacts(
         repo=repo,
         project=project,
-        label=label,
-        pr_state="open",
+        workflow_name=workflow_name,
         download_metadata=True,
     )
 

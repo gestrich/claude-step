@@ -30,6 +30,7 @@ class StatisticsService:
         repo: str,
         project_repository: ProjectRepository,
         pr_service: PRService,
+        workflow_name: str,
     ):
         """Initialize the statistics service
 
@@ -37,10 +38,12 @@ class StatisticsService:
             repo: GitHub repository (owner/name)
             project_repository: ProjectRepository instance for loading project data
             pr_service: PRService instance for PR operations
+            workflow_name: Name of the workflow that creates PRs (for artifact discovery)
         """
         self.repo = repo
         self.project_repository = project_repository
         self.pr_service = pr_service
+        self.workflow_name = workflow_name
 
     # Public API methods
 
@@ -186,7 +189,7 @@ class StatisticsService:
         print(f"  Merged PRs (last {days_back} days): {len(merged_prs)}")
 
         # Fetch costs from artifacts (keyed by PR number)
-        costs_by_pr = self._get_costs_by_pr(project_name, label)
+        costs_by_pr = self._get_costs_by_pr(project_name)
 
         # Build task-PR mappings (with costs)
         self._build_task_pr_mappings(stats, spec, open_prs, merged_prs, costs_by_pr)
@@ -280,7 +283,7 @@ class StatisticsService:
             print(f"  Orphaned PRs: {len(stats.orphaned_prs)}")
 
     def _get_costs_by_pr(
-        self, project_name: str, label: str
+        self, project_name: str
     ) -> Dict[int, float]:
         """Get costs from task metadata artifacts, keyed by PR number.
 
@@ -289,7 +292,6 @@ class StatisticsService:
 
         Args:
             project_name: Name of the project
-            label: GitHub label for filtering
 
         Returns:
             Dict mapping PR number -> cost in USD
@@ -297,8 +299,7 @@ class StatisticsService:
         artifacts = find_project_artifacts(
             repo=self.repo,
             project=project_name,
-            label=label,
-            pr_state="all",
+            workflow_name=self.workflow_name,
             download_metadata=True,
         )
 

@@ -8,6 +8,9 @@ branding:
   color: 'blue'
 
 inputs:
+  workflow_name:
+    description: 'Name of the workflow that creates PRs (must match the name: property in your claude-chain.yml)'
+    required: true
   github_token:
     description: 'GitHub token for API access'
     required: true
@@ -69,6 +72,7 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github_token }}
         GITHUB_REPOSITORY: ${{ github.repository }}
+        INPUT_WORKFLOW_NAME: ${{ inputs.workflow_name }}
         BASE_BRANCH: ${{ inputs.base_branch }}
         CONFIG_PATH: ${{ inputs.config_path }}
         STATS_DAYS_BACK: ${{ inputs.days_back }}

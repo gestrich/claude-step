@@ -139,6 +139,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: gestrich/claude-chain/statistics@main
         with:
+          workflow_name: 'ClaudeChain'  # Must match the name: property in your main workflow
           github_token: ${{ github.token }}
           days_back: 7
           slack_webhook_url: ${{ secrets.CLAUDE_CHAIN_SLACK_WEBHOOK_URL }}
@@ -148,6 +149,7 @@ jobs:
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
+| `workflow_name` | Yes | - | Name of the workflow that creates PRs (must match the `name:` property in your main ClaudeChain workflow) |
 | `github_token` | Yes | `${{ github.token }}` | GitHub token for API access |
 | `days_back` | No | `30` | Days to look back for statistics |
 | `base_branch` | No | `main` | Branch to fetch project specs from |
@@ -201,6 +203,7 @@ To enable the leaderboard, add `show_reviewer_stats: true` to your workflow:
 ```yaml
 - uses: gestrich/claude-chain/statistics@main
   with:
+    workflow_name: 'ClaudeChain'  # Must match the name: property in your main workflow
     github_token: ${{ github.token }}
     show_reviewer_stats: true  # Enable reviewer leaderboard
 ```

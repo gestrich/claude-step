@@ -34,6 +34,7 @@ jobs:
         uses: ./statistics  # Use local action (for this repo)
         # For external repos, use: gestrich/claude-chain/statistics@v1
         with:
+          workflow_name: 'ClaudeChain'  # Must match the name: property in claude-chain.yml
           github_token: ${{ secrets.GITHUB_TOKEN }}
           # config_path: refactor/my-project/configuration.json # Use for per-project statitics
           base_branch: ${{ github.event.inputs.base_branch || env.DEFAULT_BASE_BRANCH }}
