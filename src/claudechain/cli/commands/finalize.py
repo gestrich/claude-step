@@ -194,11 +194,21 @@ def cmd_finalize(args: argparse.Namespace, gh: GitHubActionsHelper) -> int:
             pr_body_file = f.name
 
         try:
+            # Build PR title with truncation to avoid overly long titles
+            max_title_length = 80
+            title_prefix = f"ClaudeChain: [{project}] "
+            available_for_task = max_title_length - len(title_prefix)
+            if len(task) > available_for_task:
+                truncated_task = task[:available_for_task - 3] + "..."
+            else:
+                truncated_task = task
+            pr_title = f"{title_prefix}{truncated_task}"
+
             # Build PR creation command (assignee is optional)
             pr_create_args = [
                 "pr", "create",
                 "--draft",
-                "--title", f"ClaudeChain: [{project}] {task}",
+                "--title", pr_title,
                 "--body-file", pr_body_file,
                 "--label", label,
                 "--head", branch_name,
